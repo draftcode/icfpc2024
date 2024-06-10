@@ -1,17 +1,12 @@
-#![allow(
-    dead_code,
-    unused_imports,
-    unused_variables,
-    clippy::needless_range_loop
-)]
+use anyhow::Result;
+use clap::Parser;
 
-use anyhow::{anyhow, bail, Result};
+#[derive(Parser, Debug)]
+struct Args {}
 
-#[argopt::subcmd]
-fn hello() -> Result<()> {
+fn main() -> Result<()> {
+    let _args = Args::parse();
+
     println!("Hello, world!");
     Ok(())
 }
-
-#[argopt::cmd_group(commands = [hello])]
-fn main() -> Result<()> {}
