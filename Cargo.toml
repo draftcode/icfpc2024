@@ -1,0 +1,7 @@
+[workspace]
+resolver = "2"
+members = [
+  "sandbox/hello",
+  "sandbox/lifegame",
+  "sandbox/lifegame-wasm",
+]
