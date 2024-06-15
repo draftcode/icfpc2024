@@ -1,0 +1,5 @@
+#!/bin/bash
+
+cd $(git rev-parse --show-toplevel)/backend_py
+export PGPASSWORD=$POSTGRES_PASSWORD
+exec psql -h localhost -U app_pg_user app_db

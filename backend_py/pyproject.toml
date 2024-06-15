@@ -1,0 +1,38 @@
+[project]
+name = "backend_py"
+version = "0.1.0"
+dependencies = [
+    "backend_rs>=0.1.0",
+    "fastapi>=0.111.0",
+    "sqlmodel>=0.0.18",
+    "psycopg[binary]>=3.1.19",
+    "pydantic-settings>=2.2.1",
+    "python-dotenv>=1.0.1",
+]
+requires-python = ">= 3.12"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.rye]
+managed = true
+
+[tool.rye.scripts]
+dev-server = { cmd = "./scripts/dev-server", env = { ENVIRONMENT = "dev" } }
+db-upgrade = { cmd = "alembic upgrade head", env = { ENVIRONMENT = "dev" } }
+db-migrate = { cmd = "alembic revision --autogenerate", env = { ENVIRONMENT = "dev" } }
+psql = { cmd = "./scripts/psql", env-file = ".env" }
+dev-dependencies = [
+    "pyright>=1.1.367",
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/backend_py"]
+
+[tool.pyright]
+include = ["src"]
+exclude = ["**/__pycache__"]

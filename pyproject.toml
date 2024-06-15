@@ -1,0 +1,12 @@
+[project]
+name = "icfpc2024-prep"
+version = "0.1.0"
+requires-python = ">= 3.12"
+dependencies = ["alembic>=1.13.1"]
+
+[tool.rye]
+managed = true
+virtual = true
+
+[tool.rye.workspace]
+members = ["backend_rs", "backend_py"]

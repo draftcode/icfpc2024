@@ -1,0 +1,17 @@
+[project]
+name = "backend_rs"
+version = "0.1.0"
+requires-python = ">= 3.12"
+
+[build-system]
+requires = ["maturin>=1.2,<2.0"]
+build-backend = "maturin"
+
+[tool.rye]
+managed = true
+
+[tool.maturin]
+python-source = "python"
+module-name = "backend_rs"
+manifest-path = "Cargo.toml"
+features = ["pyo3/extension-module"]
