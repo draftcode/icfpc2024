@@ -1,0 +1,11 @@
+[Unit]
+Description=backend_py
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+WorkingDirectory=/root/icfpc2024/backend_py
+ExecStart=/root/icfpc2024/.venv/bin/granian --workers=8 --interface=asgi backend_py.api:app
+ExecReload=kill -HUP $MAINPID
+

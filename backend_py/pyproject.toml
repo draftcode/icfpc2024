@@ -8,6 +8,7 @@ dependencies = [
     "psycopg[binary]>=3.1.19",
     "pydantic-settings>=2.2.1",
     "python-dotenv>=1.0.1",
+    "granian>=1.4.4",
 ]
 requires-python = ">= 3.12"
 

@@ -1,0 +1,7 @@
+services:
+  frontend:
+    image: us-central1-docker.pkg.dev/misc-project-220721/icfptest/frontend:latest
+    restart: always
+    pull_policy: always
+    ports:
+      - "127.0.0.1:3000:3000"

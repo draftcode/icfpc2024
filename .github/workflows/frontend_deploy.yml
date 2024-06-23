@@ -1,0 +1,34 @@
+name: frontend_deploy
+
+on: workflow_dispatch
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    steps:
+      - uses: actions/checkout@v4
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          token_format: access_token
+          workload_identity_provider: github
+          service_account: github-actions@misc-project-220721.iam.gserviceaccount.com
+          access_token_lifetime: 600s
+
+      - uses: docker/login-action@v3
+        with:
+          registry: us-west2-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          file: frontend/Dockerfile
+          push: true
+          tags: us-central1-docker.pkg.dev/misc-project-220721/icfptest/frontend:latest
+
+      # TODO: gcloud ssh to run the restart docker container
