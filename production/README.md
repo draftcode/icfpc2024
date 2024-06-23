@@ -8,7 +8,7 @@
   * apt install build-essential
   * Install docker https://docs.docker.com/engine/install/debian/
   * curl -sSf https://rye.astral.sh/get | bash
-  * Add `. "$HOME/.rye/env"` to .bashrc and modify .profile
+  * Add `. "$HOME/.rye/env"` to .bashrc
   * curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
   * snap install --classic certbot
   * ln -s /snap/bin/certbot /usr/bin/certbot
@@ -30,3 +30,9 @@
 
 * Cloudflare DNS setup
   * Set up a new A record for the domain
+
+* GCP
+  * Create workload identity pool
+  * Create GCP SA
+    * Allow Artifact Registry Writer
+  * Create Artifact Registry repository
