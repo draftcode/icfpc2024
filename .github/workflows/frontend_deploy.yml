@@ -14,7 +14,7 @@ jobs:
         uses: google-github-actions/auth@v2
         with:
           token_format: access_token
-          workload_identity_provider: projects/misc-project-220721/locations/global/workloadIdentityPools/github/providers/github'
+          workload_identity_provider: projects/177174127123/locations/global/workloadIdentityPools/github/providers/github
           service_account: github-actions@misc-project-220721.iam.gserviceaccount.com
 
       - uses: docker/login-action@v3
