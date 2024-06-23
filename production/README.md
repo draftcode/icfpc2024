@@ -16,10 +16,16 @@
   * cd && git clone git@github.com:draftcode/icfpc2024.git
   * cd icfpc2024 && rye sync
   * cd backend_py && docker compose up -d
-  * cp /root/icfpc2024/production/nginx-sites.conf /etc/nginx/sites-available/default
+  * ln -s /root/icfpc2024/production/nginx-sites.conf /etc/nginx/sites-available/default
   * ln -s /root/icfpc2024/production/backend_py.service /etc/systemd/system/backend_py.service
   * systemctl daemon-reload
   * systemctl enable --now backend_py
+  * cp /root/icfpc2024/production/id_ed25519_icfpc2024_gha.pub /root/.ssh/authorized_keys
+  * Update /etc/ssh/sshd_config
+    * PermitRootLogin prohibit-password
+  * systemctl reload sshd
+  * gcloud auth configure-docker us-central1-docker.pkg.dev
+  * cd frontend && docker compose up --detach --force-recreate
 
 
 * Cloudflare DNS setup

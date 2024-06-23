@@ -30,4 +30,18 @@ jobs:
           push: true
           tags: us-central1-docker.pkg.dev/misc-project-220721/icfptest/frontend:latest
 
-      # TODO: gcloud ssh to run the restart docker container
+      - run: |
+          mkdir -p ~/.ssh/
+          echo "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          cat >>~/.ssh/config <<END
+          Host icfptest.badalloc.com
+            User root
+            IdentityFile ~/.ssh/id_ed25519
+            StrictHostKeyChecking no
+          END
+        env:
+          SSH_KEY: ${{ secrets.PROD_DEPLOY_PRIVATE_KEY }}
+
+      - run: ssh icfptest.badalloc.com 'cd /root/icfpc2024 && git pull'
+      - run: ssh icfptest.badalloc.com 'cd /root/icfpc2024/frontend && docker compose up --detach --force-recreate'
