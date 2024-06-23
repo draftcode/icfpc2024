@@ -23,6 +23,7 @@ jobs:
           SSH_KEY: ${{ secrets.PROD_DEPLOY_PRIVATE_KEY }}
 
       - run: ssh icfptest.badalloc.com 'cd /root/icfpc2024 && git pull'
-      - run: ssh icfptest.badalloc.com 'cd /root/icfpc2024 && rye sync'
+      # Without --force, it won't rebuild the Rust modules.
+      - run: ssh icfptest.badalloc.com 'cd /root/icfpc2024 && rye sync --force --no-lock'
       - run: ssh icfptest.badalloc.com 'cd /root/icfpc2024/backend_py && rye run db-upgrade'
       - run: ssh icfptest.badalloc.com 'systemctl reload backend_py.service'
