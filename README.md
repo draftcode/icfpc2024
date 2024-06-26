@@ -11,7 +11,7 @@ RustもPythonもこのToolchainインストーラーでなんとかしましょ�
 
 Gitのpre-commit hookでformatterをかけてしましましょう。
 
-```
+```bash
 rye install pre-commit
 pre-commit install
 ```
