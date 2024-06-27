@@ -6,4 +6,5 @@ members = [
   "sandbox/lifegame-wasm",
   "backend_rs",
   "oka",
+  "common",
 ]
