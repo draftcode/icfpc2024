@@ -5,4 +5,5 @@ members = [
   "sandbox/lifegame",
   "sandbox/lifegame-wasm",
   "backend_rs",
+  "oka",
 ]
