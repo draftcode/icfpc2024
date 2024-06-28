@@ -129,6 +129,8 @@ pub enum BinOp {
     Take,
     Drop,
     App,
+    AppL,
+    AppV,
 }
 
 impl std::fmt::Display for BinOp {
@@ -148,6 +150,8 @@ impl std::fmt::Display for BinOp {
             BinOp::Take => "take",
             BinOp::Drop => "drop",
             BinOp::App => "$",
+            BinOp::AppL => "~",
+            BinOp::AppV => "!",
         };
         write!(f, "{op}")
     }
@@ -178,6 +182,8 @@ impl std::fmt::Display for BinOpEncoded {
             BinOp::Take => "T",
             BinOp::Drop => "D",
             BinOp::App => "$",
+            BinOp::AppL => "~",
+            BinOp::AppV => "!",
         };
         write!(f, "{op}")
     }
@@ -241,6 +247,8 @@ impl FromStr for Token {
                 Some('T') => Token::Bin(BinOp::Take),
                 Some('D') => Token::Bin(BinOp::Drop),
                 Some('$') => Token::Bin(BinOp::App),
+                Some('~') => Token::Bin(BinOp::AppL),
+                Some('!') => Token::Bin(BinOp::AppV),
                 _ => bail!("invalid token: {s}"),
             },
             '?' => Token::If,
@@ -383,5 +391,7 @@ mod tests {
         assert_eq!("?", Token::If.encoded().to_string());
         assert_eq!("L#", Token::Lambda(2).encoded().to_string());
         assert_eq!("v#", Token::Var(2).encoded().to_string());
+        assert_eq!("B~", Token::Bin(BinOp::AppL).encoded().to_string());
+        assert_eq!("B!", Token::Bin(BinOp::AppV).encoded().to_string());
     }
 }
