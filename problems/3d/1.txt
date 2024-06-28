@@ -8,3 +8,4 @@
 # Example
   * `A = 5`
     `Answer = 120`
+
