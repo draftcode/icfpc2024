@@ -5,6 +5,7 @@ members = [
   "common",
   "communicate",
   "oka",
+  "printer",
   "sandbox/hello",
   "sandbox/lifegame-wasm",
   "sandbox/lifegame",
