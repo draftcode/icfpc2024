@@ -74,9 +74,6 @@ string solve(const vector<string>& input)
     {
         // Find nearest pill
         vector<pair<int,int>> path = bfs(sr, sc, maze);
-        for (int i = 0; i < path.size(); i++) {
-            cerr << path[i].first << " " << path[i].second << endl;
-        }
         
         // Move to pill
         for (int i = 0; i < path.size(); i++) {
