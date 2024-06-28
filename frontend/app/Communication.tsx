@@ -24,9 +24,11 @@ export default function Communication({ log }: { log: CommunicationLog }) {
       </div>
       <div className="pl-4 space-y-2">
         <div className="font-mono bg-base-200 border p-2">
-          <pre>
-            <code>{log.decoded_request}</code>
-          </pre>
+          <div className="font-mono">
+            <textarea className="w-full" rows={1} disabled>
+              {log.decoded_request}
+            </textarea>
+          </div>
         </div>
         <div>
           <form>
