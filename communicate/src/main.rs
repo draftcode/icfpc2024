@@ -55,6 +55,7 @@ fn main() -> Result<ExitCode> {
         eprintln!("{}", text);
 
         if let Ok(expr) = text.parse::<Expr>() {
+            eprintln!("{}", expr);
             let expr = eval(&expr)?;
             if let Expr::String(s) = expr {
                 println!("{}", s);
@@ -93,6 +94,7 @@ fn main() -> Result<ExitCode> {
         eprintln!("{}", text);
 
         if let Ok(expr) = text.parse::<Expr>() {
+            eprintln!("{}", expr);
             let expr = eval(&expr)?;
             if let Expr::String(s) = expr {
                 println!("{}", s);
