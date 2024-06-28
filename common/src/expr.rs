@@ -1,13 +1,14 @@
-use std::{iter::Peekable, str::Chars};
+use std::{iter::Peekable, rc::Rc, str::Chars};
 
 use anyhow::{anyhow, bail};
+use num_bigint::BigInt;
 
 use crate::base94::{decode_base94, decode_str, encode_base94, encode_base94_int, encode_str};
 
 #[derive(Debug)]
 pub enum Token {
     Bool(bool),
-    Int(i64),
+    Int(BigInt),
     String(String),
     Un(UnOp),
     Bin(BinOp),
@@ -29,18 +30,20 @@ impl std::fmt::Display for TokenEncoded<'_> {
         match self.0 {
             Token::Bool(v) => write!(f, "{}", if *v { "T" } else { "F" }),
             Token::Int(n) => {
-                if *n < 0 {
+                if *n < BigInt::ZERO {
                     return Err(std::fmt::Error);
                 }
                 write!(f, "I")?;
-                if *n == 0 {
+                if *n == BigInt::ZERO {
                     write!(f, "{}", encode_base94(0).unwrap())?;
                 } else {
-                    let mut n = *n;
+                    let mut n = n.clone();
                     let mut chars: Vec<char> = Vec::new();
-                    while n > 0 {
-                        chars.push(encode_base94(n % 94).unwrap());
-                        n /= 94;
+                    while n > BigInt::ZERO {
+                        let n2 = &n / 94;
+                        let r: BigInt = &n - &n2 * 94;
+                        chars.push(encode_base94(r.try_into().unwrap()).unwrap());
+                        n = n2;
                     }
                     for c in chars.into_iter().rev() {
                         write!(f, "{}", c)?;
@@ -197,7 +200,7 @@ impl Token {
                 Token::Bool(false)
             }
             'I' => {
-                let mut n = 0;
+                let mut n = BigInt::from(0);
                 while let Some(c) = cur.0.next() {
                     n = n * 94 + decode_base94(c)?;
                 }
@@ -259,8 +262,8 @@ pub fn tokenize(s: &str) -> anyhow::Result<Vec<Token>> {
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Expr {
     Bool(bool),
-    Int(i64),
-    String(String),
+    Int(Rc<BigInt>),
+    String(Rc<String>),
     Var(usize),
     Un(UnOp, Box<Expr>),
     Bin(BinOp, Box<Expr>, Box<Expr>),
@@ -312,8 +315,8 @@ impl Expr {
     fn parse_expr(cur: &mut TokenCursor<'_>) -> anyhow::Result<Expr> {
         Ok(match cur.0.next() {
             Some(Token::Bool(b)) => Expr::Bool(*b),
-            Some(Token::Int(n)) => Expr::Int(*n),
-            Some(Token::String(s)) => Expr::String(s.clone()),
+            Some(Token::Int(n)) => Expr::Int(n.clone().into()),
+            Some(Token::String(s)) => Expr::String(s.clone().into()),
             Some(Token::Var(v)) => Expr::Var(*v),
             Some(Token::Un(op)) => {
                 let e = Box::new(Self::parse_expr(cur)?);
@@ -334,7 +337,7 @@ impl Expr {
                 let e = Box::new(Self::parse_expr(cur)?);
                 Expr::Lambda(*v, e)
             }
-            _ => bail!("invalid expr"),
+            e => bail!("invalid expr: {e:?}"),
         })
     }
 }
@@ -347,9 +350,9 @@ mod tests {
     fn token_encoded() {
         assert_eq!("T", Token::Bool(true).encoded().to_string());
         assert_eq!("F", Token::Bool(false).encoded().to_string());
-        assert_eq!("I!", Token::Int(0).encoded().to_string());
-        assert_eq!("I\"", Token::Int(1).encoded().to_string());
-        assert_eq!("I/6", Token::Int(1337).encoded().to_string());
+        assert_eq!("I!", Token::Int(0.into()).encoded().to_string());
+        assert_eq!("I\"", Token::Int(1.into()).encoded().to_string());
+        assert_eq!("I/6", Token::Int(1337.into()).encoded().to_string());
         assert_eq!(
             "SB%,,/}Q/2,$_",
             Token::String("Hello World!".into()).encoded().to_string()
