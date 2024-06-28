@@ -4,13 +4,13 @@ use anyhow::bail;
 use num_bigint::BigInt;
 
 use crate::{
-    base94::{decode_base94, decode_char, encode_base94, encode_char, encode_str},
+    base94::{decode_base94, decode_char, encode_base94, encode_str},
     expr::{BinOp, Expr, UnOp},
 };
 
 #[derive(Default)]
 struct Env {
-    count: usize,
+    _count: usize,
 }
 
 impl Env {
