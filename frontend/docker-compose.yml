@@ -1,6 +1,6 @@
 services:
   frontend:
-    image: us-central1-docker.pkg.dev/misc-project-220721/icfptest/frontend:latest
+    image: asia-northeast1-docker.pkg.dev/icfp-contest-compute/icfpc2024/frontend:latest
     restart: always
     pull_policy: always
     ports:
