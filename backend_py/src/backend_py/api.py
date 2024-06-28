@@ -1,4 +1,5 @@
 import httpx
+from backend_rs import decode_message  # type: ignore
 from fastapi import FastAPI, Body
 from fastapi.responses import RedirectResponse, PlainTextResponse
 from .config import settings
@@ -25,7 +26,11 @@ async def communicate(
     resp_str = resp.text
 
     log = CommunicationLog(
-        created=datetime.datetime.now(), request=body, response=resp_str
+        created=datetime.datetime.now(),
+        request=body,
+        response=resp_str,
+        decoded_request=decode_message(body),
+        decoded_response=decode_message(resp_str),
     )
     session.add(log)
     session.commit()
