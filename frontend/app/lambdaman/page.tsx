@@ -11,7 +11,8 @@ const fetcher = (url: string): Promise<any> =>
   fetch(url).then((res) => res.json());
 
 export default function Page() {
-  const [id, setId] = useState(1);
+  const initialId = window.location.search.match(/id=(\d+)/)?.[1];
+  const [id, setId] = useState(initialId ? Number(initialId) : 1);
   const [prog, setProg] = useState(P);
 
   const { data: data1 } = useSWR(`/api/lambdaman?id=${id}`, fetcher);
@@ -19,8 +20,8 @@ export default function Page() {
 
   const { data: data2 } = useSWR(`/api/eval_scheme?program=${prog}`, fetcher);
 
-  const ok = !!data2?.result;
-  const output: string = ok ? data2?.result : data2?.error;
+  const ok = data2?.result && typeof data2.result === "string";
+  const output: string = ok ? data2?.result : data2?.error || data2?.result;
   const outType = ok ? typeof output : "error";
 
   return (
@@ -55,7 +56,7 @@ export default function Page() {
         ></textarea>
       </div>
 
-      {ok ? <Board data={lambdamanMapData} dirs={output} /> : <></>}
+      <Board data={lambdamanMapData} dirs={ok ? output : ""} />
     </div>
   );
 }
