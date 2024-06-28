@@ -74,8 +74,9 @@ fn main() -> Result<ExitCode> {
         let input_token = Token::String(line.trim().to_string());
 
         let response = client
-            .post("https://boundvariable.space/communicate")
+            .post(args.api_url)
             .header("Authorization", format!("Bearer {}", args.api_token))
+            .header("Content-Type", "text/plain")
             .body(input_token.encoded().to_string())
             .send()?;
         ensure!(
