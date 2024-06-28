@@ -1,10 +1,13 @@
 [workspace]
 resolver = "2"
 members = [
-  "sandbox/hello",
-  "sandbox/lifegame",
-  "sandbox/lifegame-wasm",
   "backend_rs",
+  "common",
+  "communicate",
   "oka",
-  "common", "tanakh/solver",
+  "printer",
+  "sandbox/hello",
+  "sandbox/lifegame-wasm",
+  "sandbox/lifegame",
+  "tanakh/solver",
 ]
