@@ -26,12 +26,13 @@ async def communicate(
     resp.raise_for_status()
 
     resp_str = resp.text
-
+    req_str = decode_message(body)
     log = CommunicationLog(
         created=datetime.datetime.now(),
         request=body,
         response=resp_str,
-        decoded_request=decode_message(body),
+        decoded_request_prefix=req_str[:100],
+        decoded_request=req_str,
         decoded_response=decode_message(resp_str),
     )
     session.add(log)
