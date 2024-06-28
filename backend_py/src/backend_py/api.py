@@ -1,6 +1,6 @@
 import httpx
 from backend_rs import decode_message  # type: ignore
-from fastapi import FastAPI, Body, Query
+from fastapi import FastAPI, Body, Query, HTTPException
 from fastapi.responses import RedirectResponse, PlainTextResponse
 from .config import settings
 from .deps import SessionDep
@@ -23,7 +23,8 @@ async def communicate(
     session: SessionDep, body: str = Body(..., media_type="text/plain")
 ) -> str:
     resp = http_client.post("https://boundvariable.space/communicate", content=body)
-    resp.raise_for_status()
+    if not resp.is_success:
+        raise HTTPException(status_code=resp.status_code, detail=resp.text)
 
     resp_str = resp.text
     req_str = decode_message(body)
