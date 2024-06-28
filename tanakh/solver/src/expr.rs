@@ -198,7 +198,7 @@ impl std::fmt::Display for Expr {
                     write!(f, "({l} {r})")
                 }
                 _ => {
-                    write!(f, "({l} {op} {r})")
+                    write!(f, "({op} {l} {r})")
                 }
             },
             Expr::If(cond, th, el) => write!(f, "if {cond} then {th} else {el}"),

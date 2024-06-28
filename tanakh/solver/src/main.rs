@@ -57,10 +57,12 @@ use solver::*;
 // }
 
 fn main() -> anyhow::Result<()> {
+    env_logger::init();
+
     for line in std::io::stdin().lock().lines() {
         let line = line?;
         let tokens = tokenize(&line)?;
-        println!("{:?}", tokens);
+        // println!("{:?}", tokens);
         let expr = Expr::parse(&tokens)?;
         println!("{}", expr);
 

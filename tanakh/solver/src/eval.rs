@@ -62,13 +62,16 @@ fn reduce(e: &Expr, env: &mut Env) -> anyhow::Result<Expr> {
         }
         Expr::Bin(op, l, r) => {
             if matches!(op, BinOp::App) {
-                dbg!(l, r);
+                log::info!("app: {l}, {r}");
                 let f = reduce(l.as_ref(), env)?;
                 match f {
                     Expr::Lambda(v, e) => {
-                        return beta_reduction(e.as_ref(), v, r.as_ref(), &mut vec![]);
+                        return reduce(
+                            &beta_reduction(e.as_ref(), v, r.as_ref(), &mut vec![])?,
+                            env,
+                        );
                     }
-                    _ => bail!("Invalid operator for app: {f:?}"),
+                    _ => bail!("Invalid operator for app: {f}"),
                 }
             }
 
@@ -77,31 +80,31 @@ fn reduce(e: &Expr, env: &mut Env) -> anyhow::Result<Expr> {
             match (op, &l, &r) {
                 (BinOp::Add, l, r) => match (l, r) {
                     (Expr::Int(n1), Expr::Int(n2)) => Expr::Int(n1 + n2),
-                    _ => bail!("Invalid operator for add: {op:?} {l:?} {r:?}"),
+                    _ => bail!("Invalid operator for add:\nl = {l}\nr = {r}"),
                 },
                 (BinOp::Sub, l, r) => match (l, r) {
                     (Expr::Int(n1), Expr::Int(n2)) => Expr::Int(n1 - n2),
-                    _ => bail!("Invalid operator for sub: {op:?} {l:?} {r:?}"),
+                    _ => bail!("Invalid operator for sub: {op} {l} {r}"),
                 },
                 (BinOp::Mul, l, r) => match (l, r) {
                     (Expr::Int(n1), Expr::Int(n2)) => Expr::Int(n1 * n2),
-                    _ => bail!("Invalid operator for mul: {op:?} {l:?} {r:?}"),
+                    _ => bail!("Invalid operator for mul: {op} {l} {r}"),
                 },
                 (BinOp::Div, l, r) => match (l, r) {
                     (Expr::Int(n1), Expr::Int(n2)) => Expr::Int(n1 / n2),
-                    _ => bail!("Invalid operator for div: {op:?} {l:?} {r:?}"),
+                    _ => bail!("Invalid operator for div: {op} {l} {r}"),
                 },
                 (BinOp::Mod, l, r) => match (l, r) {
                     (Expr::Int(n1), Expr::Int(n2)) => Expr::Int(n1 % n2),
-                    _ => bail!("Invalid operator for mod: {op:?} {l:?} {r:?}"),
+                    _ => bail!("Invalid operator for mod: {l} {r}"),
                 },
                 (BinOp::Lt, l, r) => match (l, r) {
                     (Expr::Int(n1), Expr::Int(n2)) => Expr::Bool(n1 < n2),
-                    _ => bail!("Invalid operator for lt: {op:?} {l:?} {r:?}"),
+                    _ => bail!("Invalid operator for lt: \n{l} \n{r}"),
                 },
                 (BinOp::Gt, l, r) => match (l, r) {
                     (Expr::Int(n1), Expr::Int(n2)) => Expr::Bool(n1 > n2),
-                    _ => bail!("Invalid operator for gt: {op:?} {l:?} {r:?}"),
+                    _ => bail!("Invalid operator for gt: {l} {r}"),
                 },
                 (BinOp::Eq, l, r) => match (l, r) {
                     (Expr::Int(n1), Expr::Int(n2)) => Expr::Bool(n1 == n2),
@@ -137,8 +140,8 @@ fn reduce(e: &Expr, env: &mut Env) -> anyhow::Result<Expr> {
         Expr::If(cond, th, el) => {
             let cond = reduce(cond.as_ref(), env)?;
             match cond {
-                Expr::Bool(true) => th.as_ref().clone(),
-                Expr::Bool(false) => el.as_ref().clone(),
+                Expr::Bool(true) => reduce(th.as_ref(), env)?,
+                Expr::Bool(false) => reduce(el.as_ref(), env)?,
                 _ => bail!("Invalid condition: {cond:?}"),
             }
         }
