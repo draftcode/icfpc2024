@@ -20,5 +20,13 @@ fn main() -> anyhow::Result<()> {
         log::info!("{}", expr);
         let result = eval::eval(&expr)?;
         println!("{}", result);
+
+        match result {
+            Expr::String(s) => {
+                println!("=== string ===");
+                println!("{}", s);
+            }
+            _ => {}
+        }
     }
 }
