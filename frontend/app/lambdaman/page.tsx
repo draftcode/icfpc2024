@@ -10,8 +10,12 @@ const P = `((lambda (v0) (v0 (v0 (v0 (v0 (v0 (v0 (v0 (v0 (v0 (v0 "R"))))))))))) 
 const fetcher = (url: string): Promise<any> =>
   fetch(url).then((res) => res.json());
 
-export default function Page() {
-  const initialId = window.location.search.match(/id=(\d+)/)?.[1];
+export default function Page({
+  searchParams,
+}: {
+  searchParams: { id?: string };
+}) {
+  const initialId = searchParams.id;
   const [id, setId] = useState(initialId ? Number(initialId) : 1);
   const [prog, setProg] = useState(P);
 
