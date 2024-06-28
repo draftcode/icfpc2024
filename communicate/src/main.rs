@@ -38,6 +38,7 @@ fn main() -> Result<ExitCode> {
         let response = client
             .post("https://boundvariable.space/communicate")
             .header("Authorization", format!("Bearer {}", args.api_token))
+            .header("Content-Type", "text/plain")
             .body(input_expr.to_string())
             .send()?;
         ensure!(

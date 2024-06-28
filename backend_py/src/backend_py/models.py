@@ -1,6 +1,8 @@
 from sqlmodel import Field, SQLModel
+import datetime
 
-
-class DummyProblem(SQLModel, table=True):
+class CommunicationLog(SQLModel, table=True):
     id: int = Field(primary_key=True)
-    name: str
+    created: datetime.datetime
+    request: str
+    response: str
