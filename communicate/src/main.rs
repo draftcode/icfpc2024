@@ -1,10 +1,11 @@
 use std::io::{BufRead, BufReader, Write as _};
 use std::process::ExitCode;
 
-use anyhow::Result;
+use anyhow::{ensure, Result};
 use clap::Parser;
+use expr::{Expr, Token};
 
-mod tanakh_copipe;
+mod expr;
 
 fn get_api_token_from_env() -> String {
     std::env::var("API_TOKEN").unwrap_or_default()
@@ -12,8 +13,10 @@ fn get_api_token_from_env() -> String {
 
 #[derive(Parser, Debug)]
 struct Args {
-    #[clap(long, default_value_t = get_api_token_from_env())]
+    #[arg(long, default_value_t = get_api_token_from_env())]
     api_token: String,
+
+    request: Option<String>,
 }
 
 fn main() -> Result<ExitCode> {
@@ -29,6 +32,34 @@ fn main() -> Result<ExitCode> {
     let mut stdout = std::io::stdout().lock();
     let client = reqwest::blocking::Client::new();
 
+    if let Some(request) = args.request {
+        let input_expr = Expr::String(request);
+
+        let response = client
+            .post("https://boundvariable.space/communicate")
+            .header("Authorization", format!("Bearer {}", args.api_token))
+            .body(input_expr.to_string())
+            .send()?;
+        ensure!(
+            response.status().is_success(),
+            "request failed: {}",
+            response.status()
+        );
+        let text = response.text()?;
+
+        let tokens = expr::tokenize(&text)?;
+        if tokens.len() == 1 {
+            if let Token::String(s) = &tokens[0] {
+                writeln!(&mut stdout, "{}", s)?;
+                return Ok(ExitCode::SUCCESS);
+            }
+        }
+
+        eprintln!("*** Failed to evaluate the response! Printing the raw response. ***");
+        writeln!(stdout, "{}", text)?;
+        return Ok(ExitCode::FAILURE);
+    }
+
     loop {
         write!(&mut stdout, "> ")?;
         stdout.flush()?;
@@ -38,19 +69,24 @@ fn main() -> Result<ExitCode> {
             break;
         }
 
-        let input_expr = tanakh_copipe::Expr::String(line.trim().to_string());
+        let input_expr = Expr::String(line.trim().to_string());
 
         let response = client
             .post("https://boundvariable.space/communicate")
             .header("Authorization", format!("Bearer {}", args.api_token))
             .body(input_expr.to_string())
             .send()?;
+        ensure!(
+            response.status().is_success(),
+            "request failed: {}",
+            response.status()
+        );
         let text = response.text()?;
         writeln!(stdout, "{}", text)?;
 
-        let tokens = tanakh_copipe::tokenize(&text)?;
+        let tokens = expr::tokenize(&text)?;
         if tokens.len() == 1 {
-            if let tanakh_copipe::Token::String(s) = &tokens[0] {
+            if let Token::String(s) = &tokens[0] {
                 writeln!(&mut stdout, "{}", s)?;
             }
         }
