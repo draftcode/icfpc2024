@@ -1,4 +1,4 @@
-use std::io::BufRead as _;
+use std::io::Write as _;
 
 use expr::{tokenize, Expr};
 use solver::*;
@@ -6,15 +6,19 @@ use solver::*;
 fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    for line in std::io::stdin().lock().lines() {
-        let line = line?;
-        let tokens = tokenize(&line)?;
-        // println!("{:?}", tokens);
-        let expr = Expr::parse(&tokens)?;
-        println!("{}", expr);
+    let mut stdout = std::io::stdout();
+    let stdin = std::io::stdin();
 
+    loop {
+        write!(&mut stdout, "> ")?;
+        stdout.flush()?;
+
+        let mut s = String::new();
+        stdin.read_line(&mut s)?;
+        let tokens = tokenize(&s)?;
+        let expr = Expr::parse(&tokens)?;
+        log::info!("{}", expr);
         let result = eval::eval(&expr)?;
         println!("{}", result);
     }
-    Ok(())
 }
