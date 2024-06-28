@@ -22,7 +22,7 @@ impl Token {
     }
 }
 
-struct TokenEncoded<'a>(&'a Token);
+pub struct TokenEncoded<'a>(&'a Token);
 
 impl std::fmt::Display for TokenEncoded<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

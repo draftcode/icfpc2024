@@ -3,9 +3,7 @@ use std::process::ExitCode;
 
 use anyhow::{ensure, Result};
 use clap::Parser;
-use expr::{Expr, Token};
-
-mod expr;
+use common::expr::Token;
 
 fn get_api_token_from_env() -> String {
     std::env::var("API_TOKEN").unwrap_or_default()
@@ -40,13 +38,13 @@ fn main() -> Result<ExitCode> {
     let client = reqwest::blocking::Client::new();
 
     if let Some(request) = args.request {
-        let input_expr = Expr::String(request);
+        let input_expr = Token::String(request);
 
         let response = client
             .post(args.api_url)
             .header("Authorization", format!("Bearer {}", args.api_token))
             .header("Content-Type", "text/plain")
-            .body(input_expr.to_string())
+            .body(input_expr.encoded().to_string())
             .send()?;
         ensure!(
             response.status().is_success(),
@@ -55,12 +53,8 @@ fn main() -> Result<ExitCode> {
         );
         let text = response.text()?;
 
-        let tokens = expr::tokenize(&text)?;
-        if tokens.len() == 1 {
-            if let Token::String(s) = &tokens[0] {
-                writeln!(&mut stdout, "{}", s)?;
-                return Ok(ExitCode::SUCCESS);
-            }
+        if let Ok(Token::String(s)) = Token::from_str(&text) {
+            writeln!(&mut stdout, "{}", s)?;
         }
 
         eprintln!("*** Failed to evaluate the response! Printing the raw response. ***");
@@ -77,12 +71,12 @@ fn main() -> Result<ExitCode> {
             break;
         }
 
-        let input_expr = Expr::String(line.trim().to_string());
+        let input_token = Token::String(line.trim().to_string());
 
         let response = client
             .post("https://boundvariable.space/communicate")
             .header("Authorization", format!("Bearer {}", args.api_token))
-            .body(input_expr.to_string())
+            .body(input_token.encoded().to_string())
             .send()?;
         ensure!(
             response.status().is_success(),
@@ -92,11 +86,8 @@ fn main() -> Result<ExitCode> {
         let text = response.text()?;
         writeln!(stdout, "{}", text)?;
 
-        let tokens = expr::tokenize(&text)?;
-        if tokens.len() == 1 {
-            if let Token::String(s) = &tokens[0] {
-                writeln!(&mut stdout, "{}", s)?;
-            }
+        if let Ok(Token::String(s)) = Token::from_str(&text) {
+            writeln!(&mut stdout, "{}", s)?;
         }
     }
 
