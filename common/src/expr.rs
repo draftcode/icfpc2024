@@ -2,6 +2,8 @@ use std::{iter::Peekable, str::Chars};
 
 use anyhow::{anyhow, bail};
 
+use crate::base94::{decode_base94, decode_str, encode_base94, encode_base94_int, encode_str};
+
 #[derive(Debug)]
 pub enum Token {
     Bool(bool),
@@ -12,6 +14,56 @@ pub enum Token {
     If,
     Lambda(usize),
     Var(usize),
+}
+
+impl Token {
+    pub fn encoded(&self) -> TokenEncoded {
+        TokenEncoded(self)
+    }
+}
+
+struct TokenEncoded<'a>(&'a Token);
+
+impl std::fmt::Display for TokenEncoded<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.0 {
+            Token::Bool(v) => write!(f, "{}", if *v { "T" } else { "F" }),
+            Token::Int(n) => {
+                if *n < 0 {
+                    return Err(std::fmt::Error);
+                }
+                write!(f, "I")?;
+                if *n == 0 {
+                    write!(f, "{}", encode_base94(0).unwrap())?;
+                } else {
+                    let mut n = *n;
+                    let mut chars: Vec<char> = Vec::new();
+                    while n > 0 {
+                        chars.push(encode_base94(n % 94).unwrap());
+                        n /= 94;
+                    }
+                    for c in chars.into_iter().rev() {
+                        write!(f, "{}", c)?;
+                    }
+                }
+                Ok(())
+            }
+            Token::String(s) => write!(f, "S{}", encode_str(s).map_err(|_| std::fmt::Error)?),
+            Token::Un(op) => write!(f, "U{}", op.encoded()),
+            Token::Bin(op) => write!(f, "B{}", op.encoded()),
+            Token::If => write!(f, "?"),
+            Token::Lambda(v) => write!(
+                f,
+                "L{}",
+                encode_base94_int(*v as i64).map_err(|_| std::fmt::Error)?
+            ),
+            Token::Var(v) => write!(
+                f,
+                "v{}",
+                encode_base94_int(*v as i64).map_err(|_| std::fmt::Error)?
+            ),
+        }
+    }
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
@@ -29,6 +81,26 @@ impl std::fmt::Display for UnOp {
             UnOp::Not => "!",
             UnOp::StrToInt => "str-to-int",
             UnOp::IntToStr => "int-to-str",
+        };
+        write!(f, "{op}")
+    }
+}
+
+impl UnOp {
+    pub fn encoded(self) -> UnOpEncoded {
+        UnOpEncoded(self)
+    }
+}
+
+pub struct UnOpEncoded(UnOp);
+
+impl std::fmt::Display for UnOpEncoded {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let op = match self.0 {
+            UnOp::Neg => "-",
+            UnOp::Not => "!",
+            UnOp::StrToInt => "#",
+            UnOp::IntToStr => "$",
         };
         write!(f, "{op}")
     }
@@ -74,41 +146,37 @@ impl std::fmt::Display for BinOp {
     }
 }
 
+impl BinOp {
+    pub fn encoded(self) -> BinOpEncoded {
+        BinOpEncoded(self)
+    }
+}
+
+pub struct BinOpEncoded(BinOp);
+
+impl std::fmt::Display for BinOpEncoded {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let op = match self.0 {
+            BinOp::Add => "+",
+            BinOp::Sub => "-",
+            BinOp::Mul => "*",
+            BinOp::Div => "/",
+            BinOp::Mod => "%",
+            BinOp::Lt => "<",
+            BinOp::Gt => ">",
+            BinOp::Eq => "=",
+            BinOp::Or => "|",
+            BinOp::And => "&",
+            BinOp::Concat => ".",
+            BinOp::Take => "T",
+            BinOp::Drop => "D",
+            BinOp::App => "$",
+        };
+        write!(f, "{op}")
+    }
+}
+
 struct Cursor<'a>(Peekable<Chars<'a>>);
-
-pub fn base94(c: char) -> anyhow::Result<i64> {
-    if ('!'..='~').contains(&c) {
-        let n = c as i64 - '!' as i64;
-        Ok(n)
-    } else {
-        bail!("invalid base94 char")
-    }
-}
-
-pub fn base94enc(n: i64) -> anyhow::Result<char> {
-    if n < 0 || n >= 94 {
-        bail!("invalid base94 number")
-    }
-    Ok((n + '!' as i64) as u8 as char)
-}
-
-const TBL: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!\"#$%&'()*+,-./:;<=>?@[\\]^_`|~ \n";
-
-pub fn base94_char(c: char) -> anyhow::Result<char> {
-    Ok(TBL[base94(c)? as usize] as char)
-}
-
-pub fn char_enc(c: char) -> anyhow::Result<char> {
-    let ix = TBL
-        .iter()
-        .position(|&x| x == c as u8)
-        .ok_or_else(|| anyhow!("invalid char"))?;
-    base94enc(ix as i64)
-}
-
-pub fn str_enc(s: &str) -> anyhow::Result<String> {
-    s.chars().map(char_enc).collect()
-}
 
 impl Token {
     pub fn from_str(s: &str) -> anyhow::Result<Token> {
@@ -131,16 +199,16 @@ impl Token {
             'I' => {
                 let mut n = 0;
                 while let Some(c) = cur.0.next() {
-                    n = n * 94 + base94(c)?;
+                    n = n * 94 + decode_base94(c)?;
                 }
                 Token::Int(n)
             }
             'S' => {
                 let mut s = String::new();
                 while let Some(c) = cur.0.next() {
-                    s.push(base94_char(c)?);
+                    s.push(c);
                 }
-                Token::String(s)
+                Token::String(decode_str(&s)?)
             }
             'U' => match cur.0.next() {
                 Some('-') => Token::Un(UnOp::Neg),
@@ -168,11 +236,13 @@ impl Token {
             },
             '?' => Token::If,
             'L' => {
-                let var = base94(cur.0.next().ok_or_else(|| anyhow!("invalid token: {s}"))?)?;
+                let var =
+                    decode_base94(cur.0.next().ok_or_else(|| anyhow!("invalid token: {s}"))?)?;
                 Token::Lambda(var as usize)
             }
             'v' => {
-                let var = base94(cur.0.next().ok_or_else(|| anyhow!("invalid token: {s}"))?)?;
+                let var =
+                    decode_base94(cur.0.next().ok_or_else(|| anyhow!("invalid token: {s}"))?)?;
                 Token::Var(var as usize)
             }
             _ => bail!("invalid token: {s}"),
@@ -266,5 +336,34 @@ impl Expr {
             }
             _ => bail!("invalid expr"),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn token_encoded() {
+        assert_eq!("T", Token::Bool(true).encoded().to_string());
+        assert_eq!("F", Token::Bool(false).encoded().to_string());
+        assert_eq!("I!", Token::Int(0).encoded().to_string());
+        assert_eq!("I\"", Token::Int(1).encoded().to_string());
+        assert_eq!("I/6", Token::Int(1337).encoded().to_string());
+        assert_eq!(
+            "SB%,,/}Q/2,$_",
+            Token::String("Hello World!".into()).encoded().to_string()
+        );
+        assert_eq!("U-", Token::Un(UnOp::Neg).encoded().to_string());
+        assert_eq!("U!", Token::Un(UnOp::Not).encoded().to_string());
+        assert_eq!("U#", Token::Un(UnOp::StrToInt).encoded().to_string());
+        assert_eq!("U$", Token::Un(UnOp::IntToStr).encoded().to_string());
+        assert_eq!("B+", Token::Bin(BinOp::Add).encoded().to_string());
+        assert_eq!("BT", Token::Bin(BinOp::Take).encoded().to_string());
+        assert_eq!("BD", Token::Bin(BinOp::Drop).encoded().to_string());
+        assert_eq!("B$", Token::Bin(BinOp::App).encoded().to_string());
+        assert_eq!("?", Token::If.encoded().to_string());
+        assert_eq!("L#", Token::Lambda(2).encoded().to_string());
+        assert_eq!("v#", Token::Var(2).encoded().to_string());
     }
 }

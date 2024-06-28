@@ -1,6 +1,9 @@
 use anyhow::bail;
 
-use crate::expr::{base94, base94_char, base94enc, str_enc, BinOp, Expr, UnOp};
+use crate::{
+    base94::{decode_base94, decode_char, encode_base94, encode_str},
+    expr::{BinOp, Expr, UnOp},
+};
 
 #[derive(Default)]
 #[allow(unused)]
@@ -145,10 +148,10 @@ fn reduce_to_nf(e: &Expr, env: &mut Env) -> anyhow::Result<Expr> {
 }
 
 fn str_to_int(s: &str) -> i64 {
-    let s = str_enc(s).unwrap();
+    let s = encode_str(s).unwrap();
     let mut ret = 0;
     for c in s.chars() {
-        ret = ret * 94 + base94(c).unwrap();
+        ret = ret * 94 + decode_base94(c).unwrap();
     }
     ret
 }
@@ -157,7 +160,7 @@ fn int_to_str(n: i64) -> String {
     let mut s = String::new();
     let mut n = n;
     while n > 0 {
-        s.push(base94_char(base94enc(n % 94).unwrap()).unwrap());
+        s.push(decode_char(encode_base94(n % 94).unwrap()).unwrap());
         n /= 94;
     }
     s.chars().rev().collect::<String>()
@@ -185,4 +188,15 @@ fn beta_reduction(e: &Expr, v: usize, arg: &Expr, shadow: &mut Vec<usize>) -> an
         }
         _ => e.clone(),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn conversion() {
+        assert_eq!(str_to_int("test"), 15818151);
+        assert_eq!(int_to_str(15818151), "test");
+    }
 }
