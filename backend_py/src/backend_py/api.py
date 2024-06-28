@@ -51,9 +51,9 @@ async def communications(
 ) -> Sequence[CommunicationLog]:
     q = select(CommunicationLog)
     if decoded_request:
-        q = q.where(CommunicationLog.decoded_request == decoded_request)
+        q = q.where(CommunicationLog.decoded_request_prefix == decoded_request)
     if decoded_request_prefix:
-        q = q.where(CommunicationLog.decoded_request.like(decoded_request_prefix + "%"))  # type: ignore
+        q = q.where(CommunicationLog.decoded_request_prefix.like(decoded_request_prefix + "%"))  # type: ignore
 
     return session.exec(
         q.order_by(CommunicationLog.id.desc())  # type: ignore
