@@ -1,0 +1,2 @@
+B. SF B$ B$ L" B$ L# B$ v" B$ v# v# L# B$ v" B$ v# v# L" L# ? B= v# I;Y S B. ? B= B% v# IS I! S~ S B. ? B= B% v# I, I! Sa Sl B$ v" B+ v# I" I"
+(. "L" (((λv1. ((λv2. (v1 (v2 v2))) (λv2. (v1 (v2 v2))))) (λv1. (λv2. if (= v2 2500) then "" else (. if (= (% v2 50) 0) then "\n" else "" (. if (= (% v2 11) 0) then "#" else "." (v1 (+ v2 1))))))) 1))

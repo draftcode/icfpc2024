@@ -1,0 +1,2 @@
+Sa}C.054~}}zkVUU}pq};}pq}VUUz~~a}I54054~}}N(%}3)'.}/&}z;zj}7()#(})3}zkVz}&/2}.%'!4)6%}.5-"%23j}zUz}&/2}zUzj}!.$}zVz}&/2}0/3)4)6%}.5-"%23l~~a}?8!-0,%~}}h}z;}q}Xz~}}}}z;.37%2}q}Vz~}}h}z;}q}k[z~}}}}z;.37%2}q}kVz~
+"# Input\n  `-100 <= A <= 100`\n\n# Output\n  The sign of `A`, which is `-1` for negative numbers, `0` for `0`, and `1` for positive numbers.\n\n# Example\n  * `A = 3`\n    `Answer = 1`\n  * `A = -6`\n    `Answer = -1`\n"

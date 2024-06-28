@@ -1,6 +1,6 @@
 import httpx
 from backend_rs import decode_message  # type: ignore
-from fastapi import FastAPI, Body, Query
+from fastapi import FastAPI, Body, Query, HTTPException
 from fastapi.responses import RedirectResponse, PlainTextResponse
 from .config import settings
 from .deps import SessionDep
@@ -23,15 +23,17 @@ async def communicate(
     session: SessionDep, body: str = Body(..., media_type="text/plain")
 ) -> str:
     resp = http_client.post("https://boundvariable.space/communicate", content=body)
-    resp.raise_for_status()
+    if not resp.is_success:
+        raise HTTPException(status_code=resp.status_code, detail=resp.text)
 
     resp_str = resp.text
-
+    req_str = decode_message(body)
     log = CommunicationLog(
         created=datetime.datetime.now(),
         request=body,
         response=resp_str,
-        decoded_request=decode_message(body),
+        decoded_request_prefix=req_str[:100],
+        decoded_request=req_str,
         decoded_response=decode_message(resp_str),
     )
     session.add(log)
@@ -50,9 +52,9 @@ async def communications(
 ) -> Sequence[CommunicationLog]:
     q = select(CommunicationLog)
     if decoded_request:
-        q = q.where(CommunicationLog.decoded_request == decoded_request)
+        q = q.where(CommunicationLog.decoded_request_prefix == decoded_request)
     if decoded_request_prefix:
-        q = q.where(CommunicationLog.decoded_request.like(decoded_request_prefix + "%"))  # type: ignore
+        q = q.where(CommunicationLog.decoded_request_prefix.like(decoded_request_prefix + "%"))  # type: ignore
 
     return session.exec(
         q.order_by(CommunicationLog.id.desc())  # type: ignore

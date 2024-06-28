@@ -17,7 +17,7 @@ fn get_api_url_from_env() -> String {
 }
 
 fn find_history_file() -> Result<PathBuf> {
-    let mut current_dir = Path::new(".").canonicalize().unwrap();
+    let current_dir = Path::new(".").canonicalize().unwrap();
     for dir in current_dir.ancestors() {
         if dir.join(".git").exists() {
             return Ok(dir.join(".communicate.history"));

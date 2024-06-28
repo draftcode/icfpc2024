@@ -207,6 +207,7 @@ fn to_haskell(e: &Expr) -> String {
                 BinOp::Take => format!("(take {l} {r})"),
                 BinOp::Drop => format!("(drop {l} {r})"),
                 BinOp::App => format!("({l} {r})"),
+                _ => unreachable!(),
             }
         }
         Expr::If(cond, th, el) => {
@@ -275,6 +276,7 @@ fn to_scheme(e: &Expr) -> String {
                 BinOp::Take => format!("(string-take (force {r}) (force {l}))"),
                 BinOp::Drop => format!("(string-drop (force {r}) (force {l}))"),
                 BinOp::App => format!("((force {l}) {r})"),
+                _ => format!("Not support op {:?}", op),
             };
             format!("(lazy {ret})")
         }

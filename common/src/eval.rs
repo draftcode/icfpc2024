@@ -4,13 +4,13 @@ use anyhow::bail;
 use num_bigint::BigInt;
 
 use crate::{
-    base94::{decode_base94, decode_char, encode_base94, encode_char, encode_str},
+    base94::{decode_base94, decode_char, encode_base94, encode_str},
     expr::{BinOp, Expr, UnOp},
 };
 
 #[derive(Default)]
 struct Env {
-    count: usize,
+    _count: usize,
 }
 
 impl Env {
@@ -71,6 +71,21 @@ fn reduce_to_nf(e: &Expr, env: &mut Env) -> anyhow::Result<Expr> {
                         );
                     }
                     _ => bail!("Invalid operator for app: {f}"),
+                }
+            }
+            if matches!(op, BinOp::AppV) {
+                log::trace!("app: {l}, {r}");
+                let f = reduce_to_nf(l.as_ref(), env)?;
+                // It's okay to eval the rhs because it's call-by-value.
+                let g = reduce_to_nf(r.as_ref(), env)?;
+                match f {
+                    Expr::Lambda(v, e) => {
+                        return reduce_to_nf(
+                            &beta_reduction(e.as_ref(), v, &g, &mut vec![])?,
+                            env,
+                        );
+                    }
+                    _ => bail!("Invalid operator for appv: {f}"),
                 }
             }
 
