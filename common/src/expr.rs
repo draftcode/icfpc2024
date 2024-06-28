@@ -191,6 +191,14 @@ impl std::fmt::Display for BinOpEncoded {
 
 struct Cursor<'a>(Peekable<Chars<'a>>);
 
+fn decode_base94_cur(cur: &mut Cursor<'_>) -> anyhow::Result<BigInt> {
+    let mut n = BigInt::from(0);
+    while let Some(c) = cur.0.next() {
+        n = n * 94 + decode_base94(c)?;
+    }
+    Ok(n)
+}
+
 impl FromStr for Token {
     type Err = anyhow::Error;
 
@@ -211,13 +219,7 @@ impl FromStr for Token {
                 }
                 Token::Bool(false)
             }
-            'I' => {
-                let mut n = BigInt::from(0);
-                while let Some(c) = cur.0.next() {
-                    n = n * 94 + decode_base94(c)?;
-                }
-                Token::Int(n)
-            }
+            'I' => Token::Int(decode_base94_cur(&mut cur)?),
             'S' => {
                 let mut s = String::new();
                 while let Some(c) = cur.0.next() {
@@ -253,14 +255,12 @@ impl FromStr for Token {
             },
             '?' => Token::If,
             'L' => {
-                let var =
-                    decode_base94(cur.0.next().ok_or_else(|| anyhow!("invalid token: {s}"))?)?;
-                Token::Lambda(var as usize)
+                let var = decode_base94_cur(&mut cur)?;
+                Token::Lambda(var.try_into().unwrap())
             }
             'v' => {
-                let var =
-                    decode_base94(cur.0.next().ok_or_else(|| anyhow!("invalid token: {s}"))?)?;
-                Token::Var(var as usize)
+                let var = decode_base94_cur(&mut cur)?;
+                Token::Var(var.try_into().unwrap())
             }
             _ => bail!("invalid token: {s}"),
         })
