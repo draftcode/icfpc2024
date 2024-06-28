@@ -8,7 +8,7 @@ fn encode_message(input: String) -> PyResult<String> {
 
 #[pyfunction]
 fn decode_message(input: String) -> PyResult<String> {
-    if let Ok(Token::String(s)) = Token::from_str(&input) {
+    if let Ok(Token::String(s)) = input.parse() {
         return Ok(s);
     }
     Ok("".to_string())
