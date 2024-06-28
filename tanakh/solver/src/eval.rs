@@ -1,6 +1,6 @@
 use anyhow::bail;
 
-use crate::expr::{base94, base94enc, BinOp, Expr, UnOp};
+use crate::expr::{base94, base94_char, base94enc, str_enc, BinOp, Expr, UnOp};
 
 #[derive(Default)]
 struct Env {
@@ -25,22 +25,15 @@ impl Env {
 }
 
 pub fn eval(e: &Expr) -> anyhow::Result<Expr> {
-    let mut e = e.clone();
-    loop {
-        let ne = reduce(&e, &mut Env::default())?;
-        if e == ne {
-            return Ok(e);
-        }
-        e = ne;
-    }
+    reduce_to_nf(e, &mut Env::default())
 }
 
-fn reduce(e: &Expr, env: &mut Env) -> anyhow::Result<Expr> {
+fn reduce_to_nf(e: &Expr, env: &mut Env) -> anyhow::Result<Expr> {
     log::info!("eval: {e}");
 
     Ok(match e {
         Expr::Un(op, e) => {
-            let e = reduce(e.as_ref(), env)?;
+            let e = reduce_to_nf(e.as_ref(), env)?;
             match op {
                 UnOp::Neg => match e {
                     Expr::Int(n) => Expr::Int(-n),
@@ -63,10 +56,10 @@ fn reduce(e: &Expr, env: &mut Env) -> anyhow::Result<Expr> {
         Expr::Bin(op, l, r) => {
             if matches!(op, BinOp::App) {
                 log::info!("app: {l}, {r}");
-                let f = reduce(l.as_ref(), env)?;
+                let f = reduce_to_nf(l.as_ref(), env)?;
                 match f {
                     Expr::Lambda(v, e) => {
-                        return reduce(
+                        return reduce_to_nf(
                             &beta_reduction(e.as_ref(), v, r.as_ref(), &mut vec![])?,
                             env,
                         );
@@ -75,8 +68,8 @@ fn reduce(e: &Expr, env: &mut Env) -> anyhow::Result<Expr> {
                 }
             }
 
-            let l = reduce(l.as_ref(), env)?;
-            let r = reduce(r.as_ref(), env)?;
+            let l = reduce_to_nf(l.as_ref(), env)?;
+            let r = reduce_to_nf(r.as_ref(), env)?;
             match (op, &l, &r) {
                 (BinOp::Add, l, r) => match (l, r) {
                     (Expr::Int(n1), Expr::Int(n2)) => Expr::Int(n1 + n2),
@@ -138,10 +131,10 @@ fn reduce(e: &Expr, env: &mut Env) -> anyhow::Result<Expr> {
             }
         }
         Expr::If(cond, th, el) => {
-            let cond = reduce(cond.as_ref(), env)?;
+            let cond = reduce_to_nf(cond.as_ref(), env)?;
             match cond {
-                Expr::Bool(true) => reduce(th.as_ref(), env)?,
-                Expr::Bool(false) => reduce(el.as_ref(), env)?,
+                Expr::Bool(true) => reduce_to_nf(th.as_ref(), env)?,
+                Expr::Bool(false) => reduce_to_nf(el.as_ref(), env)?,
                 _ => bail!("Invalid condition: {cond:?}"),
             }
         }
@@ -151,6 +144,7 @@ fn reduce(e: &Expr, env: &mut Env) -> anyhow::Result<Expr> {
 }
 
 fn str_to_int(s: &str) -> i64 {
+    let s = str_enc(s).unwrap();
     let mut ret = 0;
     for c in s.chars() {
         ret = ret * 94 + base94(c).unwrap();
@@ -162,7 +156,7 @@ fn int_to_str(n: i64) -> String {
     let mut s = String::new();
     let mut n = n;
     while n > 0 {
-        s.push(base94enc(n % 94).unwrap());
+        s.push(base94_char(base94enc(n % 94).unwrap()).unwrap());
         n /= 94;
     }
     s.chars().rev().collect::<String>()

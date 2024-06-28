@@ -92,9 +92,22 @@ pub fn base94enc(n: i64) -> anyhow::Result<char> {
     Ok((n + '!' as i64) as u8 as char)
 }
 
+const TBL: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!\"#$%&'()*+,-./:;<=>?@[\\]^_`|~ \n";
+
 pub fn base94_char(c: char) -> anyhow::Result<char> {
-    const TBL: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!\"#$%&'()*+,-./:;<=>?@[\\]^_`|~ \n";
     Ok(TBL[base94(c)? as usize] as char)
+}
+
+pub fn char_enc(c: char) -> anyhow::Result<char> {
+    let ix = TBL
+        .iter()
+        .position(|&x| x == c as u8)
+        .ok_or_else(|| anyhow!("invalid char"))?;
+    base94enc(ix as i64)
+}
+
+pub fn str_enc(s: &str) -> anyhow::Result<String> {
+    s.chars().map(char_enc).collect()
 }
 
 impl Token {
