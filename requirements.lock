@@ -45,6 +45,7 @@ httpcore==1.0.5
 httptools==0.6.1
     # via uvicorn
 httpx==0.27.0
+    # via backend-py
     # via fastapi
 idna==3.7
     # via anyio

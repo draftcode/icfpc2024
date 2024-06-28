@@ -70,13 +70,13 @@ impl Token {
         let ty = cur.0.next().ok_or_else(|| anyhow!("invalid token"))?;
         Ok(match ty {
             'T' => {
-                if cur.0.next().is_none() {
+                if cur.0.next().is_some() {
                     bail!("invalid token: {s}")
                 }
                 Token::Bool(true)
             }
             'F' => {
-                if cur.0.next().is_none() {
+                if cur.0.next().is_some() {
                     bail!("invalid token: {s}")
                 }
                 Token::Bool(false)

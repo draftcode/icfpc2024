@@ -1,16 +1,13 @@
-import importlib.resources as pkg_resources
-
-from backend_rs import hello  # type: ignore
-from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
-from pydantic import BaseModel
-from sqlmodel import select
-from typing import Sequence
-
-from . import models
+import httpx
+from fastapi import FastAPI, Body
+from fastapi.responses import RedirectResponse, PlainTextResponse
+from .config import settings
 from .deps import SessionDep
+from .models import CommunicationLog
+import datetime
 
 app = FastAPI()
+http_client = httpx.Client(headers={"Authorization": f"Bearer {settings.API_TOKEN}"})
 
 
 @app.get("/", include_in_schema=False)
@@ -18,18 +15,19 @@ async def root():
     return RedirectResponse("/docs")
 
 
-class SampleResponse(BaseModel):
-    backend_rs: str
-    data_test_txt: str
-    dummies: Sequence[models.DummyProblem]
+@app.post("/communicate", response_class=PlainTextResponse)
+async def communicate(
+    session: SessionDep, body: str = Body(..., media_type="text/plain")
+) -> str:
+    resp = http_client.post("https://boundvariable.space/communicate", content=body)
+    resp.raise_for_status()
 
+    resp_str = resp.text
 
-@app.get("/message")
-async def message(session: SessionDep) -> SampleResponse:
-    dummies = session.exec(select(models.DummyProblem)).all()
-    content = pkg_resources.files("backend_py").joinpath("data/test.txt").read_text()
-    return SampleResponse(
-        backend_rs=hello(),
-        data_test_txt=content,
-        dummies=dummies,
+    log = CommunicationLog(
+        created=datetime.datetime.now(), request=body, response=resp_str
     )
+    session.add(log)
+    session.commit()
+
+    return resp_str
