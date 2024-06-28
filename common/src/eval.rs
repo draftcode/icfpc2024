@@ -107,6 +107,8 @@ fn reduce_to_nf(e: &Expr, env: &mut Env) -> anyhow::Result<Expr> {
                 },
                 (BinOp::Eq, l, r) => match (l, r) {
                     (Expr::Int(n1), Expr::Int(n2)) => Expr::Bool(n1 == n2),
+                    (Expr::String(n1), Expr::String(n2)) => Expr::Bool(n1 == n2),
+                    (Expr::Bool(n1), Expr::Bool(n2)) => Expr::Bool(n1 == n2),
                     _ => bail!("Invalid operator for eq: {op:?} {l:?} {r:?}"),
                 },
                 (BinOp::Or, l, r) => match (l, r) {
