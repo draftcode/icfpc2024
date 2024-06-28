@@ -11,5 +11,5 @@ members = [
   "sandbox/lifegame",
   "tanakh/evaluator",
   "chun/spaceship_order",
-  "tanakh/spaceship",
+  "tanakh/spaceship", "tanakh/solver",
 ]
