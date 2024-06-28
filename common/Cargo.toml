@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.86"
 log = "0.4.22"
+num-bigint = "0.4.6"

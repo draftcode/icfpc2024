@@ -1,7 +1,9 @@
 use std::{io::Write as _, path::PathBuf};
 
-use evaluator::*;
-use expr::{tokenize, Expr, UnOp};
+use common::{
+    eval,
+    expr::{tokenize, BinOp, Expr, UnOp},
+};
 
 fn to_haskell(e: &Expr) -> String {
     match e {
@@ -22,20 +24,20 @@ fn to_haskell(e: &Expr) -> String {
             let l = to_haskell(l);
             let r = to_haskell(r);
             match op {
-                expr::BinOp::Add => format!("({l}) + ({r})"),
-                expr::BinOp::Sub => format!("({l}) - ({r})"),
-                expr::BinOp::Mul => format!("({l}) * ({r})"),
-                expr::BinOp::Div => format!("({l}) / ({r})"),
-                expr::BinOp::Mod => format!("({l}) `mod` ({r})"),
-                expr::BinOp::Lt => format!("({l}) < ({r})"),
-                expr::BinOp::Gt => format!("({l}) > ({r})"),
-                expr::BinOp::Eq => format!("({l}) == ({r})"),
-                expr::BinOp::Or => format!("({l}) || ({r})"),
-                expr::BinOp::And => format!("({l}) && ({r})"),
-                expr::BinOp::Concat => format!("({l}) ++ ({r})"),
-                expr::BinOp::Take => format!("take ({l}) ({r})"),
-                expr::BinOp::Drop => format!("drop ({l}) ({r})"),
-                expr::BinOp::App => format!("({l}) ({r})"),
+                BinOp::Add => format!("({l}) + ({r})"),
+                BinOp::Sub => format!("({l}) - ({r})"),
+                BinOp::Mul => format!("({l}) * ({r})"),
+                BinOp::Div => format!("({l}) / ({r})"),
+                BinOp::Mod => format!("({l}) `mod` ({r})"),
+                BinOp::Lt => format!("({l}) < ({r})"),
+                BinOp::Gt => format!("({l}) > ({r})"),
+                BinOp::Eq => format!("({l}) == ({r})"),
+                BinOp::Or => format!("({l}) || ({r})"),
+                BinOp::And => format!("({l}) && ({r})"),
+                BinOp::Concat => format!("({l}) ++ ({r})"),
+                BinOp::Take => format!("take ({l}) ({r})"),
+                BinOp::Drop => format!("drop ({l}) ({r})"),
+                BinOp::App => format!("({l}) ({r})"),
             }
         }
         Expr::If(cond, th, el) => {
@@ -71,20 +73,20 @@ fn to_scheme(e: &Expr) -> String {
             let l = to_scheme(l);
             let r = to_scheme(r);
             let ret = match op {
-                expr::BinOp::Add => format!("(+ (force {l}) (force {r}))"),
-                expr::BinOp::Sub => format!("(- (force {l}) (force {r}))"),
-                expr::BinOp::Mul => format!("(* (force {l}) (force {r}))"),
-                expr::BinOp::Div => format!("(div (force {l}) (force {r}))"),
-                expr::BinOp::Mod => format!("(mod (force {l}) (force {r}))"),
-                expr::BinOp::Lt => format!("(< (force {l}) (force {r}))"),
-                expr::BinOp::Gt => format!("(> (force {l}) (force {r}))"),
-                expr::BinOp::Eq => format!("(= (force {l}) (force {r}))"),
-                expr::BinOp::Or => format!("(or (force {l}) (force {r}))"),
-                expr::BinOp::And => format!("(and (force {l}) (force {r}))"),
-                expr::BinOp::Concat => format!("(string-append (force {l}) (force {r}))"),
-                expr::BinOp::Take => format!("(string-take (force {r}) (force {l}))"),
-                expr::BinOp::Drop => format!("(string-drop (force {r}) (force {l}))"),
-                expr::BinOp::App => format!("((force {l}) {r})"),
+                BinOp::Add => format!("(+ (force {l}) (force {r}))"),
+                BinOp::Sub => format!("(- (force {l}) (force {r}))"),
+                BinOp::Mul => format!("(* (force {l}) (force {r}))"),
+                BinOp::Div => format!("(div (force {l}) (force {r}))"),
+                BinOp::Mod => format!("(mod (force {l}) (force {r}))"),
+                BinOp::Lt => format!("(< (force {l}) (force {r}))"),
+                BinOp::Gt => format!("(> (force {l}) (force {r}))"),
+                BinOp::Eq => format!("(= (force {l}) (force {r}))"),
+                BinOp::Or => format!("(or (force {l}) (force {r}))"),
+                BinOp::And => format!("(and (force {l}) (force {r}))"),
+                BinOp::Concat => format!("(string-append (force {l}) (force {r}))"),
+                BinOp::Take => format!("(string-take (force {r}) (force {l}))"),
+                BinOp::Drop => format!("(string-drop (force {r}) (force {l}))"),
+                BinOp::App => format!("((force {l}) {r})"),
             };
             format!("(lazy {ret})")
         }
@@ -105,7 +107,7 @@ fn to_scheme(e: &Expr) -> String {
 fn scheme(path: PathBuf) -> anyhow::Result<()> {
     let s = std::fs::read_to_string(&path)?;
     let tokens = tokenize(&s)?;
-    let expr = Expr::parse(&tokens)?;
+    let expr = Expr::parse_tokens(&tokens)?;
     println!("(use srfi-13)");
     println!("(print (force {}))", to_scheme(&expr));
     Ok(())
@@ -115,7 +117,7 @@ fn scheme(path: PathBuf) -> anyhow::Result<()> {
 fn haskell(path: PathBuf) -> anyhow::Result<()> {
     let s = std::fs::read_to_string(&path)?;
     let tokens = tokenize(&s)?;
-    let expr = Expr::parse(&tokens)?;
+    let expr = Expr::parse_tokens(&tokens)?;
     println!("{}", to_haskell(&expr));
     Ok(())
 }
@@ -133,9 +135,7 @@ fn repl() -> anyhow::Result<()> {
 
         let mut s = String::new();
         stdin.read_line(&mut s)?;
-        let tokens = tokenize(&s)?;
-        log::info!("{:?}", tokens);
-        let expr = Expr::parse(&tokens)?;
+        let expr: Expr = s.parse()?;
         log::info!("{}", expr);
         let result = eval::eval(&expr)?;
         println!("{}", result);

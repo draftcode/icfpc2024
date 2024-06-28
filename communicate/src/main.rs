@@ -3,7 +3,8 @@ use std::process::ExitCode;
 
 use anyhow::{ensure, Result};
 use clap::Parser;
-use common::expr::Token;
+use common::eval::eval;
+use common::expr::{Expr, Token};
 
 fn get_api_token_from_env() -> String {
     std::env::var("API_TOKEN").unwrap_or_default()
@@ -34,14 +35,13 @@ fn main() -> Result<ExitCode> {
 
     let stdin = std::io::stdin().lock();
     let mut stdin = BufReader::new(stdin);
-    let mut stdout = std::io::stdout().lock();
     let client = reqwest::blocking::Client::new();
 
     if let Some(request) = args.request {
         let input_expr = Token::String(request);
 
         let response = client
-            .post(args.api_url)
+            .post(&args.api_url)
             .header("Authorization", format!("Bearer {}", args.api_token))
             .header("Content-Type", "text/plain")
             .body(input_expr.encoded().to_string())
@@ -52,19 +52,25 @@ fn main() -> Result<ExitCode> {
             response.status()
         );
         let text = response.text()?;
+        eprintln!("{}", text);
 
-        if let Ok(Token::String(s)) = Token::from_str(&text) {
-            writeln!(&mut stdout, "{}", s)?;
+        if let Ok(expr) = text.parse::<Expr>() {
+            eprintln!("{}", expr);
+            let expr = eval(&expr)?;
+            if let Expr::String(s) = expr {
+                println!("{}", s);
+            } else {
+                eprintln!("*** Failed to evaluate the response! ***");
+                return Ok(ExitCode::FAILURE);
+            }
         }
 
-        eprintln!("*** Failed to evaluate the response! Printing the raw response. ***");
-        writeln!(stdout, "{}", text)?;
-        return Ok(ExitCode::FAILURE);
+        return Ok(ExitCode::SUCCESS);
     }
 
     loop {
-        write!(&mut stdout, "> ")?;
-        stdout.flush()?;
+        print!("> ");
+        std::io::stdout().flush()?;
         let mut line = String::new();
         stdin.read_line(&mut line)?;
         if line.is_empty() {
@@ -74,7 +80,7 @@ fn main() -> Result<ExitCode> {
         let input_token = Token::String(line.trim().to_string());
 
         let response = client
-            .post(args.api_url)
+            .post(&args.api_url)
             .header("Authorization", format!("Bearer {}", args.api_token))
             .header("Content-Type", "text/plain")
             .body(input_token.encoded().to_string())
@@ -85,10 +91,16 @@ fn main() -> Result<ExitCode> {
             response.status()
         );
         let text = response.text()?;
-        writeln!(stdout, "{}", text)?;
+        eprintln!("{}", text);
 
-        if let Ok(Token::String(s)) = Token::from_str(&text) {
-            writeln!(&mut stdout, "{}", s)?;
+        if let Ok(expr) = text.parse::<Expr>() {
+            eprintln!("{}", expr);
+            let expr = eval(&expr)?;
+            if let Expr::String(s) = expr {
+                println!("{}", s);
+            } else {
+                eprintln!("*** Failed to evaluate the response! ***");
+            }
         }
     }
 
