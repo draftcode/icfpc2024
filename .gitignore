@@ -19,3 +19,5 @@ Cargo.lock
 __pycache__
 *.so
 dist
+
+.communicate.history
