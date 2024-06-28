@@ -9,5 +9,5 @@ members = [
   "sandbox/hello",
   "sandbox/lifegame-wasm",
   "sandbox/lifegame",
-  "tanakh/solver",
+  "tanakh/solver", "chun/spaceship_order",
 ]

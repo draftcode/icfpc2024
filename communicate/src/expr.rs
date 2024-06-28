@@ -196,7 +196,9 @@ impl Expr {
 impl ToString for Expr {
     fn to_string(&self) -> String {
         match self {
-            Expr::String(s) => format!("S{}", s.chars().map(encode_base94_char).collect::<String>()),
+            Expr::String(s) => {
+                format!("S{}", s.chars().map(encode_base94_char).collect::<String>())
+            }
             _ => unimplemented!(),
         }
     }
@@ -208,6 +210,9 @@ mod tests {
 
     #[test]
     fn test_to_string() {
-        assert_eq!(Expr::String("get index".to_string()).to_string(), "S'%4}).$%8");
+        assert_eq!(
+            Expr::String("get index".to_string()).to_string(),
+            "S'%4}).$%8"
+        );
     }
 }
