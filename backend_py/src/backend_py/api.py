@@ -1,6 +1,7 @@
 import httpx
 from backend_rs import decode_message  # type: ignore
 from fastapi import FastAPI, Body, Query, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, PlainTextResponse
 from .config import settings
 from .deps import SessionDep
@@ -10,7 +11,19 @@ import datetime
 from typing import Sequence
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 http_client = httpx.Client(headers={"Authorization": f"Bearer {settings.API_TOKEN}"})
+
+
+@app.get("/")
+async def main():
+    return {"message": "Hello World"}
 
 
 @app.get("/", include_in_schema=False)
@@ -54,7 +67,9 @@ async def communications(
     if decoded_request:
         q = q.where(CommunicationLog.decoded_request_prefix == decoded_request)
     if decoded_request_prefix:
-        q = q.where(CommunicationLog.decoded_request_prefix.like(decoded_request_prefix + "%"))  # type: ignore
+        q = q.where(
+            CommunicationLog.decoded_request_prefix.like(decoded_request_prefix + "%")  # type: ignore
+        )
 
     return session.exec(
         q.order_by(CommunicationLog.id.desc())  # type: ignore
