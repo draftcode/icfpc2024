@@ -1,4 +1,8 @@
-use std::{iter::Peekable, rc::Rc, str::Chars};
+use std::{
+    iter::Peekable,
+    rc::Rc,
+    str::{Chars, FromStr},
+};
 
 use anyhow::{anyhow, bail};
 use num_bigint::BigInt;
@@ -181,8 +185,10 @@ impl std::fmt::Display for BinOpEncoded {
 
 struct Cursor<'a>(Peekable<Chars<'a>>);
 
-impl Token {
-    pub fn from_str(s: &str) -> anyhow::Result<Token> {
+impl FromStr for Token {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> anyhow::Result<Token> {
         let mut cur = Cursor(s.chars().peekable());
 
         let ty = cur.0.next().ok_or_else(|| anyhow!("invalid token"))?;
@@ -303,7 +309,7 @@ impl Expr {
         }
     }
 
-    pub fn parse(tokens: &[Token]) -> anyhow::Result<Expr> {
+    pub fn parse_tokens(tokens: &[Token]) -> anyhow::Result<Expr> {
         let mut cur = TokenCursor(tokens.iter().peekable());
         let ret = Self::parse_expr(&mut cur)?;
         if cur.0.next().is_some() {
@@ -339,6 +345,15 @@ impl Expr {
             }
             e => bail!("invalid expr: {e:?}"),
         })
+    }
+}
+
+impl FromStr for Expr {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> anyhow::Result<Expr> {
+        let tokens = tokenize(s)?;
+        Expr::parse_tokens(&tokens)
     }
 }
 

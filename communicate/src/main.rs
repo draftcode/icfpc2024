@@ -53,7 +53,7 @@ fn main() -> Result<ExitCode> {
         );
         let text = response.text()?;
 
-        if let Ok(Token::String(s)) = Token::from_str(&text) {
+        if let Ok(Token::String(s)) = text.parse() {
             writeln!(&mut stdout, "{}", s)?;
         }
 
@@ -87,7 +87,7 @@ fn main() -> Result<ExitCode> {
         let text = response.text()?;
         writeln!(stdout, "{}", text)?;
 
-        if let Ok(Token::String(s)) = Token::from_str(&text) {
+        if let Ok(Token::String(s)) = text.parse() {
             writeln!(&mut stdout, "{}", s)?;
         }
     }
