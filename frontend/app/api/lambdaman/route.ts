@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   const id = searchParams.get("id");
 
   const data = await fs.promises.readFile(
-    `../problems/lambdaman/${id}.txt`,
+    `${process.cwd()}/problems/lambdaman/${id}.txt`,
     "utf8"
   );
 
