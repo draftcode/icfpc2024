@@ -122,7 +122,7 @@ int main() {
     }
 
     string best_moves = solve(input);
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 1000; i++) {
         string moves = solve(input);
         if (moves.size() < best_moves.size()) {
             best_moves = moves;
