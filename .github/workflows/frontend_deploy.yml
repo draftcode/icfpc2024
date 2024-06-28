@@ -25,7 +25,7 @@ jobs:
 
       - uses: docker/build-push-action@v6
         with:
-          context: frontend
+          context: .
           file: frontend/Dockerfile
           push: true
           tags: asia-northeast1-docker.pkg.dev/icfp-contest-compute/icfpc2024/frontend:latest

@@ -23,7 +23,7 @@ function TopBar() {
   return (
     <div className="navbar justify-between pb-4">
       <Link
-        className="btn btn-ghost normal-case text-xl hover:text-white hover:underline focus:text-white"
+        className="btn btn-ghost normal-case text-xl hover:text-black hover:underline focus:text-black"
         href="/"
       >
         Spica [kari]

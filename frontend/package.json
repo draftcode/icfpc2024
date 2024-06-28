@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@heroicons/react": "^2.1.4",
     "@tailwindcss/typography": "^0.5.13",
     "axios": "^1.7.2",
     "biwascheme": "^0.8.0",
@@ -21,10 +22,10 @@
     "swr": "^2.2.5"
   },
   "devDependencies": {
+    "@types/luxon": "^3.4.2",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "@types/luxon": "^3.4.2",
     "clsx": "^2.1.1",
     "daisyui": "^4.12.2",
     "postcss": "^8",
