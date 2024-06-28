@@ -21,11 +21,6 @@ app.add_middleware(
 http_client = httpx.Client(headers={"Authorization": f"Bearer {settings.API_TOKEN}"})
 
 
-@app.get("/")
-async def main():
-    return {"message": "Hello World"}
-
-
 @app.get("/", include_in_schema=False)
 async def root():
     return RedirectResponse("/docs")
