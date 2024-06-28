@@ -1,10 +1,12 @@
-use std::io::{BufRead, BufReader, Write as _};
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use anyhow::{ensure, Result};
+use anyhow::{bail, ensure, Result};
 use clap::Parser;
 use common::eval::eval;
 use common::expr::{Expr, Token};
+use rustyline::error::ReadlineError;
+use rustyline::DefaultEditor;
 
 fn get_api_token_from_env() -> String {
     std::env::var("API_TOKEN").unwrap_or_default()
@@ -12,6 +14,16 @@ fn get_api_token_from_env() -> String {
 
 fn get_api_url_from_env() -> String {
     std::env::var("API_URL").unwrap_or("https://icfp-api.badalloc.com/communicate".to_string())
+}
+
+fn find_history_file() -> Result<PathBuf> {
+    let mut current_dir = Path::new(".").canonicalize().unwrap();
+    for dir in current_dir.ancestors() {
+        if dir.join(".git").exists() {
+            return Ok(dir.join(".communicate.history"));
+        }
+    }
+    bail!("Must be run under a git repository");
 }
 
 #[derive(Parser, Debug)]
@@ -33,8 +45,6 @@ fn main() -> Result<ExitCode> {
         return Ok(ExitCode::FAILURE);
     }
 
-    let stdin = std::io::stdin().lock();
-    let mut stdin = BufReader::new(stdin);
     let client = reqwest::blocking::Client::new();
 
     if let Some(request) = args.request {
@@ -68,14 +78,18 @@ fn main() -> Result<ExitCode> {
         return Ok(ExitCode::SUCCESS);
     }
 
+    let history_path = find_history_file()?;
+
+    let mut rl = DefaultEditor::new()?;
+    rl.load_history(&history_path).ok();
+
     loop {
-        print!("> ");
-        std::io::stdout().flush()?;
-        let mut line = String::new();
-        stdin.read_line(&mut line)?;
-        if line.is_empty() {
-            break;
-        }
+        let line = match rl.readline(">>> ") {
+            Ok(line) => line,
+            Err(ReadlineError::Interrupted) | Err(ReadlineError::Eof) => break,
+            Err(err) => return Err(err.into()),
+        };
+        rl.add_history_entry(&line)?;
 
         let input_token = Token::String(line.trim().to_string());
 
@@ -103,6 +117,8 @@ fn main() -> Result<ExitCode> {
             }
         }
     }
+
+    rl.save_history(&history_path)?;
 
     Ok(ExitCode::SUCCESS)
 }
