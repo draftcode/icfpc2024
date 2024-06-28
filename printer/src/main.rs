@@ -1,7 +1,6 @@
+use anyhow::{anyhow, bail, Result};
 use std::io;
 use std::{iter::Peekable, str::Chars};
-use anyhow::{anyhow, bail, Result};
-
 
 #[derive(Clone, Debug)]
 pub enum Token {
@@ -188,45 +187,91 @@ impl Expr {
 
     pub fn pretty_print(&self) -> String {
         match &self {
-            Expr::Bool(b) => { if *b { "true".to_string() } else { "false".to_string() }},
-            Expr::Int(i) => { i.to_string() },
-            Expr::String(s) => { format!("\"{}\"", s) },
-            Expr::Var(idx) => { format!("v{}", idx) },
+            Expr::Bool(b) => {
+                if *b {
+                    "true".to_string()
+                } else {
+                    "false".to_string()
+                }
+            }
+            Expr::Int(i) => i.to_string(),
+            Expr::String(s) => {
+                format!("\"{}\"", s)
+            }
+            Expr::Var(idx) => {
+                format!("v{}", idx)
+            }
             Expr::Un(op, expr) => {
                 let operand = expr.as_ref().pretty_print();
                 match op {
-                    UnOp::Neg => { format!("-{}", operand) },
-                    UnOp::Not => { format!("!{}", operand) },
-                    UnOp::StrToInt => { format!("stoi({})", operand) },
-                    UnOp::IntToStr => { format!("itos({})", operand) },
+                    UnOp::Neg => {
+                        format!("-{}", operand)
+                    }
+                    UnOp::Not => {
+                        format!("!{}", operand)
+                    }
+                    UnOp::StrToInt => {
+                        format!("stoi({})", operand)
+                    }
+                    UnOp::IntToStr => {
+                        format!("itos({})", operand)
+                    }
                 }
-            },
+            }
             Expr::Bin(op, lhs, rhs) => {
                 let l = lhs.as_ref().pretty_print();
                 let r = rhs.as_ref().pretty_print();
                 match op {
-                    BinOp::Add => { format!("{}+{}", l, r) },
-                    BinOp::Sub => { format!("{}-{}", l, r) },
-                    BinOp::Mul => { format!("{}*{}", l, r) },
-                    BinOp::Div => { format!("{}/{}", l, r) },
-                    BinOp::Mod => { format!("{}%{}", l, r) },
-                    BinOp::Lt => { format!("{}<{}", l, r) },
-                    BinOp::Gt => { format!("{}>{}", l, r) },
-                    BinOp::Eq => { format!("{}=={}", l, r) },
-                    BinOp::Or => { format!("{}|{}", l, r) },
-                    BinOp::And => { format!("{}&{}", l, r) },
-                    BinOp::Concat => { format!("concat({},{})", l, r)},
-                    BinOp::Take => { format!("take({},{})", l, r)},
-                    BinOp::Drop => { format!("drop({},{})", l, r)},
-                    BinOp::App => { format!("({} {})", l, r) },
+                    BinOp::Add => {
+                        format!("{}+{}", l, r)
+                    }
+                    BinOp::Sub => {
+                        format!("{}-{}", l, r)
+                    }
+                    BinOp::Mul => {
+                        format!("{}*{}", l, r)
+                    }
+                    BinOp::Div => {
+                        format!("{}/{}", l, r)
+                    }
+                    BinOp::Mod => {
+                        format!("{}%{}", l, r)
+                    }
+                    BinOp::Lt => {
+                        format!("{}<{}", l, r)
+                    }
+                    BinOp::Gt => {
+                        format!("{}>{}", l, r)
+                    }
+                    BinOp::Eq => {
+                        format!("{}=={}", l, r)
+                    }
+                    BinOp::Or => {
+                        format!("{}|{}", l, r)
+                    }
+                    BinOp::And => {
+                        format!("{}&{}", l, r)
+                    }
+                    BinOp::Concat => {
+                        format!("concat({},{})", l, r)
+                    }
+                    BinOp::Take => {
+                        format!("take({},{})", l, r)
+                    }
+                    BinOp::Drop => {
+                        format!("drop({},{})", l, r)
+                    }
+                    BinOp::App => {
+                        format!("({} {})", l, r)
+                    }
                 }
-            },
+            }
             Expr::If(cond, th, el) => {
                 let c = cond.as_ref().pretty_print();
                 let t = th.as_ref().pretty_print();
                 let e = el.as_ref().pretty_print();
                 format!("if ({}) then {{{}}} else {{{}}})", c, t, e)
-            },
+            }
             Expr::Lambda(idx, body) => {
                 let b = body.as_ref().pretty_print();
                 format!("(\\v{}. {})", idx, b)
@@ -236,45 +281,91 @@ impl Expr {
 
     pub fn pretty_print_lisp(&self) -> String {
         match &self {
-            Expr::Bool(b) => { if *b { "#t".to_string() } else { "#f".to_string() }},
-            Expr::Int(i) => { i.to_string() },
-            Expr::String(s) => { format!("\"{}\"", s.replace("\n", "\\n")) },
-            Expr::Var(idx) => { format!("v{}", idx) },
+            Expr::Bool(b) => {
+                if *b {
+                    "#t".to_string()
+                } else {
+                    "#f".to_string()
+                }
+            }
+            Expr::Int(i) => i.to_string(),
+            Expr::String(s) => {
+                format!("\"{}\"", s.replace("\n", "\\n"))
+            }
+            Expr::Var(idx) => {
+                format!("v{}", idx)
+            }
             Expr::Un(op, expr) => {
                 let operand = expr.as_ref().pretty_print_lisp();
                 match op {
-                    UnOp::Neg => { format!("-{}", operand) },
-                    UnOp::Not => { format!("!{}", operand) },
-                    UnOp::StrToInt => { format!("(stoi {})", operand) },
-                    UnOp::IntToStr => { format!("(itos {})", operand) },
+                    UnOp::Neg => {
+                        format!("-{}", operand)
+                    }
+                    UnOp::Not => {
+                        format!("!{}", operand)
+                    }
+                    UnOp::StrToInt => {
+                        format!("(stoi {})", operand)
+                    }
+                    UnOp::IntToStr => {
+                        format!("(itos {})", operand)
+                    }
                 }
-            },
+            }
             Expr::Bin(op, lhs, rhs) => {
                 let l = lhs.as_ref().pretty_print_lisp();
                 let r = rhs.as_ref().pretty_print_lisp();
                 match op {
-                    BinOp::Add => { format!("(+ {} {})", l, r) },
-                    BinOp::Sub => { format!("(- {} {})", l, r) },
-                    BinOp::Mul => { format!("(* {} {})", l, r) },
-                    BinOp::Div => { format!("(/ {} {})", l, r) },
-                    BinOp::Mod => { format!("(% {} {})", l, r) },
-                    BinOp::Lt => { format!("(< {} {})", l, r) },
-                    BinOp::Gt => { format!("(> {} {})", l, r) },
-                    BinOp::Eq => { format!("(equal? {} {})", l, r) },
-                    BinOp::Or => { format!("(and {} {})", l, r) },
-                    BinOp::And => { format!("(or {} {})", l, r) },
-                    BinOp::Concat => { format!("(string-append {} {})", l, r)},
-                    BinOp::Take => { format!("(take {} {})", l, r)},
-                    BinOp::Drop => { format!("(drop {} {})", l, r)},
-                    BinOp::App => { format!("({} {})", l, r) },
+                    BinOp::Add => {
+                        format!("(+ {} {})", l, r)
+                    }
+                    BinOp::Sub => {
+                        format!("(- {} {})", l, r)
+                    }
+                    BinOp::Mul => {
+                        format!("(* {} {})", l, r)
+                    }
+                    BinOp::Div => {
+                        format!("(/ {} {})", l, r)
+                    }
+                    BinOp::Mod => {
+                        format!("(% {} {})", l, r)
+                    }
+                    BinOp::Lt => {
+                        format!("(< {} {})", l, r)
+                    }
+                    BinOp::Gt => {
+                        format!("(> {} {})", l, r)
+                    }
+                    BinOp::Eq => {
+                        format!("(equal? {} {})", l, r)
+                    }
+                    BinOp::Or => {
+                        format!("(and {} {})", l, r)
+                    }
+                    BinOp::And => {
+                        format!("(or {} {})", l, r)
+                    }
+                    BinOp::Concat => {
+                        format!("(string-append {} {})", l, r)
+                    }
+                    BinOp::Take => {
+                        format!("(take {} {})", l, r)
+                    }
+                    BinOp::Drop => {
+                        format!("(drop {} {})", l, r)
+                    }
+                    BinOp::App => {
+                        format!("({} {})", l, r)
+                    }
                 }
-            },
+            }
             Expr::If(cond, th, el) => {
                 let c = cond.as_ref().pretty_print_lisp();
                 let t = th.as_ref().pretty_print_lisp();
                 let e = el.as_ref().pretty_print_lisp();
                 format!("(if {} {} {})", c, t, e)
-            },
+            }
             Expr::Lambda(idx, body) => {
                 let b = body.as_ref().pretty_print_lisp();
                 format!("(lambda (v{}) {})", idx, b)

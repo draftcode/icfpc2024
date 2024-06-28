@@ -14,12 +14,12 @@ jobs:
         uses: google-github-actions/auth@v2
         with:
           token_format: access_token
-          workload_identity_provider: projects/177174127123/locations/global/workloadIdentityPools/github/providers/github
+          workload_identity_provider: projects/462797584958/locations/global/workloadIdentityPools/github/providers/github
           service_account: github-actions@misc-project-220721.iam.gserviceaccount.com
 
       - uses: docker/login-action@v3
         with:
-          registry: us-central1-docker.pkg.dev
+          registry: asia-northeast1-docker.pkg.dev
           username: oauth2accesstoken
           password: ${{ steps.auth.outputs.access_token }}
 
@@ -28,14 +28,14 @@ jobs:
           context: frontend
           file: frontend/Dockerfile
           push: true
-          tags: us-central1-docker.pkg.dev/misc-project-220721/icfptest/frontend:latest
+          tags: asia-northeast1-docker.pkg.dev/icfp-contest-compute/icfpc2024/frontend:latest
 
       - run: |
           mkdir -p ~/.ssh/
           echo "$SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           cat >>~/.ssh/config <<END
-          Host icfptest.badalloc.com
+          Host icfp.badalloc.com
             User root
             IdentityFile ~/.ssh/id_ed25519
             StrictHostKeyChecking no
@@ -43,5 +43,5 @@ jobs:
         env:
           SSH_KEY: ${{ secrets.PROD_DEPLOY_PRIVATE_KEY }}
 
-      - run: ssh icfptest.badalloc.com 'cd /root/icfpc2024 && git pull'
-      - run: ssh icfptest.badalloc.com 'cd /root/icfpc2024/frontend && docker compose up --detach --force-recreate'
+      - run: ssh icfp.badalloc.com 'cd /root/icfpc2024 && git pull'
+      - run: ssh icfp.badalloc.com 'cd /root/icfpc2024/frontend && docker compose up --detach --force-recreate'
