@@ -1,4 +1,7 @@
+use std::rc::Rc;
+
 use anyhow::bail;
+use num_bigint::BigInt;
 
 use crate::expr::{base94, base94_char, base94enc, str_enc, BinOp, Expr, UnOp};
 
@@ -29,14 +32,14 @@ pub fn eval(e: &Expr) -> anyhow::Result<Expr> {
 }
 
 fn reduce_to_nf(e: &Expr, env: &mut Env) -> anyhow::Result<Expr> {
-    log::info!("eval: {e}");
+    log::trace!("eval: {e}");
 
     Ok(match e {
         Expr::Un(op, e) => {
             let e = reduce_to_nf(e.as_ref(), env)?;
             match op {
                 UnOp::Neg => match e {
-                    Expr::Int(n) => Expr::Int(-n),
+                    Expr::Int(n) => Expr::Int(Rc::new(-n.as_ref().clone())),
                     _ => bail!("Invalid operator for neg: {e:?}"),
                 },
                 UnOp::Not => match e {
@@ -44,18 +47,18 @@ fn reduce_to_nf(e: &Expr, env: &mut Env) -> anyhow::Result<Expr> {
                     _ => bail!("Invalid operator for not: {e:?}"),
                 },
                 UnOp::StrToInt => match e {
-                    Expr::String(s) => Expr::Int(str_to_int(&s)),
+                    Expr::String(s) => Expr::Int(str_to_int(&s).into()),
                     _ => bail!("Invalid operator for str_to_int: {e:?}"),
                 },
                 UnOp::IntToStr => match e {
-                    Expr::Int(n) => Expr::String(int_to_str(n)),
+                    Expr::Int(n) => Expr::String(int_to_str(&n).into()),
                     _ => bail!("Invalid operator for int_to_str: {e:?}"),
                 },
             }
         }
         Expr::Bin(op, l, r) => {
             if matches!(op, BinOp::App) {
-                log::info!("app: {l}, {r}");
+                log::trace!("app: {l}, {r}");
                 let f = reduce_to_nf(l.as_ref(), env)?;
                 match f {
                     Expr::Lambda(v, e) => {
@@ -72,23 +75,23 @@ fn reduce_to_nf(e: &Expr, env: &mut Env) -> anyhow::Result<Expr> {
             let r = reduce_to_nf(r.as_ref(), env)?;
             match (op, &l, &r) {
                 (BinOp::Add, l, r) => match (l, r) {
-                    (Expr::Int(n1), Expr::Int(n2)) => Expr::Int(n1 + n2),
+                    (Expr::Int(n1), Expr::Int(n2)) => Expr::Int((n1.as_ref() + n2.as_ref()).into()),
                     _ => bail!("Invalid operator for add:\nl = {l}\nr = {r}"),
                 },
                 (BinOp::Sub, l, r) => match (l, r) {
-                    (Expr::Int(n1), Expr::Int(n2)) => Expr::Int(n1 - n2),
+                    (Expr::Int(n1), Expr::Int(n2)) => Expr::Int((n1.as_ref() - n2.as_ref()).into()),
                     _ => bail!("Invalid operator for sub: {op} {l} {r}"),
                 },
                 (BinOp::Mul, l, r) => match (l, r) {
-                    (Expr::Int(n1), Expr::Int(n2)) => Expr::Int(n1 * n2),
+                    (Expr::Int(n1), Expr::Int(n2)) => Expr::Int((n1.as_ref() * n2.as_ref()).into()),
                     _ => bail!("Invalid operator for mul: {op} {l} {r}"),
                 },
                 (BinOp::Div, l, r) => match (l, r) {
-                    (Expr::Int(n1), Expr::Int(n2)) => Expr::Int(n1 / n2),
+                    (Expr::Int(n1), Expr::Int(n2)) => Expr::Int((n1.as_ref() / n2.as_ref()).into()),
                     _ => bail!("Invalid operator for div: {op} {l} {r}"),
                 },
                 (BinOp::Mod, l, r) => match (l, r) {
-                    (Expr::Int(n1), Expr::Int(n2)) => Expr::Int(n1 % n2),
+                    (Expr::Int(n1), Expr::Int(n2)) => Expr::Int((n1.as_ref() % n2.as_ref()).into()),
                     _ => bail!("Invalid operator for mod: {l} {r}"),
                 },
                 (BinOp::Lt, l, r) => match (l, r) {
@@ -112,19 +115,27 @@ fn reduce_to_nf(e: &Expr, env: &mut Env) -> anyhow::Result<Expr> {
                     _ => bail!("Invalid operator for and: {op:?} {l:?} {r:?}"),
                 },
                 (BinOp::Concat, l, r) => match (l, r) {
-                    (Expr::String(s1), Expr::String(s2)) => Expr::String(s1.clone() + s2),
+                    (Expr::String(s1), Expr::String(s2)) => {
+                        Expr::String((s1.as_ref().clone() + s2.as_ref()).into())
+                    }
                     _ => bail!("Invalid operator for concat: {op:?} {l:?} {r:?}"),
                 },
                 (BinOp::Take, l, r) => match (l, r) {
-                    (Expr::Int(n), Expr::String(s)) => {
-                        Expr::String(s.chars().take(*n as usize).collect())
-                    }
+                    (Expr::Int(n), Expr::String(s)) => Expr::String(
+                        s.chars()
+                            .take(n.as_ref().try_into().unwrap())
+                            .collect::<String>()
+                            .into(),
+                    ),
                     _ => bail!("Invalid operator for take: {op:?} {l:?} {r:?}"),
                 },
                 (BinOp::Drop, l, r) => match (l, r) {
-                    (Expr::Int(n), Expr::String(s)) => {
-                        Expr::String(s.chars().skip(*n as usize).collect())
-                    }
+                    (Expr::Int(n), Expr::String(s)) => Expr::String(
+                        s.chars()
+                            .skip(n.as_ref().try_into().unwrap())
+                            .collect::<String>()
+                            .into(),
+                    ),
                     _ => bail!("Invalid operator for drop: {op:?} {l:?} {r:?}"),
                 },
                 _ => unreachable!(),
@@ -143,21 +154,25 @@ fn reduce_to_nf(e: &Expr, env: &mut Env) -> anyhow::Result<Expr> {
     })
 }
 
-fn str_to_int(s: &str) -> i64 {
+fn str_to_int(s: &str) -> BigInt {
     let s = str_enc(s).unwrap();
-    let mut ret = 0;
+    let mut ret = BigInt::from(0);
     for c in s.chars() {
         ret = ret * 94 + base94(c).unwrap();
     }
     ret
 }
 
-fn int_to_str(n: i64) -> String {
+fn int_to_str(n: &BigInt) -> String {
+    let zero = BigInt::from(0);
+
     let mut s = String::new();
-    let mut n = n;
-    while n > 0 {
-        s.push(base94_char(base94enc(n % 94).unwrap()).unwrap());
-        n /= 94;
+    let mut n = n.clone();
+    while n > zero {
+        let n2 = &n / 94;
+        let r: BigInt = &n - &n2 * 94;
+        s.push(base94_char(base94enc(r.try_into().unwrap()).unwrap()).unwrap());
+        n = n2;
     }
     s.chars().rev().collect::<String>()
 }

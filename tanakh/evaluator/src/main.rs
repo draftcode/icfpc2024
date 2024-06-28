@@ -1,7 +1,7 @@
 use std::io::Write as _;
 
+use evaluator::*;
 use expr::{tokenize, Expr};
-use solver::*;
 
 fn main() -> anyhow::Result<()> {
     env_logger::init();
@@ -16,6 +16,7 @@ fn main() -> anyhow::Result<()> {
         let mut s = String::new();
         stdin.read_line(&mut s)?;
         let tokens = tokenize(&s)?;
+        log::info!("{:?}", tokens);
         let expr = Expr::parse(&tokens)?;
         log::info!("{}", expr);
         let result = eval::eval(&expr)?;

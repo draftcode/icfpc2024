@@ -1,5 +1,5 @@
 [package]
-name = "solver"
+name = "evaluator"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,3 +7,4 @@ edition = "2021"
 anyhow = "1.0.44"
 env_logger = "0.11.3"
 log = "0.4.22"
+num-bigint = "0.4.6"

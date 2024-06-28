@@ -1,11 +1,12 @@
-use std::{iter::Peekable, str::Chars};
+use std::{iter::Peekable, rc::Rc, str::Chars};
 
 use anyhow::{anyhow, bail};
+use num_bigint::BigInt;
 
 #[derive(Debug)]
 pub enum Token {
     Bool(bool),
-    Int(i64),
+    Int(BigInt),
     String(String),
     Un(UnOp),
     Bin(BinOp),
@@ -129,7 +130,7 @@ impl Token {
                 Token::Bool(false)
             }
             'I' => {
-                let mut n = 0;
+                let mut n = BigInt::from(0);
                 while let Some(c) = cur.0.next() {
                     n = n * 94 + base94(c)?;
                 }
@@ -189,8 +190,8 @@ pub fn tokenize(s: &str) -> anyhow::Result<Vec<Token>> {
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Expr {
     Bool(bool),
-    Int(i64),
-    String(String),
+    Int(Rc<BigInt>),
+    String(Rc<String>),
     Var(usize),
     Un(UnOp, Box<Expr>),
     Bin(BinOp, Box<Expr>, Box<Expr>),
@@ -242,8 +243,8 @@ impl Expr {
     fn parse_expr(cur: &mut TokenCursor<'_>) -> anyhow::Result<Expr> {
         Ok(match cur.0.next() {
             Some(Token::Bool(b)) => Expr::Bool(*b),
-            Some(Token::Int(n)) => Expr::Int(*n),
-            Some(Token::String(s)) => Expr::String(s.clone()),
+            Some(Token::Int(n)) => Expr::Int(n.clone().into()),
+            Some(Token::String(s)) => Expr::String(s.clone().into()),
             Some(Token::Var(v)) => Expr::Var(*v),
             Some(Token::Un(op)) => {
                 let e = Box::new(Self::parse_expr(cur)?);
@@ -264,7 +265,7 @@ impl Expr {
                 let e = Box::new(Self::parse_expr(cur)?);
                 Expr::Lambda(*v, e)
             }
-            _ => bail!("invalid expr"),
+            e => bail!("invalid expr: {e:?}"),
         })
     }
 }
