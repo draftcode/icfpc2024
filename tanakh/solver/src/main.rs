@@ -1,6 +1,6 @@
-use std::{io::BufRead as _, iter::Peekable, str::Chars};
+use std::io::BufRead as _;
 
-use anyhow::{anyhow, bail};
+use expr::{tokenize, Expr};
 use solver::*;
 
 // fn reduce(&self) -> Self {
@@ -62,7 +62,10 @@ fn main() -> anyhow::Result<()> {
         let tokens = tokenize(&line)?;
         println!("{:?}", tokens);
         let expr = Expr::parse(&tokens)?;
-        println!("{:?}", expr);
+        println!("{}", expr);
+
+        let result = eval::eval(&expr)?;
+        println!("{:?}", result);
     }
     Ok(())
 }
