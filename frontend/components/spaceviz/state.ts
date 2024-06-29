@@ -162,11 +162,12 @@ export class WaypointVizState {
     ctx.lineTo(spaceCenterCanvasXY[0] * cw, ch);
     ctx.stroke();
 
+    // カーソル座標表示
     if (this.cursorCanvasXY) {
       const [x, y] = this.cursorCanvasXY;
       const [spaceX, spaceY] = [
-        x * this.viewportSpaceSize + this.viewportTopLeftSpaceXY[0],
-        this.viewportTopLeftSpaceXY[1] - y * this.viewportSpaceSize,
+        Math.round(x * this.viewportSpaceSize + this.viewportTopLeftSpaceXY[0]),
+        Math.round(this.viewportTopLeftSpaceXY[1] - y * this.viewportSpaceSize),
       ];
       ctx.font = "64px monospace";
       const text = `(${spaceX}, ${spaceY})`;
@@ -176,6 +177,25 @@ export class WaypointVizState {
       ctx.fillRect(0, 0, m.width + 30, h + 30);
       ctx.fillStyle = "black";
       ctx.fillText(text, 0, h);
+
+      // カーソル位置にcrosshairを描画
+      const [roundedX, roundedY] = this.convertSpaceXYToCanvasXY([
+        spaceX,
+        spaceY,
+      ]);
+      const pixelX = roundedX * cw;
+      const pixelY = roundedY * ch;
+
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = "black";
+      ctx.beginPath();
+      ctx.moveTo(pixelX, pixelY - 50);
+      ctx.lineTo(pixelX, pixelY + 50);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(pixelX - 50, pixelY);
+      ctx.lineTo(pixelX + 50, pixelY);
+      ctx.stroke();
     }
   }
 }
