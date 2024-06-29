@@ -134,7 +134,7 @@ impl PartialOrd for SearchState {
 }
 
 fn follow_backtrack(
-    backtrackinfo: HashMap<(Point, Velocity, bool), Acceleration>,
+    backtrackinfo: HashMap<(Point, Velocity), Acceleration>,
     pos: Point,
     vel: Velocity,
     midpt: Point,
@@ -146,15 +146,15 @@ fn follow_backtrack(
     let mut vel = vel;
     let mut passed_mid = true;
     loop {
-        println!(
-            "backtracking cur = {:?} {:?}, mid = {:?}, to = {:?} {:?}",
+        eprintln!(
+            " backtracking cur = {:?} {:?}, mid = {:?}, to = {:?} {:?}",
             pos, vel, midpt, backto, vbackto
         );
         if pos == backto && vel == vbackto {
             ret.reverse();
             return ret;
         }
-        let prevacc = *(backtrackinfo.get(&(pos, vel, passed_mid)).unwrap());
+        let prevacc = *(backtrackinfo.get(&(pos, vel)).unwrap());
         if pos == midpt {
             passed_mid = false;
         }
@@ -188,9 +188,9 @@ fn solve_lookahead(
     endpt: Point,
 ) -> (Vec<Acceleration>, Vec<Acceleration>, Velocity) {
     let mut heap = BinaryHeap::new();
-    let mut backtrack: HashMap<(Point, Velocity, bool), Acceleration> = HashMap::new();
-    let mut combinedscore: HashMap<(Point, Velocity, bool), i32> = HashMap::new();
-    let mut truescore: HashMap<(Point, Velocity, bool), i32> = HashMap::new();
+    let mut backtrack: HashMap<(Point, Velocity), Acceleration> = HashMap::new();
+    let mut combinedscore: HashMap<(Point, Velocity), i32> = HashMap::new();
+    let mut truescore: HashMap<(Point, Velocity), i32> = HashMap::new();
 
     heap.push(SearchState {
         cost_with_potential: 0,
@@ -199,9 +199,9 @@ fn solve_lookahead(
         velocity: iniv,
     });
 
-    truescore.insert((inip, iniv, inip == midpt), 0);
+    truescore.insert((inip, iniv), 0);
     combinedscore.insert(
-        (inip, iniv, inip == midpt),
+        (inip, iniv),
         0 + calc_additional_estimate(inip, iniv, inip == midpt, midpt, endpt),
     );
 
@@ -234,7 +234,7 @@ fn solve_lookahead(
             }
             return (move_before_mid, move_after_mid, midv.unwrap());
         }
-        let base_truescore = *truescore.get(&(position, velocity, passed_mid)).unwrap();
+        let base_truescore = *truescore.get(&(position, velocity)).unwrap();
         //let base_combinedscore = base_truescore + calc_additional_estimate(position, velocity, passed_mid, midpt, endpt);
         for ax in [-1, 0, 1] {
             for ay in [-1, 0, 1] {
@@ -243,15 +243,15 @@ fn solve_lookahead(
                 let new_passed_mid = passed_mid || newx == midpt;
                 let new_truescore = base_truescore + 1;
                 let cur_saved_score = *truescore
-                    .get(&(newx, newv, new_passed_mid))
+                    .get(&(newx, newv))
                     .or(Some(&i32::MAX))
                     .unwrap();
                 if new_truescore < cur_saved_score {
                     let new_combinedscore = new_truescore
                         + calc_additional_estimate(newx, newv, passed_mid, midpt, endpt);
-                    truescore.insert((newx, newv, new_passed_mid), new_truescore);
-                    combinedscore.insert((newx, newv, new_passed_mid), new_combinedscore);
-                    backtrack.insert((newx, newv, new_passed_mid), (ax, ay));
+                    truescore.insert((newx, newv), new_truescore);
+                    combinedscore.insert((newx, newv), new_combinedscore);
+                    backtrack.insert((newx, newv), (ax, ay));
 
                     heap.push(SearchState {
                         cost_with_potential: new_combinedscore,
@@ -281,6 +281,7 @@ fn solve(points: Vec<(i32, i32)>) -> String {
         if nextmid == nextend {
             continue;
         }
+        eprintln!("Solving {:?}, {:?} to {:?}, looking ahead: {:?}", curpt, curv, nextmid, nextend);
         let (accs, _ve, midv) = solve_lookahead(curpt, curv, nextmid, nextend);
         {
             let check_by_simulate = simulate(curpt, curv, &accs);
