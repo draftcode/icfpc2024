@@ -18,6 +18,10 @@ pub fn parse<'a>(cs: Chars<'a>) -> anyhow::Result<Program> {
     Ok(Program { exprs })
 }
 
+pub fn parse_str(prog: &str) -> anyhow::Result<Program> {
+    parse(prog.chars())
+}
+
 pub struct Parser<'a> {
     toks: Tokenizer<'a>,
     tok: Option<Token>,
@@ -43,22 +47,27 @@ impl<'a> Parser<'a> {
         let fst = self.next_token()?;
         Some(match fst {
             Token::OpenParen => {
-                let name = if let Token::Var(name) = self.next_token()? {
-                    name
-                } else {
-                    panic!("no name after paren");
-                };
-                let mut args = Vec::new();
+                let mut args: Vec<Expr> = vec![];
                 while let Some(tok) = self.next_token() {
                     match tok {
-                        Token::CloseParen => return Some(Expr::Proc { name, args }),
+                        Token::CloseParen => {
+                            if args[0] == Expr::Var("lambda".to_string()) {
+                                let names = args[1].must_proc();
+                                let expr = args[2].clone();
+                                if names.len() != 1 {
+                                    panic!("lambda should have 1 arg");
+                                }
+                                return Some(Expr::lambda(names[0].to_string(), expr));
+                            }
+                            return Some(Expr::Proc(args));
+                        }
                         _ => {
                             self.push_back(tok);
                             args.push(self.next_expr()?);
                         }
                     }
                 }
-                panic!("no close paren")
+                panic!("no close paren");
             }
             Token::Str(s) => Expr::Str(s),
             Token::Num(n) => Expr::Num(n),

@@ -1,14 +1,19 @@
 Scheme program を ICFP にコンパイルする。(WIP)
 
-top level の expression はすべて (define ...) 形式である必要がある。(oka/8.scm を参照)
+# 制約条件
+
+(サンプル oka/8.scm を参照)
+
+top level の expression はすべて (define ...) 形式である必要がある。
 また、`(define (res) ...)` が存在する必要があり、res の値に評価されるような ICFP を出力する。
+それ以外で 0 引数の define があってはならない。
 
 # 実装メモ
 
 ICFP のスペック https://icfpcontest2024.github.io/icfp.html
 Scheme のスペック https://groups.csail.mit.edu/mac/ftpdir/scheme-7.4/doc-html/scheme_7.html
 
-## 1 引数以上の define
+## 2 引数以上の define
 
 (define (f x1 x2) A)
 
@@ -18,13 +23,13 @@ Scheme のスペック https://groups.csail.mit.edu/mac/ftpdir/scheme-7.4/doc-ht
 
 とおなじ
 
-## 0 引数の define
+## 1 引数の define
 
-(define (f) A) B
+(define (f x) A) B
 
 は
 
-((lambda (f) B) A)
+((lambda (f) B) (lambda (x) A))
 
 とおなじ
 
@@ -53,6 +58,8 @@ Scheme のスペック https://groups.csail.mit.edu/mac/ftpdir/scheme-7.4/doc-ht
 (string-tail A B)   -> BD A' B'
 (A B)               -> B$ A' B'
 
+(string=? A B)      -> B= A' B'
+
 # If
 (if A B)            -> ? A' B'
 
@@ -62,6 +69,16 @@ Scheme のスペック https://groups.csail.mit.edu/mac/ftpdir/scheme-7.4/doc-ht
 
 ## 再帰関数の変換
 
-(define (f) (f)) (f)
+(define (f x) A) B
 
-は、
+は
+Z コンビネータを pre-defined 関数として、
+
+(define (F f) (lambda (x) A))
+(define (f x) ((Z F) x))
+B
+
+(define (f x) ((Z (lambda (f) ((lambda (x) A)))) x))
+B
+
+に書き換えられる

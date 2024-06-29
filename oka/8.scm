@@ -1,6 +1,9 @@
-(define (string-car s) (substring s 0 1))
+(define (string-head s n) (substring s 0 n))
+(define (string-tail s n) (substring s n (string-length s)))
 
-(define (string-cdr s) (substring s 1 (string-length s)))
+(define (string-car s) (string-head s 1))
+
+(define (string-cdr s) (string-tail s 1))
 
 (define (power2repeat y x) (if (= y 0) x (string-append (power2repeat (- y 1) x) (power2repeat (- y 1) x))))
 
