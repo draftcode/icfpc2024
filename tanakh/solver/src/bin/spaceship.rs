@@ -27,6 +27,9 @@ fn solve_basic(mut ps: Vec<Point2D<i64>>) {
     ps.sort_by_key(|p| (p.x, p.y));
     ps.dedup();
 
+    use rand::prelude::SliceRandom;
+    ps.shuffle(&mut rand::thread_rng());
+
     let n = ps.len();
 
     let mut cur = Point2D::new(0, 0);
@@ -35,9 +38,8 @@ fn solve_basic(mut ps: Vec<Point2D<i64>>) {
     let mut moves = vec![];
 
     let mut done = vec![false; n];
-    let mut total = 0;
 
-    for turn in 0..n {
+    for turn in 1..=n {
         // let mut best = (0, i64::MAX, i64::MAX);
 
         // for i in 0..n {
@@ -51,33 +53,42 @@ fn solve_basic(mut ps: Vec<Point2D<i64>>) {
         //     }
         // }
 
-        let mut nearest = (0, i64::MAX, i64::MAX);
+        let mut nearest = (0, i64::MAX);
 
         for i in 0..n {
             if done[i] {
                 continue;
             }
 
-            let dist = (ps[i] - cur).square_length();
-            if dist <= nearest.1 {
-                let d = calc_dist(cur, v, ps[i], None);
-                if (dist, d.0) < (nearest.1, nearest.2) {
-                    nearest = (i, dist, d.0);
-                }
+            // let dist = calc_dist(cur, v, ps[i], None).0;
+            // if dist <= nearest.1 {
+            //     if dist < nearest.1 {
+            //         nearest = (i, dist);
+            //     }
+            // }
+
+            let diff = ps[i] - cur;
+            let dist = diff.square_length();
+            if dist < nearest.1 {
+                // let d = calc_dist(cur, v, ps[i], None);
+                nearest = (i, dist);
             }
         }
 
-        eprintln!("best: {:?}", nearest.2);
-
         let i = nearest.0;
-        total += nearest.1;
-        v = calc_dist(cur, v, ps[i], Some(&mut moves)).1;
-        done[i] = true;
+        let (t, nv) = calc_dist(cur, v, ps[i], Some(&mut moves));
+        v = nv;
         cur = ps[i];
+        done[i] = true;
+
+        let total = moves.len();
+        let est = total * n / turn;
 
         eprintln!(
-            "*** {turn} / {n}: movs: {} pos: {:?} vel: {:?}",
-            nearest.1, cur, v
+            "* {turn} / {n}: total: {}, est: {est}, movs: {t} pos: {:?} vel: {:?}",
+            moves.len(),
+            cur,
+            v
         );
     }
 
@@ -107,7 +118,7 @@ fn calc_dist(
     mut moves: Option<&mut Vec<Vector2D<i64>>>,
 ) -> (i64, Vector2D<i64>) {
     let mut lo = 0;
-    let mut hi = 1_000_000_000;
+    let mut hi = 1_000_000;
 
     while hi - lo > 1 {
         let m = (lo + hi) / 2;

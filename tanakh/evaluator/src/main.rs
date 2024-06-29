@@ -341,8 +341,6 @@ fn haskell(path: PathBuf) -> anyhow::Result<()> {
 
 #[argopt::subcmd]
 fn repl() -> anyhow::Result<()> {
-    env_logger::init();
-
     let mut stdout = std::io::stdout();
     let stdin = std::io::stdin();
 
@@ -368,4 +366,6 @@ fn repl() -> anyhow::Result<()> {
 }
 
 #[argopt::cmd_group(commands = [scheme, haskell, repl, pretty])]
-fn main() -> anyhow::Result<()> {}
+fn main() -> anyhow::Result<()> {
+    env_logger::init();
+}

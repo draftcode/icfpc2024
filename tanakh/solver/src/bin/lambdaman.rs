@@ -158,6 +158,7 @@ fn problem8() -> Expr {
 
 fn problem9() -> Expr {
     let header = "solve lambdaman9 ";
+
     // icfp! {
     //     let r =
     //         (let s = "RRRRRRRRRRRR" in
@@ -180,14 +181,32 @@ fn problem9() -> Expr {
                 f (+ c 1)
                     (concat "R" (concat p "U"))
                     (concat "D" (concat q "L"))
-                    (concat s (
-                        if (== (% c 2) 0) {
-                            concat "D" p
+                    (concat s
+                        (if (== (% c 2) 1) {
+                            (concat p "R")
                         } else {
-                            concat "R" q
+                            (concat q "D")
                         }))
             }))
-            1 "" "" (#header)
+            0 "" "" (#header)
+    }
+}
+
+fn problem16() -> Expr {
+    let header = "solve lambdaman16 ";
+    icfp! {
+        (concat (#header)
+            (fix (fn f s d e g r ->
+                (if (== s 0) {
+                    ""
+                } else {
+                    let t = (/ (- s 1) 2) in
+                    (concat
+                        (concat (concat (f t e d r g) d)
+                                (concat (f t d e g r) e))
+                        (concat (concat (f t d e g r) g)
+                                (f t r g e d)))
+                })) 127 "DD" "RR" "UU" "LL"))
     }
 }
 
@@ -197,6 +216,7 @@ fn special(pid: usize) {
         6 => problem6(),
         8 => problem8(),
         9 => problem9(),
+        16 => problem16(),
         _ => unimplemented!(),
     };
 
@@ -212,23 +232,6 @@ fn special(pid: usize) {
 
 #[argopt::subcmd]
 fn comp(pid: usize, path: PathBuf) {
-    if pid == 6 {
-        let code = problem6();
-        let code = icfp! {
-            (concat "solve lambdaman6 " (#code))
-        };
-
-        let tokens = code.to_tokens();
-        let s = tokens
-            .into_iter()
-            .map(|token| token.encoded().to_string())
-            .collect::<Vec<_>>()
-            .join(" ");
-
-        println!("{}", s);
-        return;
-    }
-
     let s = std::fs::read_to_string(path).unwrap();
     let c = compress(s.trim());
     let header = format!("solve lambdaman{pid} ");

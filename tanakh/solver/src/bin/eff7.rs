@@ -225,7 +225,7 @@ const PROBLEM8: &[&[isize]] = &[
 ];
 
 fn main() {
-    let mut prob = PROBLEM8.into_iter().map(|r| r.to_vec()).collect::<Vec<_>>();
+    let prob = PROBLEM8.into_iter().map(|r| r.to_vec()).collect::<Vec<_>>();
 
     let mut cand = [[false; 2]; 51];
 
