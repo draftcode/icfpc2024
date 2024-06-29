@@ -1,11 +1,13 @@
-(define (repeat2power x y) (if (= y 0) x (string-append (repeat2power x (- y 1)) (repeat2power x (- y 1)))))
+(define (string-car s) (substring s 0 1))
 
-(define (map f l) (if (null? l) '() (cons (f (car l)) (map f (cdr l)))))
+(define (string-cdr s) (substring s 1 (string-length s)))
 
-(define (concat-all l) (if (null? l) "" (string-append (car l) (concat-all (cdr l)))))
+(define (power2repeat y x) (if (= y 0) x (string-append (power2repeat (- y 1) x) (power2repeat (- y 1) x))))
 
-(define (concat x y) (string-append x y))
+(define (string-map f l) (if (string=? l "") "" (string-append (f (string-car l)) (string-map f (string-cdr l)))))
 
-(define (res) (repeat2power () 4))
+(define (res) (
+    power2repeat 7 (string-map (lambda (x) (power2repeat 7 x)) "DLUR")
+))
 
-(define (main args) (print (repeat2power "x" 4)))
+(define (main args) (print (res)))
