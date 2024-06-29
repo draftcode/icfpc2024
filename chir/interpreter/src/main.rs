@@ -29,7 +29,7 @@ fn main() -> Result<()> {
     println!("{}", state.board);
 
     let mut turn = 0;
-    while state.output.is_none() && turn < 10 {
+    while state.output.is_none() {
         state.onestep()?;
         println!("{}", state.board);
         turn += 1;

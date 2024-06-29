@@ -18,7 +18,7 @@ pub enum Cell {
     Mul,
     Div,
     Rem,
-    Warp,
+    Warp(char),
     Eq,
     Neq,
     Submit,
@@ -42,7 +42,7 @@ impl FromStr for Cell {
             "*" => Cell::Mul,
             "/" => Cell::Div,
             "%" => Cell::Rem,
-            "@" => Cell::Warp,
+            "@" => Cell::Warp('_'),
             "=" => Cell::Eq,
             "#" => Cell::Neq,
             "S" => Cell::Submit,
@@ -56,6 +56,15 @@ impl FromStr for Cell {
                 _ => {
                     if s.len() == 1 && s.chars().next().unwrap().is_lowercase() {
                         Cell::Label(s.chars().next().unwrap())
+                    } else if s.len() == 2 && s.chars().next().unwrap() == '@' {
+                        let mut it = s.chars();
+                        it.next();
+                        let l: char = it.next().unwrap();
+                        if !l.is_lowercase() {
+                            bail!("label should be lower case")
+                        } else {
+                            Cell::Warp(l)
+                        }
                     } else {
                         bail!("Invalid cell: {}", s);
                     }
@@ -81,7 +90,13 @@ impl std::fmt::Display for Cell {
             Cell::Mul => write!(f, "*"),
             Cell::Div => write!(f, "/"),
             Cell::Rem => write!(f, "%"),
-            Cell::Warp => write!(f, "@"),
+            Cell::Warp(c) => {
+                if *c == '_' {
+                    write!(f, "@")
+                } else {
+                    write!(f, "@{}", c)
+                }
+            }
             Cell::Eq => write!(f, "="),
             Cell::Neq => write!(f, "#"),
             Cell::Submit => write!(f, "S"),
@@ -164,17 +179,13 @@ impl State {
         let mut refs = vec![];
         for y in 0..self.board.0.len() {
             for x in 0..self.board.0[y].len() {
-                let mut is_ref = false;
                 if let Cell::Label(c) = self.board.0[y][x] {
-                    if inside(&self.board.0, (x as i32 + 1, y as i32)) {
-                        if let Cell::Warp = self.board.0[y][x + 1] {
-                            refs.push((c, x + 1, y));
-                            is_ref = true;
-                        }
+                    labels.push((c, x, y));
+                } else if let Cell::Warp(c) = self.board.0[y][x] {
+                    if c == '_' {
+                        continue;
                     }
-                    if !is_ref {
-                        labels.push((c, x, y));
-                    }
+                    refs.push((c, x, y));
                 }
             }
         }
@@ -239,7 +250,7 @@ impl State {
                     Cell::Eq | Cell::Neq => {
                         self.binop_comp(&mut new_board, x, y)?;
                     }
-                    Cell::Warp => {
+                    Cell::Warp(_) => {
                         self.warp(x, y, &mut warp_requests)?;
                     }
                     _ => bail!("Not implemented {:?}", new_board[y][x]),
