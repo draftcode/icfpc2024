@@ -24,8 +24,11 @@ export class WaypointVizState {
   viewportSpaceSize: number;
   viewportTopLeftSpaceXY: [number, number];
   waypoints: Waypoint[];
+  canvasWaypoints: [number, number][];
+  reqCheckPoints: [number, number][];
+  canvasReqCheckPoints: [number, number][];
 
-  constructor(waypoints: Waypoint[]) {
+  constructor(waypoints: Waypoint[], reqCheckPoints: [number, number][]) {
     this.waypoints = waypoints;
     let minX = Infinity;
     let minY = Infinity;
@@ -41,9 +44,16 @@ export class WaypointVizState {
     const dy = maxY - minY;
     this.viewportSpaceSize = Math.max(dx, dy);
     this.viewportTopLeftSpaceXY = [minX, maxY];
+    this.canvasWaypoints = this.convertWaypointsToCanvasXY(
+      waypoints.map(([x, y]) => [x, y]),
+    );
+    this.reqCheckPoints = reqCheckPoints;
+    this.canvasReqCheckPoints = this.convertWaypointsToCanvasXY(reqCheckPoints);
   }
 
-  convertWaypointsToCanvasXY(waypoints: Waypoint[]): [number, number][] {
+  convertWaypointsToCanvasXY(
+    waypoints: [number, number][],
+  ): [number, number][] {
     return waypoints.map(([x, y]) => {
       const [minX, maxY] = this.viewportTopLeftSpaceXY;
       const canvasX = (x - minX) / this.viewportSpaceSize;
@@ -54,14 +64,51 @@ export class WaypointVizState {
   }
 
   plotWaypoints(ctx: CanvasRenderingContext2D) {
-    const canvasWaypoints = this.convertWaypointsToCanvasXY(this.waypoints);
     ctx.lineWidth = 3;
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.moveTo(
+      this.canvasWaypoints[0][0] * ctx.canvas.width,
+      this.canvasWaypoints[0][1] * ctx.canvas.height,
+    );
+
+    ctx.strokeStyle = "blue";
     ctx.beginPath();
-    ctx.moveTo(...canvasWaypoints[0]);
-    for (const [canvasX, canvasY] of canvasWaypoints) {
+    for (const [canvasX, canvasY] of this.canvasWaypoints) {
       ctx.lineTo(canvasX * ctx.canvas.width, canvasY * ctx.canvas.height);
     }
     ctx.stroke();
+
+    for (const [canvasX, canvasY] of this.canvasWaypoints) {
+      ctx.beginPath();
+      ctx.arc(
+        canvasX * ctx.canvas.width,
+        canvasY * ctx.canvas.height,
+        10,
+        0,
+        2 * Math.PI,
+      );
+      ctx.fillStyle = "blue";
+      ctx.fill();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = "blue";
+      ctx.stroke();
+    }
+
+    for (const [canvasX, canvasY] of this.canvasReqCheckPoints) {
+      ctx.beginPath();
+      ctx.arc(
+        canvasX * ctx.canvas.width,
+        canvasY * ctx.canvas.height,
+        8,
+        0,
+        2 * Math.PI,
+      );
+      ctx.fillStyle = "red";
+      ctx.fill();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = "red";
+      ctx.stroke();
+    }
   }
 }
 
@@ -110,4 +157,11 @@ export function calculateWaypoints(path: string): Waypoint[] {
     waypoints.push([currentX, currentY, currentVX, currentVY]);
   }
   return waypoints;
+}
+
+export function parseReqPoints(reqPointsStr: string): [number, number][] {
+  return reqPointsStr
+    .split("\n")
+    .map((line) => line.split(" ").map((s) => parseInt(s)))
+    .filter((point) => point.length === 2) as [number, number][];
 }

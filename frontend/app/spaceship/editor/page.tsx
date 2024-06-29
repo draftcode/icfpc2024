@@ -2,12 +2,14 @@
 
 import {
   calculateWaypoints,
+  parseReqPoints,
   WaypointVizState,
 } from "@/components/spaceviz/state";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 export default function Page() {
   const [path, setPath] = useState("236659");
+  const [reqPointsStr, setReqPointStr] = useState("");
   const [vizPath, setVizPath] = useState("236659");
 
   return (
@@ -25,17 +27,33 @@ export default function Page() {
           onChange={(e) => setPath(e.target.value)}
           className="input input-bordered w-full max-w-xs"
         />
+        <textarea
+          className="textarea textarea-bordered"
+          value={reqPointsStr}
+          onChange={(e) => setReqPointStr(e.target.value)}
+        />
       </form>
-      <Visualizer key={vizPath} path={vizPath} />
+      <Visualizer
+        key={vizPath + reqPointsStr}
+        path={vizPath}
+        reqPointsStr={reqPointsStr}
+      />
     </div>
   );
 }
 
 const CANVAS_SIZE = 4000;
 
-function Visualizer({ path }: { path: string }) {
+function Visualizer({
+  path,
+  reqPointsStr,
+}: {
+  path: string;
+  reqPointsStr: string;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const waypoints = useMemo(() => calculateWaypoints(path), [path]);
+  const reqPoints = useMemo(() => parseReqPoints(reqPointsStr), [reqPointsStr]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -43,8 +61,7 @@ function Visualizer({ path }: { path: string }) {
       return;
     }
 
-    const state = new WaypointVizState(waypoints);
-
+    const state = new WaypointVizState(waypoints, reqPoints);
     let animationFrameId: number = 0;
     const render = () => {
       const ctx = canvas.getContext("2d");
