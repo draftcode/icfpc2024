@@ -397,6 +397,7 @@ impl FromStr for Expr {
 
     fn from_str(s: &str) -> anyhow::Result<Expr> {
         let tokens = tokenize(s)?;
+        log::info!("tokenize: {tokens:?}");
         Expr::parse_tokens(&tokens)
     }
 }
