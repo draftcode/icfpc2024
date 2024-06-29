@@ -66,7 +66,9 @@ export default function Sidebar({ current }: { current?: string }) {
       <hr />
       <ul className="menu menu-xs w-56 shrink-0">
         <li>
-          <h2 className="menu-title">Lambdaman</h2>
+          <h2 className="menu-title">
+            Lambdaman <CategoryBadge rank={data.lambdaman.rank} />
+          </h2>
           <ul>
             {data.lambdaman.problems.map(
               ({ id, rank, our_score, best_score }) => {
@@ -94,7 +96,10 @@ export default function Sidebar({ current }: { current?: string }) {
         </li>
 
         <li>
-          <h2 className="menu-title">Spaceship</h2>
+          <h2 className="menu-title">
+            Spaceship
+            <CategoryBadge rank={data.spaceship.rank} />
+          </h2>
           <ul>
             {data.spaceship.problems.map(
               ({ id, rank, our_score, best_score }) => {
@@ -122,7 +127,10 @@ export default function Sidebar({ current }: { current?: string }) {
         </li>
 
         <li>
-          <h2 className="menu-title">3D</h2>
+          <h2 className="menu-title">
+            3D
+            <CategoryBadge rank={data.threed.rank} />
+          </h2>
           <ul>
             {data.threed.problems.map(({ id, rank, our_score, best_score }) => {
               return (
@@ -146,7 +154,10 @@ export default function Sidebar({ current }: { current?: string }) {
         </li>
 
         <li>
-          <h2 className="menu-title">Efficiency</h2>
+          <h2 className="menu-title">
+            Efficiency
+            <CategoryBadge rank={data.efficiency.rank} />
+          </h2>
           <ul>
             {data.efficiency.problems.map(
               ({ id, rank, our_score, best_score }) => {
@@ -219,4 +230,13 @@ function Badge({
       </div>
     );
   }
+}
+
+function CategoryBadge({ rank }: { rank: number | null }) {
+  if (rank === 1) {
+    return <div className="badge badge-success ml-1">{rank} 位</div>;
+  } else if (rank === null) {
+    return <div className="badge badge-warning ml-1">No Rank</div>;
+  }
+  return <div className="badge badge-primary ml-1">{rank} 位</div>;
 }
