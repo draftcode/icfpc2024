@@ -2,6 +2,7 @@ import datetime
 import importlib.resources as pkg_resources
 from typing import Sequence
 
+from backend_rs import encode_message  # type: ignore
 from fastapi import Body, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, RedirectResponse
@@ -38,6 +39,24 @@ async def communicate(
 ) -> str:
     log = send_encoded_req(session, body)
     return log.response
+
+
+class SubmitRequest(BaseModel):
+    plaintext: str | None = None
+    icfp: str | None = None
+
+
+@app.post("/communicate/submit")
+async def communicate_submit_plaintext(
+    session: SessionDep, body: SubmitRequest
+) -> CommunicationLog:
+    if body.plaintext is not None:
+        return send_encoded_req(session, encode_message(body.plaintext))
+    elif body.icfp is not None:
+        return send_encoded_req(session, body.icfp)
+    raise HTTPException(
+        status_code=400, detail="Either plaintext or icfp must be provided"
+    )
 
 
 @app.get("/communications")

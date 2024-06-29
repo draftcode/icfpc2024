@@ -32,4 +32,6 @@ def send_encoded_req(session: SessionDep, encoded_req: str) -> CommunicationLog:
     )
     session.add(log)
     session.commit()
+    # Need to touch something to get back the data?
+    log.id
     return log
