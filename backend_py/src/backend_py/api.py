@@ -45,6 +45,7 @@ async def communicate(
         raise HTTPException(status_code=resp.status_code, detail=resp.text)
 
     resp_str = resp.text
+    decoded_response = decode_message(resp_str)
     req_str = decode_message(body)
     log = CommunicationLog(
         created=datetime.datetime.now(),
@@ -52,7 +53,7 @@ async def communicate(
         response=resp_str,
         decoded_request_prefix=req_str[:100],
         decoded_request=req_str,
-        decoded_response=decode_message(resp_str),
+        decoded_response=decoded_response,
     )
     session.add(log)
     session.commit()

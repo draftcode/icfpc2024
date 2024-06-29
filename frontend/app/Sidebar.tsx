@@ -2,11 +2,19 @@ import { useTeamRank } from "@/components/api";
 import clsx from "clsx";
 import Link from "next/link";
 import { useState } from "react";
+import { useCookies } from "react-cookie";
 
 export default function Sidebar({ current }: { current?: string }) {
-  const [hideTop, setHideTop] = useState(true);
-  const [badgeType, setBadgeType] = useState("rank");
+  const [cookies, setCookie] = useCookies(["hideTop", "badgeType"]);
+  const [hideTop, setHideTop] = useState(
+    typeof cookies.hideTop === "undefined" || cookies.hideTop === "true",
+  );
+  const [badgeType, setBadgeTypeRaw] = useState(cookies.badgeType ?? "rank");
   const { data, error } = useTeamRank();
+  const setBadgeType = (badgeType: string) => {
+    setBadgeTypeRaw(badgeType);
+    setCookie("badgeType", badgeType);
+  };
   if (error) {
     throw error;
   }
@@ -19,7 +27,10 @@ export default function Sidebar({ current }: { current?: string }) {
         <input
           type="checkbox"
           checked={hideTop}
-          onChange={(e) => setHideTop(e.target.checked)}
+          onChange={(e) => {
+            setHideTop(e.target.checked);
+            setCookie("hideTop", JSON.stringify(e.target.checked));
+          }}
           className="checkbox checkbox-xs"
         />
         <span className="label-text">1位のやつは隠す</span>
