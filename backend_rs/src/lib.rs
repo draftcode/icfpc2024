@@ -68,5 +68,6 @@ fn backend_rs(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(encode_message, m)?)?;
     m.add_function(wrap_pyfunction!(decode_message, m)?)?;
     m.add_function(wrap_pyfunction!(evaluate_message, m)?)?;
+    m.add_function(wrap_pyfunction!(onestep_3d, m)?)?;
     Ok(())
 }
