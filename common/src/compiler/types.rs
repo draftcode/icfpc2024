@@ -1,6 +1,6 @@
 #[derive(Debug, Eq, PartialEq)]
 pub struct Program {
-    pub defines: Vec<Expr>,
+    pub exprs: Vec<Expr>,
 }
 
 #[derive(Debug, Eq, PartialEq)]

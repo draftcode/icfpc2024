@@ -14,7 +14,7 @@ pub fn parse<'a>(cs: Chars<'a>) -> anyhow::Result<Program> {
         prog.push(expr);
     }
 
-    Ok(Program { defines: prog })
+    Ok(Program { exprs: prog })
 }
 
 pub struct Parser<'a> {
