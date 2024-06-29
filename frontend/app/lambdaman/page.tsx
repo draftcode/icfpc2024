@@ -3,6 +3,7 @@
 import { CellState, LambdamanMap } from "@/components/lambdaman_map";
 import { useState } from "react";
 import useSWR from "swr";
+import Sidebar from "../Sidebar";
 
 // 256 "R"s
 const P = `((lambda (v0) (v0 (v0 (v0 (v0 (v0 (v0 (v0 (v0 (v0 (v0 "R"))))))))))) (lambda (v0) (string-append v0 v0)))`;
@@ -37,67 +38,70 @@ export default function Page({
   const outType = ok ? typeof output : "error";
 
   return (
-    <div className="container mx-auto">
-      <div>
-        <label>Problem ID</label>
-        <input
-          className="input input-primary"
-          type="number"
-          min={1}
-          value={id}
-          onChange={(e) => setId(Number(e.target.value))}
-        ></input>
-      </div>
-      <div>
-        <div className="form-control w-40">
-          <label className="label cursor-pointer">
-            <span className="label-text">Edit program</span>
-            <input
-              type="radio"
-              name="radio-10"
-              className="radio checked:bg-blue-500"
-              defaultChecked
-              onClick={() => sedEditProg(true)}
-            />
-          </label>
-        </div>
-        <div className="form-control w-40">
-          <label className="label cursor-pointer">
-            <span className="label-text">Edit output</span>
-            <input
-              type="radio"
-              name="radio-10"
-              className="radio checked:bg-blue-500"
-              onClick={() => sedEditProg(false)}
-            />
-          </label>
+    <div className="flex gap-x-4">
+      <Sidebar current="/lambdaman" />
+      <div className="w-full">
+        <div>
+          <label>Problem ID</label>
+          <input
+            className="input input-primary"
+            type="number"
+            min={1}
+            value={id}
+            onChange={(e) => setId(Number(e.target.value))}
+          ></input>
         </div>
         <div>
-          <label>
-            Program (evaluated by{" "}
-            <a className="link" href="https://www.biwascheme.org/">
-              BiwaScheme
-            </a>
-            )
-          </label>
-          <textarea
-            className="textarea textarea-primary w-full"
-            value={prog}
-            disabled={!editProg}
-            onChange={(e) => setProg(e.target.value)}
-          ></textarea>
+          <div className="form-control w-40">
+            <label className="label cursor-pointer">
+              <span className="label-text">Edit program</span>
+              <input
+                type="radio"
+                name="radio-10"
+                className="radio checked:bg-blue-500"
+                defaultChecked
+                onClick={() => sedEditProg(true)}
+              />
+            </label>
+          </div>
+          <div className="form-control w-40">
+            <label className="label cursor-pointer">
+              <span className="label-text">Edit output</span>
+              <input
+                type="radio"
+                name="radio-10"
+                className="radio checked:bg-blue-500"
+                onClick={() => sedEditProg(false)}
+              />
+            </label>
+          </div>
+          <div>
+            <label>
+              Program (evaluated by{" "}
+              <a className="link" href="https://www.biwascheme.org/">
+                BiwaScheme
+              </a>
+              )
+            </label>
+            <textarea
+              className="textarea textarea-primary w-full"
+              value={prog}
+              disabled={!editProg}
+              onChange={(e) => setProg(e.target.value)}
+            ></textarea>
+          </div>
+          <div>
+            Output ({outType}):
+            <textarea
+              className="textarea textarea-bordered w-full"
+              value={output}
+              onChange={(e) => setOutput(e.target.value)}
+            ></textarea>
+          </div>
         </div>
-        <div>
-          Output ({outType}):
-          <textarea
-            className="textarea textarea-bordered w-full"
-            value={output}
-            onChange={(e) => setOutput(e.target.value)}
-          ></textarea>
-        </div>
-      </div>
 
-      <Board data={lambdamanMapData} dirs={ok ? output : ""} />
+        <Board data={lambdamanMapData} dirs={ok ? output : ""} />
+      </div>
     </div>
   );
 }
