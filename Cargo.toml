@@ -11,4 +11,5 @@ members = [
   "tanakh/evaluator",
   "chun/spaceship_order",
   "tanakh/spaceship", "tanakh/solver", "scmcomp",
+  "chun/spaceship_lasolver",
 ]
