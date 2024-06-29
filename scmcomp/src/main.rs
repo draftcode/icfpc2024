@@ -32,6 +32,8 @@ fn compile() -> anyhow::Result<()> {
 
     let icfp = expr.icfp();
 
+    let icfp_prog = icfp.join(" ");
+
     println!("{}", icfp.join(" "));
 
     Ok(())

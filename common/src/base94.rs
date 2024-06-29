@@ -48,6 +48,9 @@ pub fn decode_base94_int(s: &str) -> Result<i64> {
 
 pub fn encode_base94_int(n: i64) -> Result<String> {
     ensure!(n >= 0);
+    if n == 0 {
+        return Ok("!".to_string());
+    }
     let mut s = String::new();
     let mut n = n;
     while n > 0 {
