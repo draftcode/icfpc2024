@@ -27,6 +27,7 @@ export class WaypointVizState {
   cursorCanvasXY?: [number, number];
   dragStartCursorCanvasXY?: [number, number];
   waypoints: Waypoint[] = [];
+  futureWaypoints: Waypoint[] = [];
 
   constructor() {}
 
@@ -63,8 +64,9 @@ export class WaypointVizState {
     console.log(this.viewportTopLeftSpaceXY);
   }
 
-  setWaypoints(waypoints: Waypoint[]) {
+  setWaypoints(waypoints: Waypoint[], futureWaypoints?: Waypoint[]) {
     this.waypoints = waypoints;
+    this.futureWaypoints = futureWaypoints ?? [];
   }
 
   private convertSpaceXYToCanvasXY([x, y]: [number, number]): [number, number] {
@@ -249,22 +251,47 @@ export class WaypointVizState {
     }
     const cw = ctx.canvas.width;
     const ch = ctx.canvas.height;
-    const canvasWaypoints = this.waypoints.map(([x, y]) =>
+    const canvasWaypoints1 = this.waypoints.map(([x, y]) =>
+      this.convertSpaceXYToCanvasXY([x, y]),
+    );
+    const last = this.waypoints.length - 1;
+    let futureWaypoints = this.futureWaypoints;
+    if (futureWaypoints.length === 0) {
+      futureWaypoints = [
+        [
+          this.waypoints[last][0] + this.waypoints[last][2],
+          this.waypoints[last][1] + this.waypoints[last][3],
+          0,
+          0,
+        ],
+      ];
+    }
+    const canvasWaypoints2 = futureWaypoints.map(([x, y]) =>
       this.convertSpaceXYToCanvasXY([x, y]),
     );
 
     // Waypointsのパスを描画
     ctx.lineWidth = 3;
-    ctx.strokeStyle = "blue";
-    ctx.moveTo(canvasWaypoints[0][0] * cw, canvasWaypoints[0][1] * ch);
+    ctx.moveTo(canvasWaypoints1[0][0] * cw, canvasWaypoints1[0][1] * ch);
     ctx.beginPath();
-    for (const [canvasX, canvasY] of canvasWaypoints) {
+    for (const [canvasX, canvasY] of canvasWaypoints1) {
       ctx.lineTo(canvasX * cw, canvasY * ch);
     }
+    ctx.strokeStyle = "blue";
     ctx.stroke();
 
+    ctx.beginPath();
+    ctx.moveTo(canvasWaypoints1[last][0] * cw, canvasWaypoints1[last][1] * ch);
+    for (const [canvasX, canvasY] of canvasWaypoints2) {
+      ctx.lineTo(canvasX * cw, canvasY * ch);
+    }
+    ctx.strokeStyle = "gray";
+    ctx.setLineDash([10, 10]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
     // Waypointsの点を描画
-    for (const [canvasX, canvasY] of canvasWaypoints) {
+    for (const [canvasX, canvasY] of canvasWaypoints1) {
       ctx.beginPath();
       ctx.arc(canvasX * cw, canvasY * ch, 10, 0, 2 * Math.PI);
       ctx.fillStyle = "blue";
@@ -273,7 +300,59 @@ export class WaypointVizState {
       ctx.strokeStyle = "blue";
       ctx.stroke();
     }
+    ctx.beginPath();
+    ctx.arc(
+      canvasWaypoints1[last][0] * cw,
+      canvasWaypoints1[last][1] * ch,
+      30,
+      0,
+      2 * Math.PI,
+    );
+    ctx.fillStyle = "blue";
+    ctx.fill();
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = "blue";
+    ctx.stroke();
+    for (const [canvasX, canvasY] of canvasWaypoints2) {
+      ctx.beginPath();
+      ctx.arc(canvasX * cw, canvasY * ch, 10, 0, 2 * Math.PI);
+      ctx.fillStyle = "gray";
+      ctx.fill();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = "gray";
+      ctx.stroke();
+    }
   }
+}
+
+export function calculateSplitWaypoints(
+  path1: string,
+  path2: string,
+): [Waypoint[], Waypoint[]] {
+  const waypoints1: Waypoint[] = [];
+  const waypoints2: Waypoint[] = [];
+  let currentX = 0;
+  let currentY = 0;
+  let currentVX = 0;
+  let currentVY = 0;
+  waypoints1.push([currentX, currentY, currentVX, currentVY]);
+  for (let i = 0; i < path1.length; i++) {
+    const [dx, dy] = getDxDy(path1[i]);
+    currentVX += dx;
+    currentVY += dy;
+    currentX += currentVX;
+    currentY += currentVY;
+    waypoints1.push([currentX, currentY, currentVX, currentVY]);
+  }
+  for (let i = 0; i < path2.length; i++) {
+    const [dx, dy] = getDxDy(path2[i]);
+    currentVX += dx;
+    currentVY += dy;
+    currentX += currentVX;
+    currentY += currentVY;
+    waypoints2.push([currentX, currentY, currentVX, currentVY]);
+  }
+  return [waypoints1, waypoints2];
 }
 
 export function calculateWaypoints(path: string): Waypoint[] {
@@ -284,43 +363,39 @@ export function calculateWaypoints(path: string): Waypoint[] {
   let currentVY = 0;
   waypoints.push([currentX, currentY, currentVX, currentVY]);
   for (let i = 0; i < path.length; i++) {
-    switch (path[i]) {
-      case "1":
-        currentVX -= 1;
-        currentVY -= 1;
-        break;
-      case "2":
-        currentVY -= 1;
-        break;
-      case "3":
-        currentVX += 1;
-        currentVY -= 1;
-        break;
-      case "4":
-        currentVX -= 1;
-        break;
-      case "5":
-        break;
-      case "6":
-        currentVX += 1;
-        break;
-      case "7":
-        currentVX -= 1;
-        currentVY += 1;
-        break;
-      case "8":
-        currentVY += 1;
-        break;
-      case "9":
-        currentVX += 1;
-        currentVY += 1;
-        break;
-    }
+    const [dx, dy] = getDxDy(path[i]);
+    currentVX += dx;
+    currentVY += dy;
     currentX += currentVX;
     currentY += currentVY;
     waypoints.push([currentX, currentY, currentVX, currentVY]);
   }
   return waypoints;
+}
+
+function getDxDy(c: string): [number, number] {
+  switch (c) {
+    case "1":
+      return [-1, -1];
+    case "2":
+      return [0, -1];
+    case "3":
+      return [1, -1];
+    case "4":
+      return [-1, 0];
+    case "5":
+      return [0, 0];
+    case "6":
+      return [1, 0];
+    case "7":
+      return [-1, 1];
+    case "8":
+      return [0, 1];
+    case "9":
+      return [1, 1];
+    default:
+      return [-Infinity, -Infinity];
+  }
 }
 
 export function parseReqPoints(reqPointsStr: string): [number, number][] {

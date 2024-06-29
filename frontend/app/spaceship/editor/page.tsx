@@ -3,9 +3,10 @@
 import { useProblem } from "@/components/api";
 import {
   WaypointVizState,
-  calculateWaypoints,
+  calculateSplitWaypoints,
 } from "@/components/spaceviz/state";
 import { parseReqPoints } from "@/components/spaceviz/state";
+import { warn } from "console";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const CANVAS_SIZE = 4000;
@@ -19,6 +20,7 @@ export default function Page() {
     problem,
   );
   const [path, setPath] = useState("");
+  const [debugStep, setDebugStep] = useState(0);
 
   useEffect(() => {
     const reqPoints = parseReqPoints(problemData?.content ?? "");
@@ -26,9 +28,12 @@ export default function Page() {
   }, [problemData?.content]);
 
   useEffect(() => {
-    const waypoints = calculateWaypoints(path);
-    vizStateRef.current.setWaypoints(waypoints);
-  }, [path]);
+    const [w1, w2] = calculateSplitWaypoints(
+      path.slice(0, debugStep),
+      path.slice(debugStep),
+    );
+    vizStateRef.current.setWaypoints(w1, w2);
+  }, [path, debugStep]);
 
   const initCanvas = useCallback((canvas: HTMLCanvasElement | null) => {
     if (canvas) {
@@ -62,21 +67,138 @@ export default function Page() {
     return null;
   }
 
+  const insertOne = (s: string) => {
+    setPath(path.slice(0, debugStep) + s + path.slice(debugStep));
+    setDebugStep(debugStep + 1);
+  };
+  const deleteOne = () => {
+    setPath(path.slice(0, Math.max(0, debugStep - 1)) + path.slice(debugStep));
+    setDebugStep(Math.max(0, debugStep - 1));
+  };
+
   return (
     <div className="space-y-2 p-4">
       <ProblemChooser problem={problem} setProblem={setProblem} />
       <input
         type="text"
         value={path}
-        onChange={(e) => setPath(e.target.value)}
+        onChange={(e) => {
+          setPath(e.target.value);
+          setDebugStep(0);
+        }}
         className="input input-bordered w-full"
       />
-      <canvas
-        className="w-full h-full border"
-        ref={initCanvas}
-        width={CANVAS_SIZE}
-        height={CANVAS_SIZE}
-      ></canvas>
+      <div className="flex gap-x-4">
+        <div>
+          <canvas
+            className="w-full h-full border"
+            ref={initCanvas}
+            width={CANVAS_SIZE}
+            height={CANVAS_SIZE}
+          ></canvas>
+        </div>
+
+        <div className="w-[70em] space-y-4">
+          <div>
+            ステップ: {debugStep}/{path.length}
+          </div>
+          <div className="grid grid-cols-4">
+            <button
+              className="btn btn-xs"
+              onClick={() => setDebugStep((s) => Math.max(0, s - 10))}
+            >
+              10戻る
+            </button>
+            <button
+              className="btn btn-xs"
+              onClick={() => setDebugStep((s) => Math.max(0, s - 1))}
+            >
+              1戻る
+            </button>
+            <button
+              className="btn btn-xs"
+              onClick={() => setDebugStep((s) => Math.min(path.length, s + 1))}
+            >
+              1進む
+            </button>
+            <button
+              className="btn btn-xs"
+              onClick={() => setDebugStep((s) => Math.min(path.length, s + 10))}
+            >
+              10進む
+            </button>
+          </div>
+          <div>
+            <div className="flex">
+              <button
+                className="btn btn-xs size-10 bg-gray-300"
+                onClick={() => insertOne("7")}
+              >
+                7
+              </button>
+              <button
+                className="btn btn-xs size-10 bg-gray-300"
+                onClick={() => insertOne("8")}
+              >
+                8
+              </button>
+              <button
+                className="btn btn-xs size-10 bg-gray-300"
+                onClick={() => insertOne("9")}
+              >
+                9
+              </button>
+            </div>
+            <div className="flex">
+              <button
+                className="btn btn-xs size-10 bg-gray-300"
+                onClick={() => insertOne("4")}
+              >
+                4
+              </button>
+              <button
+                className="btn btn-xs size-10 bg-gray-300"
+                onClick={() => insertOne("5")}
+              >
+                5
+              </button>
+              <button
+                className="btn btn-xs size-10 bg-gray-300"
+                onClick={() => insertOne("6")}
+              >
+                6
+              </button>
+            </div>
+            <div className="flex">
+              <button
+                className="btn btn-xs size-10 bg-gray-300"
+                onClick={() => insertOne("1")}
+              >
+                1
+              </button>
+              <button
+                className="btn btn-xs size-10 bg-gray-300"
+                onClick={() => insertOne("2")}
+              >
+                2
+              </button>
+              <button
+                className="btn btn-xs size-10 bg-gray-300"
+                onClick={() => insertOne("3")}
+              >
+                3
+              </button>
+            </div>
+          </div>
+
+          <button
+            className="btn btn-sm bg-gray-300"
+            onClick={() => deleteOne()}
+          >
+            現在の一文字削除
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
