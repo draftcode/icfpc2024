@@ -7,3 +7,5 @@ edition = "2021"
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
 common = { path = "../../common" }
+itertools = "0.13.0"
+num-bigint = "0.4.6"
