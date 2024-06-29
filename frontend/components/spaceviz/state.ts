@@ -21,37 +21,50 @@ export class WaypointVizState {
   //     |
   //     +y
 
-  viewportSpaceSize: number;
-  viewportTopLeftSpaceXY: [number, number];
-  waypoints: Waypoint[];
-  reqCheckPoints: [number, number][];
+  viewportSpaceSize: number = 2;
+  viewportTopLeftSpaceXY: [number, number] = [-1, -1];
+  reqCheckPoints: [number, number][] = [];
   cursorCanvasXY?: [number, number];
   dragStartCursorCanvasXY?: [number, number];
+  waypoints: Waypoint[] = [];
 
-  constructor(waypoints: Waypoint[], reqCheckPoints: [number, number][]) {
-    this.waypoints = waypoints;
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-    for (const [x, y] of waypoints) {
-      minX = Math.min(minX, x);
-      minY = Math.min(minY, y);
-      maxX = Math.max(maxX, x);
-      maxY = Math.max(maxY, y);
-    }
+  constructor() {}
+
+  setCheckPointsAndInitViewport(
+    reqCheckPoints: [number, number][],
+    waypoints?: Waypoint[],
+  ) {
+    this.reqCheckPoints = reqCheckPoints;
+    let minX = -1;
+    let minY = -1;
+    let maxX = 1;
+    let maxY = 1;
     for (const [x, y] of reqCheckPoints) {
       minX = Math.min(minX, x);
       minY = Math.min(minY, y);
       maxX = Math.max(maxX, x);
       maxY = Math.max(maxY, y);
     }
+    if (waypoints) {
+      for (const [x, y] of waypoints) {
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+      }
+      this.waypoints = waypoints;
+    }
     const dx = maxX - minX;
     const dy = maxY - minY;
     const size = Math.max(dx, dy);
-    this.viewportSpaceSize = size * 1.05;
+    this.viewportSpaceSize = Math.max(size * 1.05, 2);
     this.viewportTopLeftSpaceXY = [minX - size * 0.025, maxY + size * 0.025];
-    this.reqCheckPoints = reqCheckPoints;
+    console.log(this.viewportSpaceSize);
+    console.log(this.viewportTopLeftSpaceXY);
+  }
+
+  setWaypoints(waypoints: Waypoint[]) {
+    this.waypoints = waypoints;
   }
 
   private convertSpaceXYToCanvasXY([x, y]: [number, number]): [number, number] {
@@ -162,52 +175,12 @@ export class WaypointVizState {
     this.cursorCanvasXY = undefined;
   }
 
-  plotWaypoints(ctx: CanvasRenderingContext2D) {
+  plotBasis(ctx: CanvasRenderingContext2D) {
     const cw = ctx.canvas.width;
     const ch = ctx.canvas.height;
-    const canvasReqCheckPoints = this.reqCheckPoints.map(([x, y]) =>
-      this.convertSpaceXYToCanvasXY([x, y]),
-    );
-    const spaceCenterCanvasXY = this.convertSpaceXYToCanvasXY([0, 0]);
-    const canvasWaypoints = this.waypoints.map(([x, y]) =>
-      this.convertSpaceXYToCanvasXY([x, y]),
-    );
-
-    ctx.lineWidth = 3;
-    ctx.clearRect(0, 0, cw, ctx.canvas.height);
-
-    // Waypointsのパスを描画
-    ctx.strokeStyle = "blue";
-    ctx.moveTo(canvasWaypoints[0][0] * cw, canvasWaypoints[0][1] * ch);
-    ctx.beginPath();
-    for (const [canvasX, canvasY] of canvasWaypoints) {
-      ctx.lineTo(canvasX * cw, canvasY * ch);
-    }
-    ctx.stroke();
-
-    // Waypointsの点を描画
-    for (const [canvasX, canvasY] of canvasWaypoints) {
-      ctx.beginPath();
-      ctx.arc(canvasX * cw, canvasY * ch, 10, 0, 2 * Math.PI);
-      ctx.fillStyle = "blue";
-      ctx.fill();
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = "blue";
-      ctx.stroke();
-    }
-
-    // ReqCheckPointsの点を描画
-    for (const [canvasX, canvasY] of canvasReqCheckPoints) {
-      ctx.beginPath();
-      ctx.arc(canvasX * cw, canvasY * ch, 8, 0, 2 * Math.PI);
-      ctx.fillStyle = "red";
-      ctx.fill();
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = "red";
-      ctx.stroke();
-    }
 
     // 座標軸を描画
+    const spaceCenterCanvasXY = this.convertSpaceXYToCanvasXY([0, 0]);
     ctx.lineWidth = 2;
     ctx.strokeStyle = "black";
     ctx.moveTo(0, spaceCenterCanvasXY[1] * ch);
@@ -218,6 +191,20 @@ export class WaypointVizState {
     ctx.moveTo(spaceCenterCanvasXY[0] * cw, 0);
     ctx.lineTo(spaceCenterCanvasXY[0] * cw, ch);
     ctx.stroke();
+
+    // ReqCheckPointsの点を描画
+    const canvasReqCheckPoints = this.reqCheckPoints.map(([x, y]) =>
+      this.convertSpaceXYToCanvasXY([x, y]),
+    );
+    for (const [canvasX, canvasY] of canvasReqCheckPoints) {
+      ctx.beginPath();
+      ctx.arc(canvasX * cw, canvasY * ch, 8, 0, 2 * Math.PI);
+      ctx.fillStyle = "red";
+      ctx.fill();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = "red";
+      ctx.stroke();
+    }
 
     // カーソル座標表示
     if (this.cursorCanvasXY) {
@@ -252,6 +239,38 @@ export class WaypointVizState {
       ctx.beginPath();
       ctx.moveTo(pixelX - 50, pixelY);
       ctx.lineTo(pixelX + 50, pixelY);
+      ctx.stroke();
+    }
+  }
+
+  plotWaypoints(ctx: CanvasRenderingContext2D) {
+    if (this.waypoints.length === 0) {
+      return;
+    }
+    const cw = ctx.canvas.width;
+    const ch = ctx.canvas.height;
+    const canvasWaypoints = this.waypoints.map(([x, y]) =>
+      this.convertSpaceXYToCanvasXY([x, y]),
+    );
+
+    // Waypointsのパスを描画
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "blue";
+    ctx.moveTo(canvasWaypoints[0][0] * cw, canvasWaypoints[0][1] * ch);
+    ctx.beginPath();
+    for (const [canvasX, canvasY] of canvasWaypoints) {
+      ctx.lineTo(canvasX * cw, canvasY * ch);
+    }
+    ctx.stroke();
+
+    // Waypointsの点を描画
+    for (const [canvasX, canvasY] of canvasWaypoints) {
+      ctx.beginPath();
+      ctx.arc(canvasX * cw, canvasY * ch, 10, 0, 2 * Math.PI);
+      ctx.fillStyle = "blue";
+      ctx.fill();
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = "blue";
       ctx.stroke();
     }
   }

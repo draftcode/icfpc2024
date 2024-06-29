@@ -112,6 +112,9 @@ export default function Sidebar({ current }: { current?: string }) {
             <CategoryBadge rank={data.spaceship.rank} />
           </h2>
           <ul>
+            <li>
+              <Link href="/spaceship/editor">エディタ</Link>
+            </li>
             {data.spaceship.problems.map(
               ({ id, rank, our_score, best_score }) => {
                 return (
