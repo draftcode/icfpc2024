@@ -7,14 +7,11 @@ import {
   useCommunicationsWithRequestPrefix,
   useProblem,
 } from "@/components/api";
-import {
-  WaypointVizState,
-  calculateWaypoints,
-  parseReqPoints,
-} from "@/components/spaceviz/state";
+import { parseReqPoints } from "@/components/spaceviz/state";
 import Link from "next/link";
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 import Markdown from "react-markdown";
+import Visualizer from "../Visualizer";
 
 export default function Home({
   params: { id: idStr },
@@ -146,48 +143,5 @@ function SubmittedSpaceshipProblem({
         </div>
       </div>
     </CommunicationContainer>
-  );
-}
-
-const CANVAS_SIZE = 4000;
-
-function Visualizer({
-  path,
-  reqPoints,
-}: {
-  path: string;
-  reqPoints: [number, number][];
-}) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const waypoints = useMemo(() => calculateWaypoints(path), [path]);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) {
-      return;
-    }
-
-    const state = new WaypointVizState(waypoints, reqPoints);
-    let animationFrameId: number = 0;
-    const render = () => {
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        state.plotWaypoints(ctx);
-      }
-      animationFrameId = window.requestAnimationFrame(render);
-    };
-    render();
-    return () => {
-      window.cancelAnimationFrame(animationFrameId);
-    };
-  }, [canvasRef]);
-
-  return (
-    <canvas
-      className="w-full h-full border"
-      ref={canvasRef}
-      width={CANVAS_SIZE}
-      height={CANVAS_SIZE}
-    ></canvas>
   );
 }

@@ -21,12 +21,11 @@ export class WaypointVizState {
   //     |
   //     +y
 
-  viewportSpaceSize: number;
-  viewportTopLeftSpaceXY: [number, number];
   waypoints: Waypoint[];
   canvasWaypoints: [number, number][];
   reqCheckPoints: [number, number][];
   canvasReqCheckPoints: [number, number][];
+  spaceCenterCanvasXY: [number, number];
 
   constructor(waypoints: Waypoint[], reqCheckPoints: [number, number][]) {
     this.waypoints = waypoints;
@@ -48,51 +47,50 @@ export class WaypointVizState {
     }
     const dx = maxX - minX;
     const dy = maxY - minY;
-    this.viewportSpaceSize = Math.max(dx, dy);
-    this.viewportTopLeftSpaceXY = [minX, maxY];
-    this.canvasWaypoints = this.convertWaypointsToCanvasXY(
-      waypoints.map(([x, y]) => [x, y]),
-    );
-    this.reqCheckPoints = reqCheckPoints;
-    this.canvasReqCheckPoints = this.convertWaypointsToCanvasXY(reqCheckPoints);
-  }
-
-  convertWaypointsToCanvasXY(
-    waypoints: [number, number][],
-  ): [number, number][] {
-    return waypoints.map(([x, y]) => {
-      const [minX, maxY] = this.viewportTopLeftSpaceXY;
-      const canvasX = (x - minX) / this.viewportSpaceSize;
-      const canvasY = (maxY - y) / this.viewportSpaceSize;
+    const size = Math.max(dx, dy);
+    const viewportSpaceSize = size * 1.05;
+    const viewportTopLeftSpaceXY = [minX - size * 0.025, maxY + size * 0.025];
+    const convertSpaceXYToCanvasXY = ([x, y]: [number, number]): [
+      number,
+      number,
+    ] => {
+      const [minX, maxY] = viewportTopLeftSpaceXY;
+      const canvasX = (x - minX) / viewportSpaceSize;
+      const canvasY = (maxY - y) / viewportSpaceSize;
       // この座標が0-1の範囲に入ると画面に表示される
       return [canvasX, canvasY];
-    });
+    };
+    this.canvasWaypoints = waypoints.map(([x, y]) =>
+      convertSpaceXYToCanvasXY([x, y]),
+    );
+    this.reqCheckPoints = reqCheckPoints;
+    this.canvasReqCheckPoints = reqCheckPoints.map(convertSpaceXYToCanvasXY);
+    this.spaceCenterCanvasXY = convertSpaceXYToCanvasXY([0, 0]);
   }
 
   plotWaypoints(ctx: CanvasRenderingContext2D) {
-    ctx.lineWidth = 3;
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    ctx.moveTo(
-      this.canvasWaypoints[0][0] * ctx.canvas.width,
-      this.canvasWaypoints[0][1] * ctx.canvas.height,
-    );
+    const cw = ctx.canvas.width;
+    const ch = ctx.canvas.height;
 
+    ctx.lineWidth = 3;
+    ctx.clearRect(0, 0, cw, ctx.canvas.height);
+
+    // Waypointsのパスを描画
     ctx.strokeStyle = "blue";
+    ctx.moveTo(
+      this.canvasWaypoints[0][0] * cw,
+      this.canvasWaypoints[0][1] * ch,
+    );
     ctx.beginPath();
     for (const [canvasX, canvasY] of this.canvasWaypoints) {
-      ctx.lineTo(canvasX * ctx.canvas.width, canvasY * ctx.canvas.height);
+      ctx.lineTo(canvasX * cw, canvasY * ch);
     }
     ctx.stroke();
 
+    // Waypointsの点を描画
     for (const [canvasX, canvasY] of this.canvasWaypoints) {
       ctx.beginPath();
-      ctx.arc(
-        canvasX * ctx.canvas.width,
-        canvasY * ctx.canvas.height,
-        10,
-        0,
-        2 * Math.PI,
-      );
+      ctx.arc(canvasX * cw, canvasY * ch, 10, 0, 2 * Math.PI);
       ctx.fillStyle = "blue";
       ctx.fill();
       ctx.lineWidth = 4;
@@ -100,21 +98,28 @@ export class WaypointVizState {
       ctx.stroke();
     }
 
+    // ReqCheckPointsの点を描画
     for (const [canvasX, canvasY] of this.canvasReqCheckPoints) {
       ctx.beginPath();
-      ctx.arc(
-        canvasX * ctx.canvas.width,
-        canvasY * ctx.canvas.height,
-        8,
-        0,
-        2 * Math.PI,
-      );
+      ctx.arc(canvasX * cw, canvasY * ch, 8, 0, 2 * Math.PI);
       ctx.fillStyle = "red";
       ctx.fill();
       ctx.lineWidth = 4;
       ctx.strokeStyle = "red";
       ctx.stroke();
     }
+
+    // 座標軸を描画
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "black";
+    ctx.moveTo(0, this.spaceCenterCanvasXY[1] * ch);
+    ctx.lineTo(cw, this.spaceCenterCanvasXY[1] * ch);
+    ctx.stroke();
+
+    ctx.strokeStyle = "black";
+    ctx.moveTo(this.spaceCenterCanvasXY[0] * cw, 0);
+    ctx.lineTo(this.spaceCenterCanvasXY[0] * cw, ch);
+    ctx.stroke();
   }
 }
 
