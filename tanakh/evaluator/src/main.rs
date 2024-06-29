@@ -54,6 +54,8 @@ fn pp(e: &Expr) -> String {
         Expr::Bin(op, l, r) => {
             let l = pp(l.as_ref());
             let r = pp(r.as_ref());
+
+            #[allow(unreachable_patterns)]
             match op {
                 BinOp::Add => format!("({l} + {r})"),
                 BinOp::Sub => format!("({l} - {r})"),
@@ -69,6 +71,7 @@ fn pp(e: &Expr) -> String {
                 BinOp::Take => format!("take ({l}) ({r})"),
                 BinOp::Drop => format!("drop ({l}) ({r})"),
                 BinOp::App => format!("({l} {r})"),
+                _ => unreachable!(),
             }
         }
         Expr::If(cond, th, el) => {
@@ -126,7 +129,7 @@ fn simplify_comb(e: &Expr) -> Expr {
 fn to_haskell(e: &Expr) -> String {
     match e {
         Expr::Bool(b) => if *b { "True" } else { "False" }.to_string(),
-        Expr::Int(n) => n.to_string(),
+        Expr::Int(n) => format!("{:#x}", n.as_ref()),
         Expr::String(s) => format!("{s:?}"),
         Expr::Var(n) => {
             if *n == usize::MAX {
@@ -136,6 +139,15 @@ fn to_haskell(e: &Expr) -> String {
             }
         }
         Expr::Un(op, e) => {
+            match e.as_ref() {
+                Expr::Bin(BinOp::Eq, l, r) => {
+                    let l = to_haskell(l);
+                    let r = to_haskell(r);
+                    return format!("({l} /= {r})");
+                }
+                _ => {}
+            }
+
             let e = to_haskell(e);
             match op {
                 UnOp::Neg => format!("(- {})", e),
@@ -192,6 +204,8 @@ fn to_haskell(e: &Expr) -> String {
             }
 
             let l = to_haskell(l);
+
+            #[allow(unreachable_patterns)]
             match op {
                 BinOp::Add => format!("({l} + {r})"),
                 BinOp::Sub => format!("({l} - {r})"),
@@ -261,6 +275,8 @@ fn to_scheme(e: &Expr) -> String {
         Expr::Bin(op, l, r) => {
             let l = to_scheme(l);
             let r = to_scheme(r);
+
+            #[allow(unreachable_patterns)]
             let ret = match op {
                 BinOp::Add => format!("(+ (force {l}) (force {r}))"),
                 BinOp::Sub => format!("(- (force {l}) (force {r}))"),
