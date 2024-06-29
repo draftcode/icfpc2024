@@ -1,4 +1,4 @@
-use crate::expr::{BinOp, Expr, UnOp};
+use crate::expr::{BinOp, Expr};
 
 pub fn cps_conversion(e: &Expr) -> Expr {
     cps_conv_internal(e)

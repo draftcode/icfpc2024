@@ -1,8 +1,8 @@
 use std::{io, str::FromStr};
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::Result;
 
-use common::planar::{Board, Cell, State};
+use common::planar::{Cell, State};
 
 fn main() -> Result<()> {
     let s = io::read_to_string(io::stdin())?;
