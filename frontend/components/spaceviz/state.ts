@@ -26,6 +26,7 @@ export class WaypointVizState {
   waypoints: Waypoint[];
   reqCheckPoints: [number, number][];
   cursorCanvasXY?: [number, number];
+  dragStartCursorCanvasXY?: [number, number];
 
   constructor(waypoints: Waypoint[], reqCheckPoints: [number, number][]) {
     this.waypoints = waypoints;
@@ -57,20 +58,34 @@ export class WaypointVizState {
     const [minX, maxY] = this.viewportTopLeftSpaceXY;
     const canvasX = (x - minX) / this.viewportSpaceSize;
     const canvasY = (maxY - y) / this.viewportSpaceSize;
+    // ドラッグされている最中はこの座標がずれる。
+    if (this.dragStartCursorCanvasXY && this.cursorCanvasXY) {
+      const [dragStartX, dragStartY] = this.dragStartCursorCanvasXY;
+      const [currentX, currentY] = this.cursorCanvasXY;
+      const dx = currentX - dragStartX;
+      const dy = currentY - dragStartY;
+      return [canvasX + dx, canvasY + dy];
+    }
     // この座標が0-1の範囲に入ると画面に表示される
     return [canvasX, canvasY];
   }
 
   public addEventListeners(canvas: HTMLCanvasElement): () => void {
+    const mousedownEvent = (e: MouseEvent) => this.mousedownEvent(canvas, e);
     const mouseleaveEvent = () => this.mouseleaveEvent(canvas);
     const mousemoveEvent = (e: MouseEvent) => this.mousemoveEvent(canvas, e);
+    const mouseupEvent = (e: MouseEvent) => this.mouseupEvent(canvas, e);
     const wheelEvent = (e: WheelEvent) => this.wheelEvent(canvas, e);
+    canvas.addEventListener("mousedown", mousedownEvent);
     canvas.addEventListener("mouseleave", mouseleaveEvent);
     canvas.addEventListener("mousemove", mousemoveEvent);
+    canvas.addEventListener("mouseup", mouseupEvent);
     canvas.addEventListener("wheel", wheelEvent);
     return () => {
+      canvas.removeEventListener("mousedown", mousedownEvent);
       canvas.removeEventListener("mouseleave", mouseleaveEvent);
       canvas.removeEventListener("mousemove", mousemoveEvent);
+      canvas.removeEventListener("mouseup", mouseupEvent);
       canvas.removeEventListener("wheel", wheelEvent);
     };
   }
@@ -95,6 +110,36 @@ export class WaypointVizState {
     //   this.vp.zoomWithMousePos(1.2, this.getMouseCCoord(canvas, e));
     // }
     return false;
+  }
+
+  private mousedownEvent(canvas: HTMLCanvasElement, e: MouseEvent) {
+    this.dragStartCursorCanvasXY = this.getMouseCanvasXY(canvas, e);
+  }
+
+  private mouseupEvent(canvas: HTMLCanvasElement, e: MouseEvent) {
+    const current = this.getMouseCanvasXY(canvas, e);
+    if (
+      !this.dragStartCursorCanvasXY ||
+      (this.dragStartCursorCanvasXY[0] == current[0] &&
+        this.dragStartCursorCanvasXY[1] == current[1])
+    ) {
+      // 単体クリック
+    }
+    this.commitDragMove();
+    this.dragStartCursorCanvasXY = undefined;
+  }
+
+  private commitDragMove() {
+    if (this.cursorCanvasXY && this.dragStartCursorCanvasXY) {
+      const [dx, dy] = [
+        this.cursorCanvasXY[0] - this.dragStartCursorCanvasXY[0],
+        this.cursorCanvasXY[1] - this.dragStartCursorCanvasXY[1],
+      ];
+      this.viewportTopLeftSpaceXY = [
+        this.viewportTopLeftSpaceXY[0] - dx * this.viewportSpaceSize,
+        this.viewportTopLeftSpaceXY[1] + dy * this.viewportSpaceSize,
+      ];
+    }
   }
 
   private mousemoveEvent(canvas: HTMLCanvasElement, e: MouseEvent) {
@@ -164,7 +209,7 @@ export class WaypointVizState {
 
     // カーソル座標表示
     if (this.cursorCanvasXY) {
-      const [x, y] = this.cursorCanvasXY;
+      const [x, y] = this.dragStartCursorCanvasXY ?? this.cursorCanvasXY;
       const [spaceX, spaceY] = [
         Math.round(x * this.viewportSpaceSize + this.viewportTopLeftSpaceXY[0]),
         Math.round(this.viewportTopLeftSpaceXY[1] - y * this.viewportSpaceSize),
