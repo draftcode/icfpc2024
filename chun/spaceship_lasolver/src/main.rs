@@ -6,6 +6,7 @@ type Point = (i32, i32);
 type Velocity = (i32, i32);
 type Acceleration = (i32, i32);
 
+#[allow(dead_code)]
 fn surrogate_cost(p1: Point, p2: Point) -> i32 {
     // Chevyshev distance
 
@@ -45,6 +46,7 @@ fn encode_thrust_into_keypad(thrusts: Vec<Acceleration>) -> String {
     return retbuf;
 }
 
+#[allow(dead_code)]
 fn decode_thrust_from_keypad(s: &str) -> Vec<Acceleration> {
     let mut ret = Vec::new();
 
@@ -78,7 +80,7 @@ mod encode_decode_thrust_test {
     }
 }
 
-fn simulate(inip: Point, iniv: Velocity, order: Vec<Acceleration>) -> Vec<(Point, Velocity)> {
+fn simulate(inip: Point, iniv: Velocity, order: &Vec<Acceleration>) -> Vec<(Point, Velocity)> {
     let mut ret = Vec::new();
     let mut p = inip;
     let mut v = iniv;
@@ -99,7 +101,7 @@ mod simulate_test {
     fn test_simulate() {
         let thrusts = decode_thrust_from_keypad("236659");
         let expected_points = [(0, -1), (1, -3), (3, -5), (6, -7), (9, -9), (13, -10)];
-        let res = simulate((0, 0), (0, 0), thrusts);
+        let res = simulate((0, 0), (0, 0), &thrusts);
         let posres: Vec<Point> = res.into_iter().map(|x| x.0).collect();
         assert_eq!(posres, expected_points);
     }
@@ -107,8 +109,7 @@ mod simulate_test {
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 struct SearchState {
-    cost: i32,
-    cost_with_potential: usize,
+    cost_with_potential: i32,
     passed_mid: bool,
     position: Point,
     velocity: Velocity,
@@ -133,21 +134,30 @@ impl PartialOrd for SearchState {
 }
 
 fn follow_backtrack(
-    backtrackinfo: HashMap<(Point, Velocity), (Acceleration, i32)>,
+    backtrackinfo: HashMap<(Point, Velocity, bool), Acceleration>,
     pos: Point,
     vel: Velocity,
+    midpt: Point,
     backto: Point,
     vbackto: Velocity,
 ) -> Vec<Acceleration> {
     let mut ret: Vec<Acceleration> = Vec::new();
     let mut pos = pos;
     let mut vel = vel;
+    let mut passed_mid = true;
     loop {
+        println!(
+            "backtracking cur = {:?} {:?}, mid = {:?}, to = {:?} {:?}",
+            pos, vel, midpt, backto, vbackto
+        );
         if pos == backto && vel == vbackto {
             ret.reverse();
             return ret;
         }
-        let prevacc = backtrackinfo.get(&(pos, vel)).unwrap().0;
+        let prevacc = *(backtrackinfo.get(&(pos, vel, passed_mid)).unwrap());
+        if pos == midpt {
+            passed_mid = false;
+        }
         let prevpos = (pos.0 - vel.0, pos.1 - vel.1);
         let prevvel = (vel.0 - prevacc.0, vel.1 - prevacc.1);
         pos = prevpos;
@@ -156,91 +166,171 @@ fn follow_backtrack(
     }
 }
 
+fn calc_additional_estimate(
+    curpt: Point,
+    curv: Velocity,
+    passed_midpt: bool,
+    midpt: Point,
+    endpt: Point,
+) -> i32 {
+    if passed_midpt {
+        return surrogate_cost_with_velocity(curpt, curv, endpt);
+    } else {
+        return surrogate_cost_with_velocity(curpt, curv, midpt)
+            + surrogate_cost_with_velocity(midpt, curv, endpt);
+    }
+}
+
 fn solve_lookahead(
     inip: Point,
     iniv: Velocity,
     midpt: Point,
     endpt: Point,
-) -> (Vec<Acceleration>, Velocity) {
-    let midvel: Velocity = (0, 0);
+) -> (Vec<Acceleration>, Vec<Acceleration>, Velocity) {
     let mut heap = BinaryHeap::new();
-    let mut backtrack: HashMap<(Point, Velocity), (Acceleration, i32)> = HashMap::new();
+    let mut backtrack: HashMap<(Point, Velocity, bool), Acceleration> = HashMap::new();
+    let mut combinedscore: HashMap<(Point, Velocity, bool), i32> = HashMap::new();
+    let mut truescore: HashMap<(Point, Velocity, bool), i32> = HashMap::new();
 
     heap.push(SearchState {
-        cost: 0,
         cost_with_potential: 0,
         passed_mid: false,
         position: inip,
         velocity: iniv,
     });
 
+    truescore.insert((inip, iniv, inip == midpt), 0);
+    combinedscore.insert(
+        (inip, iniv, inip == midpt),
+        0 + calc_additional_estimate(inip, iniv, inip == midpt, midpt, endpt),
+    );
+
     while let Some(SearchState {
-        cost,
-        cost_with_potential,
+        cost_with_potential: _,
         passed_mid,
         position,
         velocity,
     }) = heap.pop()
     {
-        let mut passed_mid = passed_mid;
+        let passed_mid = passed_mid || position == midpt;
         if passed_mid && position == endpt {
+            let backtrack_res = follow_backtrack(backtrack, position, velocity, midpt, inip, iniv);
+            let trajectory = simulate(inip, iniv, &backtrack_res);
+            let mut move_before_mid = Vec::new();
+            let mut move_after_mid = Vec::new();
+            let mut aftermid = false;
+            let mut midv = None;
+            for i in 0..trajectory.len() {
+                let (curp, curv) = trajectory[i];
+                if aftermid {
+                    move_after_mid.push(backtrack_res[i]);
+                } else {
+                    move_before_mid.push(backtrack_res[i]);
+                }
+                if curp == midpt {
+                    aftermid = true;
+                    midv = Some(curv);
+                }
+            }
+            return (move_before_mid, move_after_mid, midv.unwrap());
+        }
+        let base_truescore = *truescore.get(&(position, velocity, passed_mid)).unwrap();
+        //let base_combinedscore = base_truescore + calc_additional_estimate(position, velocity, passed_mid, midpt, endpt);
+        for ax in [-1, 0, 1] {
+            for ay in [-1, 0, 1] {
+                let newv = (velocity.0 + ax, velocity.1 + ay);
+                let newx = (position.0 + newv.0, position.1 + newv.1);
+                let new_passed_mid = passed_mid || newx == midpt;
+                let new_truescore = base_truescore + 1;
+                let cur_saved_score = *truescore
+                    .get(&(newx, newv, new_passed_mid))
+                    .or(Some(&i32::MAX))
+                    .unwrap();
+                if new_truescore < cur_saved_score {
+                    let new_combinedscore = new_truescore
+                        + calc_additional_estimate(newx, newv, passed_mid, midpt, endpt);
+                    truescore.insert((newx, newv, new_passed_mid), new_truescore);
+                    combinedscore.insert((newx, newv, new_passed_mid), new_combinedscore);
+                    backtrack.insert((newx, newv, new_passed_mid), (ax, ay));
 
-            /*
-            return get_backtrack_and_midvec(backgrack, position, velocity, inip, iniv)
-            return follow_backtrack(backtrack, position, velocity);
-            */
+                    heap.push(SearchState {
+                        cost_with_potential: new_combinedscore,
+                        passed_mid: new_passed_mid,
+                        position: newx,
+                        velocity: newv,
+                    })
+                }
+            }
         }
     }
-    return (Vec::new(), midvel);
+    panic!("Could not find solution");
 }
 
 fn solve_onept(curp: Point, curv: Velocity, endpt: Point) -> Vec<Acceleration> {
-    return Vec::new();
+    let (va, _ve, _midv) = solve_lookahead(curp, curv, endpt, endpt);
+    return va;
 }
 
 fn solve(points: Vec<(i32, i32)>) -> String {
     let mut retbuf = String::new();
-    let mut curpt: (i32, i32) = (0, 0);
-    for i in 0..points.len() - 1 {}
+    let mut curpt: Point = (0, 0);
+    let mut curv: Velocity = (0, 0);
+    for i in 0..points.len() - 1 {
+        let nextmid = points[i];
+        let nextend = points[i + 1];
+        if nextmid == nextend {
+            continue;
+        }
+        let (accs, _ve, midv) = solve_lookahead(curpt, curv, nextmid, nextend);
+        {
+            let check_by_simulate = simulate(curpt, curv, &accs);
+            if curpt != nextmid {
+                assert_eq!(check_by_simulate.last().unwrap().0, nextmid);
+            }
+        }
+        retbuf.push_str(encode_thrust_into_keypad(accs).as_str());
+        curpt = nextmid;
+        curv = midv;
+    }
+    let accs = solve_onept(curpt, curv, points[points.len() - 1]);
+    retbuf.push_str(encode_thrust_into_keypad(accs).as_str());
     return retbuf;
 }
 
 fn main() {
-    fn main() {
-        let mut buffer = String::new();
-        let stdin = io::stdin();
+    let mut buffer = String::new();
+    let stdin = io::stdin();
 
-        let mut v: Vec<(i32, i32)> = Vec::new();
+    let mut v: Vec<(i32, i32)> = Vec::new();
 
-        loop {
-            match stdin.read_line(&mut buffer) {
-                Ok(k) => {
-                    if k == 0 {
-                        break;
-                    }
-                    let mut values = buffer.split_whitespace();
-                    let a = values.next();
-                    let b = values.next();
-                    let (a, b) = match a {
-                        Some(x) => (x, b.unwrap()),
-                        None => break,
-                    };
-                    let ai: i32 = a.parse().unwrap();
-                    let bi: i32 = b.parse().unwrap();
-
-                    v.push((ai, bi));
-                    buffer.clear();
-                }
-                Err(_) => {
+    loop {
+        match stdin.read_line(&mut buffer) {
+            Ok(k) => {
+                if k == 0 {
                     break;
                 }
+                let mut values = buffer.split_whitespace();
+                let a = values.next();
+                let b = values.next();
+                let (a, b) = match a {
+                    Some(x) => (x, b.unwrap()),
+                    None => break,
+                };
+                let ai: i32 = a.parse().unwrap();
+                let bi: i32 = b.parse().unwrap();
+
+                v.push((ai, bi));
+                buffer.clear();
+            }
+            Err(_) => {
+                break;
             }
         }
-
-        //println!("start reorder");
-        let solution: String = solve(v.clone());
-
-        // TODO(chun): run SA
-        println!("{}", solution);
     }
+
+    //println!("start reorder");
+    let solution: String = solve(v.clone());
+
+    // TODO(chun): run SA
+    println!("{}", solution);
 }
