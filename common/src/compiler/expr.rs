@@ -253,10 +253,11 @@ impl Expr {
                 return;
             }
             Expr::Proc(args) => {
-                if !args[0].is_buildin_var(Some(args.len() - 1)) {
+                if args.len() == 1 {
+                    // (f) => f
+                } else if !args[0].is_buildin_var(Some(args.len() - 1)) {
                     assert_eq!(args.len(), 2, "{}", self);
                     res.push("B$".to_string());
-                } else {
                 }
                 args.iter()
                     .for_each(|arg| arg.icfp_inner(res, env, args.len() == 2))

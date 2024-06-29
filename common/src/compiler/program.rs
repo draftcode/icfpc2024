@@ -27,9 +27,16 @@ impl Program {
         let Some(lst) = self.exprs.pop() else {
             return expr;
         };
+
         let Some((args, def)) = lst.get_define() else {
             return self.make_single_lambda(expr);
         };
+
+        // (define (name) def) expr = ((lambda (name) expr) def)
+        if let [name] = args.as_slice() {
+            let nxt_expr = Expr::proc2(Expr::lambda(name.to_string(), expr), def);
+            return self.make_single_lambda(nxt_expr);
+        }
 
         let [name, var] = args.as_slice() else {
             return self.make_single_lambda(expr);

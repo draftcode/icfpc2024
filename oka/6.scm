@@ -2,6 +2,7 @@
 (define (string-drop n s) (substring s n (string-length s)))
 
 (define (x4 x) (string-append (string-append x x) (string-append x x)))
+; (define (x64 x) (x4 (x4 (x4 x))))
 
 (define (res) (
     string-append

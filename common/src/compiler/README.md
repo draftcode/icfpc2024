@@ -14,7 +14,6 @@ oka/8.scm みたいな Scheme プログラムを書いて、
 
 top level の expression はすべて `(define ...)` 形式である必要がある。
 また、`(define (res) ...)` が存在する必要があり、res の値に評価されるような ICFP を出力する。
-res 以外で 0 引数の define があってはならない。
 
 `string-take` と `string-drop` の実装は書いても書かなくてもよい（無視される）。
 
@@ -78,6 +77,16 @@ Scheme のスペック https://groups.csail.mit.edu/mac/ftpdir/scheme-7.4/doc-ht
 ((lambda (f) B) (lambda (x) A))
 
 とおなじ
+
+## 0 引数の define
+
+(define (f) A) B
+
+は
+
+((lambda (f) B')) A
+
+と同じ。B' では B に出現する (f) を f に置き換える。
 
 ## 再帰関数の変換
 
