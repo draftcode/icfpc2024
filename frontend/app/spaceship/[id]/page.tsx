@@ -46,6 +46,18 @@ export default function Home({
   if (problemError) {
     throw problemError;
   }
+  if (data.length === 0 || noValidSolution(data)) {
+    return (
+      <div className="flex gap-x-4">
+        <Sidebar current={`/spaceship/${idStr}`} />
+        <div className="grow">
+          <div className="space-y-4">
+            <Visualizer path={""} reqPoints={reqPoints} />
+          </div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="flex gap-x-4">
       <Sidebar current={`/spaceship/${idStr}`} />
@@ -82,6 +94,13 @@ export default function Home({
       </div>
     </div>
   );
+}
+
+function noValidSolution(data: CommunicationLog[]) {
+  return data.every((log) => {
+    const solution = (log.decoded_request || "").split(" ").pop();
+    return !solution?.match(/^\d+$/);
+  });
 }
 
 function SubmittedSpaceshipProblem({
