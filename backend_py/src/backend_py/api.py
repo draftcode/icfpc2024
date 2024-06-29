@@ -82,7 +82,7 @@ async def communications(
     ).all()
 
 
-@app.get("/communication/{communication_id}")
+@app.get("/communications/{communication_id}")
 async def get_communication(
     session: SessionDep, communication_id: int
 ) -> CommunicationLog:
