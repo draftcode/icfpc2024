@@ -111,7 +111,7 @@ pub struct Board(pub Vec<Vec<Cell>>);
 
 impl std::fmt::Display for Board {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut col_len = vec![0; self.0.len()];
+        let mut col_len = vec![0; self.0[0].len()];
         for l in self.0.iter() {
             for x in 0..l.len() {
                 col_len[x] = col_len[x].max(format!("{}", l[x]).len());
