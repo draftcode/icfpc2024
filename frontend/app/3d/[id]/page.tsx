@@ -19,7 +19,7 @@ export default function Home({
   const { data: problemData, error: problemError } =
     useCommunicationsWithExactRequest(`get 3d${idStr}`, 0, 1);
   const { data, error } = useCommunicationsWithRequestPrefix(
-    `solve 3d${idStr}\n`,
+    `solve 3d${idStr} `,
     page * 10,
     10,
   );
