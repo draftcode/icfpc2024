@@ -227,7 +227,7 @@ fn solve_lookahead(
                 } else {
                     move_before_mid.push(backtrack_res[i]);
                 }
-                if curp == midpt {
+                if curp == midpt && !aftermid {
                     aftermid = true;
                     midv = Some(curv);
                 }
@@ -242,10 +242,7 @@ fn solve_lookahead(
                 let newx = (position.0 + newv.0, position.1 + newv.1);
                 let new_passed_mid = passed_mid || newx == midpt;
                 let new_truescore = base_truescore + 1;
-                let cur_saved_score = *truescore
-                    .get(&(newx, newv))
-                    .or(Some(&i32::MAX))
-                    .unwrap();
+                let cur_saved_score = *truescore.get(&(newx, newv)).or(Some(&i32::MAX)).unwrap();
                 if new_truescore < cur_saved_score {
                     let new_combinedscore = new_truescore
                         + calc_additional_estimate(newx, newv, passed_mid, midpt, endpt);
@@ -281,12 +278,16 @@ fn solve(points: Vec<(i32, i32)>) -> String {
         if nextmid == nextend {
             continue;
         }
-        eprintln!("Solving {:?}, {:?} to {:?}, looking ahead: {:?}", curpt, curv, nextmid, nextend);
+        eprintln!(
+            "Solving {:?}, {:?} to {:?}, looking ahead: {:?}",
+            curpt, curv, nextmid, nextend
+        );
         let (accs, _ve, midv) = solve_lookahead(curpt, curv, nextmid, nextend);
         {
             let check_by_simulate = simulate(curpt, curv, &accs);
             if curpt != nextmid {
                 assert_eq!(check_by_simulate.last().unwrap().0, nextmid);
+                assert_eq!(check_by_simulate.last().unwrap().1, midv);
             }
         }
         retbuf.push_str(encode_thrust_into_keypad(accs).as_str());
