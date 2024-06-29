@@ -23,6 +23,7 @@ export default function Visualizer({
     }
 
     const state = new WaypointVizState(waypoints, reqPoints);
+    const remove = state.addEventListeners(canvas);
     let animationFrameId: number = 0;
     const render = () => {
       const ctx = canvas.getContext("2d");
@@ -33,6 +34,7 @@ export default function Visualizer({
     };
     render();
     return () => {
+      remove();
       window.cancelAnimationFrame(animationFrameId);
     };
   }, [canvasRef]);
