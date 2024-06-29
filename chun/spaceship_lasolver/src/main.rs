@@ -17,21 +17,22 @@ fn surrogate_cost_with_velocity(curpt: Point, curv: Velocity, goal: Point) -> i3
     let dx = goal.0 - curpt.0;
     let dy = goal.1 - curpt.1;
     let vx = curv.0;
-    let avx = if dx.signum() == vx.signum() {
-        cmp::max(1, vx.abs())
+    let (avx, xpenalty) = if dx.signum() == vx.signum() {
+        (cmp::max(1, vx.abs()), 0)
     } else {
-        1
+        (1, vx.abs() * vx.abs() + 1)
     };
     let vy = curv.1;
-    let avy = if dy.signum() == vy.signum() {
-        cmp::max(1, vy.abs())
+    let (avy, ypenalty) = if dy.signum() == vy.signum() {
+        (cmp::max(1, vy.abs()), 0)
     } else {
-        1
+        (1, vy.abs() * vy.abs() + 1)
     };
     let adx = dx.abs();
     let ady = dy.abs();
 
-    return cmp::max(adx / avx, ady / avy);
+    return cmp::max(adx / avx + xpenalty, ady / avy + ypenalty);
+    //return surrogate_cost(curpt, goal);
 }
 
 fn encode_thrust_into_keypad(thrusts: Vec<Acceleration>) -> String {
@@ -134,7 +135,7 @@ impl PartialOrd for SearchState {
 }
 
 fn follow_backtrack(
-    backtrackinfo: HashMap<(Point, Velocity), Acceleration>,
+    backtrackinfo: HashMap<(Point, Velocity, bool), (Point, Velocity, bool)>,
     pos: Point,
     vel: Velocity,
     midpt: Point,
@@ -146,22 +147,22 @@ fn follow_backtrack(
     let mut vel = vel;
     let mut passed_mid = true;
     loop {
-        eprintln!(
-            " backtracking cur = {:?} {:?}, mid = {:?}, to = {:?} {:?}",
-            pos, vel, midpt, backto, vbackto
-        );
-        if pos == backto && vel == vbackto {
+        if false {
+            eprintln!(
+                " backtracking cur = {:?} {:?} {:?}, mid = {:?}, to = {:?} {:?}",
+                pos, vel, passed_mid, midpt, backto, vbackto
+            );
+        }
+        if pos == backto && vel == vbackto && !passed_mid {
             ret.reverse();
             return ret;
         }
-        let prevacc = *(backtrackinfo.get(&(pos, vel)).unwrap());
-        if pos == midpt {
-            passed_mid = false;
-        }
-        let prevpos = (pos.0 - vel.0, pos.1 - vel.1);
-        let prevvel = (vel.0 - prevacc.0, vel.1 - prevacc.1);
+        let (prevpos, prevvel, prevpassmid) =
+            *(backtrackinfo.get(&(pos, vel, passed_mid)).unwrap());
+        let prevacc = (vel.0 - prevvel.0, vel.1 - prevvel.1);
         pos = prevpos;
         vel = prevvel;
+        passed_mid = prevpassmid;
         ret.push(prevacc);
     }
 }
@@ -189,21 +190,23 @@ fn solve_lookahead_impl(
     force_run: bool,
 ) -> Result<(Vec<Acceleration>, Vec<Acceleration>, Velocity), ()> {
     let mut heap = BinaryHeap::new();
-    let mut backtrack: HashMap<(Point, Velocity), Acceleration> = HashMap::new();
-    let mut combinedscore: HashMap<(Point, Velocity), i32> = HashMap::new();
-    let mut truescore: HashMap<(Point, Velocity), i32> = HashMap::new();
+    type State = (Point, Velocity, bool);
+    let mut backtrack: HashMap<State, State> = HashMap::new();
+    let mut combinedscore: HashMap<State, i32> = HashMap::new();
+    let mut truescore: HashMap<State, i32> = HashMap::new();
+    let ini_passed_mid = inip == midpt;
 
     heap.push(SearchState {
         cost_with_potential: 0,
-        passed_mid: false,
+        passed_mid: ini_passed_mid,
         position: inip,
         velocity: iniv,
     });
 
-    truescore.insert((inip, iniv), 0);
+    truescore.insert((inip, iniv, ini_passed_mid), 0);
     combinedscore.insert(
-        (inip, iniv),
-        0 + calc_additional_estimate(inip, iniv, inip == midpt, midpt, endpt),
+        (inip, iniv, ini_passed_mid),
+        0 + calc_additional_estimate(inip, iniv, ini_passed_mid, midpt, endpt),
     );
 
     while let Some(SearchState {
@@ -221,6 +224,10 @@ fn solve_lookahead_impl(
             let mut move_after_mid = Vec::new();
             let mut aftermid = false;
             let mut midv = None;
+            if inip == midpt {
+                aftermid = true;
+                midv = Some(iniv);
+            }
             for i in 0..trajectory.len() {
                 let (curp, curv) = trajectory[i];
                 if aftermid {
@@ -235,7 +242,7 @@ fn solve_lookahead_impl(
             }
             return Ok((move_before_mid, move_after_mid, midv.unwrap()));
         }
-        let base_truescore = *truescore.get(&(position, velocity)).unwrap();
+        let base_truescore = *truescore.get(&(position, velocity, passed_mid)).unwrap();
         //let base_combinedscore = base_truescore + calc_additional_estimate(position, velocity, passed_mid, midpt, endpt);
         for ax in [-1, 0, 1] {
             for ay in [-1, 0, 1] {
@@ -243,13 +250,19 @@ fn solve_lookahead_impl(
                 let newx = (position.0 + newv.0, position.1 + newv.1);
                 let new_passed_mid = passed_mid || newx == midpt;
                 let new_truescore = base_truescore + 1;
-                let cur_saved_score = *truescore.get(&(newx, newv)).or(Some(&i32::MAX)).unwrap();
+                let cur_saved_score = *truescore
+                    .get(&(newx, newv, new_passed_mid))
+                    .or(Some(&i32::MAX))
+                    .unwrap();
                 if new_truescore < cur_saved_score {
                     let new_combinedscore = new_truescore
                         + calc_additional_estimate(newx, newv, passed_mid, midpt, endpt);
-                    truescore.insert((newx, newv), new_truescore);
-                    combinedscore.insert((newx, newv), new_combinedscore);
-                    backtrack.insert((newx, newv), (ax, ay));
+                    truescore.insert((newx, newv, new_passed_mid), new_truescore);
+                    combinedscore.insert((newx, newv, new_passed_mid), new_combinedscore);
+                    backtrack.insert(
+                        (newx, newv, new_passed_mid),
+                        (position, velocity, passed_mid),
+                    );
 
                     heap.push(SearchState {
                         cost_with_potential: new_combinedscore,
@@ -270,6 +283,75 @@ fn solve_lookahead_impl(
 fn solve_onept(curp: Point, curv: Velocity, endpt: Point) -> Vec<Acceleration> {
     let (va, _ve, _midv) = solve_lookahead_impl(curp, curv, endpt, endpt, true).unwrap();
     return va;
+}
+
+fn solve_fallback_singleaxis(px: i32, nx: i32) -> Vec<i32> {
+    let s = (nx - px).signum();
+    let d = (nx - px).abs();
+    if d == 0 {
+        return Vec::new();
+    }
+
+    let mut k = 1;
+    let mut x = 0;
+    loop {
+        x = if k % 2 != 0 {
+            (k + 1) / 2 * (k + 1) / 2
+        } else {
+            (k / 2) * (k / 2 + 1)
+        };
+        if d <= x {
+            break;
+        }
+        k += 1;
+    }
+
+    let mut p = Vec::new();
+    if k % 2 != 0 {
+        for _i in 0..((k + 1) / 2) {
+            p.push(1);
+        }
+        for _i in 0..((k + 1) / 2) {
+            p.push(-1);
+        }
+    } else {
+        for _i in 0..(k / 2) {
+            p.push(1);
+        }
+        p.push(0);
+        for _i in 0..(k / 2) {
+            p.push(-1);
+        }
+    }
+    let offset = if k % 2 != 0 { 0 } else { 1 };
+    for i in 0..(x - d) {
+        if k % 2 != 0 {
+            p[((k + 1) / 2 - 1 - i) as usize] -= 1;
+            p[((k + 1) / 2 - i) as usize] += 1;
+        } else {
+            p[(k / 2 - 1 - i) as usize] -= 1;
+            p[(k / 2 - i) as usize] += 1;
+        }
+    }
+    if s < 0 {
+        return p.into_iter().map(|x| -x).collect();
+    } else {
+        return p;
+    }
+}
+
+fn solve_fallback(curp: Point, endpt: Point) -> Vec<Acceleration> {
+    // for very long jump
+    let mut ax0plan = solve_fallback_singleaxis(curp.0, endpt.0);
+    let mut ax1plan = solve_fallback_singleaxis(curp.1, endpt.1);
+    let targetlen = cmp::max(ax0plan.len(), ax1plan.len());
+    while ax0plan.len() < targetlen {
+        ax0plan.push(0);
+    }
+    while ax1plan.len() < targetlen {
+        ax1plan.push(0);
+    }
+    return std::iter::zip(ax0plan, ax1plan).collect();
 }
 
 fn solve_lookahead(
@@ -302,6 +384,32 @@ fn solve(points: Vec<(i32, i32)>) -> String {
             "Solving {:?}, {:?} to {:?}, looking ahead: {:?}",
             curpt, curv, nextmid, nextend
         );
+        if surrogate_cost(curpt, nextmid) > 1000 {
+            // to heavy to search, falling back
+            // stop particle
+            while curv != (0, 0) {
+                let acc = (-curv.0.signum(), -curv.1.signum());
+                retbuf.push_str(&encode_thrust_into_keypad(vec![acc]));
+                curv = (curv.0 + acc.0, curv.1 + acc.1);
+                curpt = (curpt.0 + curv.0, curpt.1 + curv.1);
+            }
+            let accs = solve_fallback(curpt, nextmid);
+            let encoded = encode_thrust_into_keypad(accs.clone());
+            eprintln!(
+                "Solved step {}/{} by jumping to {:?}, \"{}\"",
+                i,
+                points.len(),
+                nextmid,
+                encoded
+            );
+            retbuf.push_str(encoded.as_str());
+            let check_by_simulate = simulate(curpt, curv, &accs);
+            assert_eq!(check_by_simulate.last().unwrap().0, nextmid);
+            assert_eq!(check_by_simulate.last().unwrap().1, (0, 0));
+            curv = (0, 0);
+            curpt = nextmid;
+            continue;
+        }
         let (accs, _ve, midv) = solve_lookahead(curpt, curv, nextmid, nextend);
         {
             let check_by_simulate = simulate(curpt, curv, &accs);
@@ -310,12 +418,23 @@ fn solve(points: Vec<(i32, i32)>) -> String {
                 assert_eq!(check_by_simulate.last().unwrap().1, midv);
             }
         }
-        retbuf.push_str(encode_thrust_into_keypad(accs).as_str());
+        let encoded = encode_thrust_into_keypad(accs);
+        eprintln!(
+            "Solved step {}/{}, arrived at {:?}, {:?}, \"{}\"",
+            i,
+            points.len(),
+            nextmid,
+            midv,
+            encoded
+        );
+        retbuf.push_str(encoded.as_str());
         curpt = nextmid;
         curv = midv;
     }
     let accs = solve_onept(curpt, curv, points[points.len() - 1]);
-    retbuf.push_str(encode_thrust_into_keypad(accs).as_str());
+    let encoded = encode_thrust_into_keypad(accs);
+    eprintln!("Solved final step, \"{}\"", encoded);
+    retbuf.push_str(encoded.as_str());
     return retbuf;
 }
 
