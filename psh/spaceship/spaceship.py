@@ -19,6 +19,9 @@ def main():
     py = 0
     solution = []
     for line in sys.stdin:
+        if not line.strip():
+            continue
+        print(line, file=sys.stderr)
         (nx, ny) = map(int, line.split())
         (cx, cy) = (px + vx, py + vy)
         (kx, ky) = (nx - cx, ny - cy)
