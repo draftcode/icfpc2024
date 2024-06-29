@@ -111,16 +111,20 @@ pub struct Board(pub Vec<Vec<Cell>>);
 
 impl std::fmt::Display for Board {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut col_len = vec![0; self.0.len()];
         for l in self.0.iter() {
-            write!(
-                f,
-                "{}",
-                l.iter()
-                    .map(|c| format!("{}", c))
-                    .collect::<Vec<String>>()
-                    .join(" ")
-            )?;
-            write!(f, "\n")?;
+            for x in 0..l.len() {
+                col_len[x] = col_len[x].max(format!("{}", l[x]).len());
+            }
+        }
+        for l in self.0.iter() {
+            let mut cols = vec![];
+            for (idx, c) in l.iter().enumerate() {
+                let mut s = format!("{}", c);
+                s = " ".repeat(0.max(col_len[idx] - s.len())) + &s;
+                cols.push(s);
+            }
+            write!(f, "{}\n", cols.join(" "))?;
         }
 
         Ok(())
