@@ -17,7 +17,10 @@ export default function Page({
 }) {
   const initialId = searchParams.id;
   const [id, setId] = useState(initialId ? Number(initialId) : 1);
+
+  const [editProg, sedEditProg] = useState(true);
   const [prog, setProg] = useState(P);
+  const [output, setOutput] = useState("");
 
   const { data: data1 } = useSWR(`/api/lambdaman?id=${id}`, fetcher);
   const lambdamanMapData: string = data1?.data ?? "";
@@ -25,7 +28,12 @@ export default function Page({
   const { data: data2 } = useSWR(`/api/eval_scheme?program=${prog}`, fetcher);
 
   const ok = data2?.result && typeof data2.result === "string";
-  const output: string = ok ? data2?.result : data2?.error || data2?.result;
+  const out: string = ok ? data2?.result : data2?.error || data2?.result;
+
+  if (editProg && out !== output) {
+    setOutput(out);
+  }
+
   const outType = ok ? typeof output : "error";
 
   return (
@@ -41,23 +49,53 @@ export default function Page({
         ></input>
       </div>
       <div>
-        <label>
-          Program (evaluated by{" "}
-          <a className="link" href="https://www.biwascheme.org/">
-            BiwaScheme
-          </a>
-          )
-        </label>
-        <textarea
-          className="textarea textarea-primary w-full"
-          value={prog}
-          onChange={(e) => setProg(e.target.value)}
-        ></textarea>
-        Output ({outType}):
-        <textarea
-          className="textarea textarea-bordered w-full"
-          value={output}
-        ></textarea>
+        <div className="form-control w-40">
+          <label className="label cursor-pointer">
+            <span className="label-text">Edit program</span>
+            <input
+              type="radio"
+              name="radio-10"
+              className="radio checked:bg-blue-500"
+              defaultChecked
+              onClick={() => sedEditProg(true)}
+            />
+          </label>
+        </div>
+        <div className="form-control w-40">
+          <label className="label cursor-pointer">
+            <span className="label-text">Edit output</span>
+            <input
+              type="radio"
+              name="radio-10"
+              className="radio checked:bg-blue-500"
+              defaultChecked
+              onClick={() => sedEditProg(false)}
+            />
+          </label>
+        </div>
+        <div>
+          <label>
+            Program (evaluated by{" "}
+            <a className="link" href="https://www.biwascheme.org/">
+              BiwaScheme
+            </a>
+            )
+          </label>
+          <textarea
+            className="textarea textarea-primary w-full"
+            value={prog}
+            disabled={!editProg}
+            onChange={(e) => setProg(e.target.value)}
+          ></textarea>
+        </div>
+        <div>
+          Output ({outType}):
+          <textarea
+            className="textarea textarea-bordered w-full"
+            value={output}
+            onChange={(e) => setOutput(e.target.value)}
+          ></textarea>
+        </div>
       </div>
 
       <Board data={lambdamanMapData} dirs={ok ? output : ""} />
