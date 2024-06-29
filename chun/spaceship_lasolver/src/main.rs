@@ -354,18 +354,37 @@ fn solve_fallback(curp: Point, endpt: Point) -> Vec<Acceleration> {
     return std::iter::zip(ax0plan, ax1plan).collect();
 }
 
+fn delta(p2: Point, p1: Point) -> Point {
+    return (p2.0 - p1.0, p2.1 - p1.1);
+}
+
 fn solve_lookahead(
     inip: Point,
     iniv: Velocity,
     midpt: Point,
     endpt: Point,
+    memo: &mut HashMap<(Point, Point, Velocity), (Vec<Acceleration>, Vec<Acceleration>, Velocity)>,
 ) -> (Vec<Acceleration>, Vec<Acceleration>, Velocity) {
-    let res = solve_lookahead_impl(inip, iniv, midpt, endpt, false);
-    match res {
-        Ok(x) => return x,
-        Err(_) => {
-            eprintln!("Exceeded search limit, shrinking the search space...");
-            return solve_lookahead_impl(inip, iniv, midpt, midpt, true).unwrap();
+    let memo_key = (delta(midpt, inip), delta(endpt, inip), iniv);
+    let maybe_memo = memo.get(&memo_key);
+    match maybe_memo {
+        Some(x) => {
+            return x.clone();
+        }
+        None => {
+            let res = solve_lookahead_impl(inip, iniv, midpt, endpt, false);
+            match res {
+                Ok(x) => {
+                    memo.insert(memo_key, x.clone());
+                    return x;
+                }
+                Err(_) => {
+                    eprintln!("Exceeded search limit, shrinking the search space...");
+                    let x = solve_lookahead_impl(inip, iniv, midpt, midpt, true).unwrap();
+                    memo.insert(memo_key, x.clone());
+                    return x;
+                }
+            }
         }
     }
 }
@@ -374,6 +393,10 @@ fn solve(points: Vec<(i32, i32)>) -> String {
     let mut retbuf = String::new();
     let mut curpt: Point = (0, 0);
     let mut curv: Velocity = (0, 0);
+    let mut memo: HashMap<
+        (Point, Point, Velocity),
+        (Vec<Acceleration>, Vec<Acceleration>, Velocity),
+    > = HashMap::new();
     for i in 0..points.len() - 1 {
         let nextmid = points[i];
         let nextend = points[i + 1];
@@ -410,7 +433,7 @@ fn solve(points: Vec<(i32, i32)>) -> String {
             curpt = nextmid;
             continue;
         }
-        let (accs, _ve, midv) = solve_lookahead(curpt, curv, nextmid, nextend);
+        let (accs, _ve, midv) = solve_lookahead(curpt, curv, nextmid, nextend, &mut memo);
         {
             let check_by_simulate = simulate(curpt, curv, &accs);
             if curpt != nextmid {
@@ -432,8 +455,17 @@ fn solve(points: Vec<(i32, i32)>) -> String {
         curv = midv;
     }
     let accs = solve_onept(curpt, curv, points[points.len() - 1]);
+    let vel = {
+        let check_by_simulate = simulate(curpt, curv, &accs);
+        check_by_simulate.last().unwrap().1
+    };
     let encoded = encode_thrust_into_keypad(accs);
-    eprintln!("Solved final step, \"{}\"", encoded);
+    eprintln!(
+        "Solved final step, arrived at {:?}, {:?}, \"{}\"",
+        points.last().unwrap(),
+        vel,
+        encoded
+    );
     retbuf.push_str(encoded.as_str());
     return retbuf;
 }
