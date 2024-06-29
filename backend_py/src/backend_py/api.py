@@ -1,4 +1,5 @@
 import datetime
+import importlib.resources as pkg_resources
 from typing import Sequence
 
 import httpx
@@ -80,6 +81,24 @@ async def communications(
         .offset(offset)
         .limit(limit)
     ).all()
+
+
+class ParsedProblem(BaseModel):
+    category: str
+    id: int
+    content: str
+
+
+@app.get("/problems/{category}/{problem_id}")
+async def problem(category: str, problem_id: int) -> ParsedProblem:
+    content = (
+        pkg_resources.files("backend_py")
+        .joinpath("problems")
+        .joinpath(category)
+        .joinpath(f"{problem_id}.txt")
+        .read_text()
+    )
+    return ParsedProblem(category=category, id=problem_id, content=content)
 
 
 class ProblemRank(BaseModel):
