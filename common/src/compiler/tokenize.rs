@@ -51,6 +51,14 @@ impl<'a> Tokenizer<'a> {
         match fst {
             '(' => Some(Token::OpenParen),
             ')' => Some(Token::CloseParen),
+            ';' => {
+                while let Some(c) = self.next_char() {
+                    if c == '\n' {
+                        break;
+                    }
+                }
+                self.next_token()
+            }
             '0'..='9' => {
                 let mut num = (fst as i32) - ('0' as i32);
                 while let Some(c) = self.next_char() {

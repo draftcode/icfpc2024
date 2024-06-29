@@ -51,15 +51,33 @@ impl Expr {
         Expr::Proc(vec![x, y])
     }
 
-    pub fn is_buildin_var(&self) -> bool {
-        match self {
-            Expr::Var(v) => match v.as_str() {
-                "define" | "if" => true,
-                _ if binary_op(v).is_some() || unary_op(v).is_some() => true,
-                _ => false,
-            },
-            _ => false,
+    pub fn is_buildin_var(&self, check_arity: Option<usize>) -> bool {
+        let Expr::Var(v) = self else { return false };
+
+        if v == "define" {
+            return true;
         }
+        let mut a = vec![];
+        if v == "if" {
+            a.push(3usize);
+        }
+        if binary_op(v).is_some() {
+            a.push(2usize);
+        }
+        if unary_op(v).is_some() {
+            a.push(1usize);
+        }
+        if a.is_empty() {
+            return false;
+        }
+
+        if let Some(ari) = check_arity {
+            if !a.contains(&ari) {
+                panic!("{} should not have arity {}", v, ari);
+            }
+        }
+
+        return true;
     }
 
     pub fn must_var(&self) -> String {
@@ -111,7 +129,7 @@ impl Expr {
         let Some((mut vars, expr)) = self.get_define() else {
             return;
         };
-        if vars.len() <= 2 || Expr::Var(vars[0].clone()).is_buildin_var() {
+        if vars.len() <= 2 || Expr::Var(vars[0].clone()).is_buildin_var(None) {
             return;
         }
         let last_var = vars.pop().unwrap();
@@ -131,7 +149,7 @@ impl Expr {
             Expr::Proc(args) => {
                 args.iter_mut().for_each(Expr::reduce_proc_params);
 
-                if args.len() <= 2 || args[0].is_buildin_var() {
+                if args.len() <= 2 || args[0].is_buildin_var(None) {
                     return;
                 }
                 let lst = args.pop().unwrap();
@@ -235,9 +253,10 @@ impl Expr {
                 return;
             }
             Expr::Proc(args) => {
-                if !args[0].is_buildin_var() {
+                if !args[0].is_buildin_var(Some(args.len() - 1)) {
                     assert_eq!(args.len(), 2, "{}", self);
                     res.push("B$".to_string());
+                } else {
                 }
                 args.iter()
                     .for_each(|arg| arg.icfp_inner(res, env, args.len() == 2))
