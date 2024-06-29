@@ -15,5 +15,5 @@ members = [
   "scmcomp",
   "tanakh/evaluator",
   "tanakh/solver",
-  "tanakh/spaceship",
+  "tanakh/spaceship", "chun/spaceship_trivialsolver",
 ]
