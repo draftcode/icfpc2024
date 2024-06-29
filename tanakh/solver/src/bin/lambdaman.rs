@@ -158,18 +158,36 @@ fn problem8() -> Expr {
 
 fn problem9() -> Expr {
     let header = "solve lambdaman9 ";
+    // icfp! {
+    //     let r =
+    //         (let s = "RRRRRRRRRRRR" in
+    //             concat (concat (concat s s) (concat s s)) "RD") in
+    //     let l =
+    //         (let s = "LLLLLLLLLLLL" in
+    //             concat (concat (concat s s) (concat s s)) "LD") in
+    //     let p = (concat r l) in
+    //     let q = (concat (concat p p) p) in
+    //     let r = (concat q q) in
+    //     let s = (concat r r) in
+    //     (concat (#header) (concat (concat s s) p))
+    // }
+
     icfp! {
-        let r =
-            (let s = "RRRRRRRRRRRR" in
-                concat (concat (concat s s) (concat s s)) "RD") in
-        let l =
-            (let s = "LLLLLLLLLLLL" in
-                concat (concat (concat s s) (concat s s)) "LD") in
-        let p = (concat r l) in
-        let q = (concat (concat p p) p) in
-        let r = (concat q q) in
-        let s = (concat r r) in
-        (concat (#header) (concat (concat s s) p))
+        fix (fn f c p q s ->
+            (if (== c 50) {
+                s
+            } else {
+                f (+ c 1)
+                    (concat "R" (concat p "U"))
+                    (concat "D" (concat q "L"))
+                    (concat s (
+                        if (== (% c 2) 0) {
+                            concat "D" p
+                        } else {
+                            concat "R" q
+                        }))
+            }))
+            1 "" "" (#header)
     }
 }
 

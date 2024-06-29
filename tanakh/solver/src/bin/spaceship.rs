@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{cmp::Reverse, collections::HashSet};
 
 use euclid::default::*;
 
@@ -38,38 +38,51 @@ fn solve_basic(mut ps: Vec<Point2D<i64>>) {
     let mut total = 0;
 
     for turn in 0..n {
-        let mut best = (0, i64::MAX, i64::MAX);
+        // let mut best = (0, i64::MAX, i64::MAX);
+
+        // for i in 0..n {
+        //     if done[i] {
+        //         continue;
+        //     }
+
+        //     let dist = calc_dist(cur, v, ps[i], None);
+        //     if (dist.0, dist.1.square_length()) < (best.1, best.2) {
+        //         best = (i, dist.0, dist.1.square_length());
+        //     }
+        // }
+
+        let mut nearest = (0, i64::MAX, i64::MAX);
 
         for i in 0..n {
             if done[i] {
                 continue;
             }
 
-            let dist = calc_dist(cur, v, ps[i], None);
-            if (dist.0, dist.1.square_length()) < (best.1, best.2) {
-                best = (i, dist.0, dist.1.square_length());
+            let dist = (ps[i] - cur).square_length();
+            if dist <= nearest.1 {
+                let d = calc_dist(cur, v, ps[i], None);
+                if (dist, d.0) < (nearest.1, nearest.2) {
+                    nearest = (i, dist, d.0);
+                }
             }
         }
 
-        // eprintln!("best: {:?}", best);
+        eprintln!("best: {:?}", nearest.2);
 
-        let i = best.0;
-        total += best.1;
+        let i = nearest.0;
+        total += nearest.1;
         v = calc_dist(cur, v, ps[i], Some(&mut moves)).1;
         done[i] = true;
         cur = ps[i];
 
         eprintln!(
             "*** {turn} / {n}: movs: {} pos: {:?} vel: {:?}",
-            best.1, cur, v
+            nearest.1, cur, v
         );
     }
 
-    println!("total: {total}");
-    println!(
-        "moves: {}",
-        moves.into_iter().map(to_move).collect::<String>()
-    );
+    eprintln!("total: {}", moves.len());
+    println!("{}", moves.into_iter().map(to_move).collect::<String>());
 }
 
 fn to_move(v: Vector2D<i64>) -> char {
