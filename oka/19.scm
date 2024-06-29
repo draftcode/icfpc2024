@@ -1,19 +1,35 @@
 (define (string-take n s) (substring s 0 n))
 (define (string-drop n s) (substring s n (string-length s)))
 
-(define (string-car s) (string-take 1 s))
+(define (rep s d) (if (= d 1) s (string-append (rep s (- d 1)) (rep s (- d 1)))))
 
-(define (string-cdr s) (string-drop 1 s))
-
-(define (power2repeat y x) (if (= y 0) x (string-append (power2repeat (- y 1) x) (power2repeat (- y 1) x))))
-
-(define (string-map f l) (if (string=? l "") "" (string-append (f (string-car l)) (string-map f (string-cdr l)))))  
+(define (recur d) (
+    if (= d 0) "" 
+        (string-append
+        (string-append
+        (string-append
+        (string-append
+        (string-append
+        (string-append
+        (string-append
+        (string-append
+        (string-append
+            (rep "D" d)
+            (recur (- d 1)))
+            (rep "U" (+ d 1)))
+            (recur (- d 1)))
+            (rep "D" d))
+            (rep "L" d))
+            (recur (- d 1)))
+            (rep "R" (+ d 1)))
+            (recur (- d 1)))
+            (rep "L" d))
+))
 
 (define (res) (
     string-append
     "solve lambdaman19 "
-    (power2repeat 7 (string-map (lambda (x) (power2repeat 7 x)) "DLUR"))
+    (recur 7)
 ))
 
 (define (main args) (print (res)))
-`

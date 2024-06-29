@@ -60,6 +60,7 @@ fn submit(#[opt(long, default_value = "")] mut api_token: String) -> anyhow::Res
     let icfp = expr.icfp();
 
     let icfp_prog = icfp.join(" ");
+    eprintln!("{}", icfp_prog);
 
     let client = reqwest::blocking::Client::new();
 
@@ -75,8 +76,6 @@ fn submit(#[opt(long, default_value = "")] mut api_token: String) -> anyhow::Res
         "request failed: {}",
         response.status()
     );
-
-    println!("{}", icfp.join(" "));
 
     let text = response.text()?;
     eprintln!("{}", text);
