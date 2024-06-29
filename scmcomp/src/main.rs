@@ -1,6 +1,6 @@
 use anyhow::{bail, Result};
 use common::compiler::parser::parse;
-use std::{io::Read, str::Chars};
+use std::io::Read;
 
 #[argopt::subcmd]
 fn compile() -> anyhow::Result<()> {

@@ -1,6 +1,13 @@
 use std::str::Chars;
 
-use super::types::Token;
+#[derive(Debug, Eq, PartialEq)]
+pub enum Token {
+    OpenParen,
+    CloseParen,
+    Str(String),
+    Num(i32),
+    Var(String),
+}
 
 pub struct Tokenizer<'a> {
     cs: Chars<'a>,

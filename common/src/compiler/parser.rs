@@ -1,20 +1,21 @@
 use std::str::Chars;
 
 use super::{
-    tokenize::Tokenizer,
-    types::{Expr, Program, Token},
+    expr::Expr,
+    program::Program,
+    tokenize::{Token, Tokenizer},
 };
 
 pub fn parse<'a>(cs: Chars<'a>) -> anyhow::Result<Program> {
     let toks = Tokenizer::new(cs);
 
     let mut parser = Parser::new(toks);
-    let mut prog = vec![];
+    let mut exprs = vec![];
     while let Some(expr) = parser.next_expr() {
-        prog.push(expr);
+        exprs.push(expr);
     }
 
-    Ok(Program { exprs: prog })
+    Ok(Program { exprs })
 }
 
 pub struct Parser<'a> {
