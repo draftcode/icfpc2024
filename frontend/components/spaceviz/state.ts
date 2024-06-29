@@ -104,12 +104,24 @@ export class WaypointVizState {
 
   private wheelEvent(canvas: HTMLCanvasElement, e: WheelEvent) {
     e.preventDefault();
-    // if (e.deltaY < 0) {
-    //   this.vp.zoomWithMousePos(0.8, this.getMouseCCoord(canvas, e));
-    // } else {
-    //   this.vp.zoomWithMousePos(1.2, this.getMouseCCoord(canvas, e));
-    // }
+    if (e.deltaY < 0) {
+      this.zoomWithMousePos(0.8, this.getMouseCanvasXY(canvas, e));
+    } else {
+      this.zoomWithMousePos(1.2, this.getMouseCanvasXY(canvas, e));
+    }
     return false;
+  }
+
+  public zoomWithMousePos(factor: number, canvasXY: [number, number]) {
+    const [spaceX, spaceY] = [
+      canvasXY[0] * this.viewportSpaceSize + this.viewportTopLeftSpaceXY[0],
+      this.viewportTopLeftSpaceXY[1] - canvasXY[1] * this.viewportSpaceSize,
+    ];
+    this.viewportSpaceSize *= factor;
+    this.viewportTopLeftSpaceXY = [
+      spaceX - canvasXY[0] * this.viewportSpaceSize,
+      spaceY + canvasXY[1] * this.viewportSpaceSize,
+    ];
   }
 
   private mousedownEvent(canvas: HTMLCanvasElement, e: MouseEvent) {
