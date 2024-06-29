@@ -1,5 +1,8 @@
+use common::compiler::program;
 use common::eval::eval;
 use common::expr::{Expr, Token};
+use common::planar;
+use num_bigint::BigInt;
 use pyo3::prelude::*;
 
 #[pyfunction]
@@ -25,6 +28,34 @@ fn evaluate_message(input: String) -> PyResult<String> {
         }
     }
     Ok("".to_string())
+}
+
+#[pyfunction]
+fn onestep_3d(program: String, a: i32, b: i32, turn: usize) -> PyResult<(String, Option<i32>)> {
+    let mut state: planar::State = Default::default();
+
+    for l in program.lines() {
+        let mut row = vec![];
+        for c in l.split_whitespace() {
+            if let Ok(cell) = c.parse::<planar::Cell>() {
+                row.push(cell);
+            }
+        }
+        state.board.0.push(row);
+    }
+
+    for _ in 0..turn {
+        if state.onestep().is_err() {
+            return Ok(("one step evaluaton is failed.".to_owned(), None));
+        }
+    }
+
+    let i32_max: BigInt = i32::MAX.into();
+    let i32_min: BigInt = i32::MIN.into();
+    let res: Option<i32> = state
+        .output
+        .map(|v| v.min(i32_max).max(i32_min).try_into().unwrap());
+    Ok((format!("{}", state.board), res))
 }
 
 /// A Python module implemented in Rust.
