@@ -2,15 +2,13 @@ import datetime
 import importlib.resources as pkg_resources
 from typing import Sequence
 
-import httpx
-from backend_rs import decode_message  # type: ignore
 from fastapi import Body, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, RedirectResponse
 from pydantic import BaseModel
 from sqlmodel import select
 
-from .config import settings
+from .communicate import send_encoded_req
 from .deps import SessionDep
 from .models import (
     CommunicationLog,
@@ -28,8 +26,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-http_client = httpx.Client(headers={"Authorization": f"Bearer {settings.API_TOKEN}"})
-
 
 @app.get("/", include_in_schema=False)
 async def root():
@@ -40,25 +36,8 @@ async def root():
 async def communicate(
     session: SessionDep, body: str = Body(..., media_type="text/plain")
 ) -> str:
-    resp = http_client.post("https://boundvariable.space/communicate", content=body)
-    if not resp.is_success:
-        raise HTTPException(status_code=resp.status_code, detail=resp.text)
-
-    resp_str = resp.text
-    decoded_response = decode_message(resp_str)
-    req_str = decode_message(body)
-    log = CommunicationLog(
-        created=datetime.datetime.now(),
-        request=body,
-        response=resp_str,
-        decoded_request_prefix=req_str[:100],
-        decoded_request=req_str,
-        decoded_response=decoded_response,
-    )
-    session.add(log)
-    session.commit()
-
-    return resp_str
+    log = send_encoded_req(session, body)
+    return log.response
 
 
 @app.get("/communications")

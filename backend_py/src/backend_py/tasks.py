@@ -1,19 +1,21 @@
 import datetime
+import re
 
 import httpx
 from celery import Celery
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-import re
+from backend_rs import encode_message  # type: ignore
+
 from .config import settings
 from .db import engine
 from .models import (
+    CommunicationLog,
     ScoreboardLog,
     ScoreboardRow,
     ScoreParseResult,
     ScoreParseResultLog,
-    CommunicationLog,
 )
 
 app = Celery("icfpc2024", broker="redis://localhost")
