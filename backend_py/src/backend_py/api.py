@@ -82,6 +82,18 @@ async def communications(
     ).all()
 
 
+@app.get("/communication/{communication_id}")
+async def get_communication(
+    session: SessionDep, communication_id: int
+) -> CommunicationLog:
+    log = session.scalar(
+        select(CommunicationLog).where(CommunicationLog.id == communication_id)
+    )
+    if not log:
+        raise HTTPException(status_code=404, detail="CommunicationLog not found")
+    return log
+
+
 class ParsedProblem(BaseModel):
     category: str
     id: int
