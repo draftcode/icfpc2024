@@ -22,6 +22,7 @@ pub enum Cell {
     Eq,
     Neq,
     Submit,
+    Label(char),
 }
 
 impl FromStr for Cell {
@@ -52,7 +53,13 @@ impl FromStr for Cell {
                     }
                     Cell::Number(i.into())
                 }
-                _ => bail!("Invalid cell: {}", s),
+                _ => {
+                    if s.len() == 1 && s.chars().next().unwrap().is_lowercase() {
+                        Cell::Label(s.chars().next().unwrap())
+                    } else {
+                        bail!("Invalid cell: {}", s);
+                    }
+                }
             },
         };
         Ok(c)
@@ -79,6 +86,7 @@ impl std::fmt::Display for Cell {
             Cell::Neq => write!(f, "#"),
             Cell::Submit => write!(f, "S"),
             Cell::Number(i) => write!(f, "{}", i.to_string()),
+            Cell::Label(c) => write!(f, "{}", c),
         }
     }
 }
@@ -151,7 +159,52 @@ fn readable(board: &Vec<Vec<Cell>>, pos: (i32, i32)) -> bool {
 }
 
 impl State {
+    pub fn resolve_label(&mut self) -> anyhow::Result<()> {
+        let mut labels = vec![];
+        let mut refs = vec![];
+        for y in 0..self.board.0.len() {
+            for x in 0..self.board.0[y].len() {
+                let mut is_ref = false;
+                if let Cell::Label(c) = self.board.0[y][x] {
+                    if inside(&self.board.0, (x as i32 + 1, y as i32)) {
+                        if let Cell::Warp = self.board.0[y][x + 1] {
+                            refs.push((c, x + 1, y));
+                            is_ref = true;
+                        }
+                    }
+                    if !is_ref {
+                        labels.push((c, x, y));
+                    }
+                }
+            }
+        }
+
+        for (c, x, y) in refs {
+            for (l, tx, ty) in labels.iter() {
+                if c == *l {
+                    let dx = x as i32 - *tx as i32;
+                    let dy = y as i32 - *ty as i32;
+                    self.board.0[y][x - 1] = Cell::Number(dx.into());
+                    self.board.0[y][x + 1] = Cell::Number(dy.into());
+                }
+            }
+        }
+
+        // Clear labels
+        for (l, x, y) in labels.iter() {
+            self.board.0[*y][*x] = Cell::Empty;
+        }
+        Ok(())
+    }
+
     pub fn onestep(&mut self) -> anyhow::Result<()> {
+        for y in 0..self.board.0.len() {
+            for x in 0..self.board.0[y].len() {
+                if let Cell::Label(_) = self.board.0[y][x] {
+                    bail!("Please call resolve_label() before one_step()");
+                }
+            }
+        }
         self.history.push(self.board.clone());
 
         // eprintln!("one step: t = {}, board = {}", self.history.len(), self.board);

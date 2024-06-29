@@ -22,10 +22,14 @@ fn main() -> Result<()> {
         state.board.0.push(row);
     }
 
+    println!("before label processing");
+    println!("{}", state.board);
+    state.resolve_label()?;
+    println!("after label processing");
     println!("{}", state.board);
 
     let mut turn = 0;
-    while state.output.is_none() {
+    while state.output.is_none() && turn < 10 {
         state.onestep()?;
         println!("{}", state.board);
         turn += 1;
