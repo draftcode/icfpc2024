@@ -9,6 +9,9 @@ const config: Config = {
   theme: {
     extend: {},
   },
+  daisyui: {
+    themes: ["light"],
+  },
   plugins: [require("@tailwindcss/typography"), require("daisyui")],
 };
 export default config;

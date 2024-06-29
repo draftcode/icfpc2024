@@ -386,6 +386,10 @@ impl Expr {
             }
         }
     }
+
+    pub fn encoded(&self) -> ExprEncoded {
+        ExprEncoded(self)
+    }
 }
 
 impl FromStr for Expr {
@@ -394,6 +398,21 @@ impl FromStr for Expr {
     fn from_str(s: &str) -> anyhow::Result<Expr> {
         let tokens = tokenize(s)?;
         Expr::parse_tokens(&tokens)
+    }
+}
+
+pub struct ExprEncoded<'a>(&'a Expr);
+
+impl std::fmt::Display for ExprEncoded<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for (i, token) in self.0.to_tokens().into_iter().enumerate() {
+            if i == 0 {
+                write!(f, "{}", token.encoded())?;
+            } else {
+                write!(f, " {}", token.encoded())?;
+            }
+        }
+        Ok(())
     }
 }
 
@@ -425,5 +444,12 @@ mod tests {
         assert_eq!("v#", Token::Var(2).encoded().to_string());
         assert_eq!("B~", Token::Bin(BinOp::AppL).encoded().to_string());
         assert_eq!("B!", Token::Bin(BinOp::AppV).encoded().to_string());
+    }
+
+    #[test]
+    fn expr_encoded() {
+        let eff12 = r#"B$ B$ L" B$ L# B$ v" B$ v# v# L# B$ v" B$ v# v# L$ L% B$ B$ L" L# ? B< v" v# v" v# v% B+ I" ? B> v% I# B$ B$ B$ L" B$ L# B$ v" B$ v# v# L# B$ v" B$ v# v# L& L' L( ? B= v' v% v( B$ B$ v& B+ v' I" ? B> B$ v$ v' B- v' I" ? B= B% v% v' I! B* B/ v( B$ v$ v' B- B$ v$ v' I" v( v( I# v% v% I"Ndb"#;
+        let expr: Expr = eff12.parse().unwrap();
+        assert_eq!(eff12, expr.encoded().to_string());
     }
 }

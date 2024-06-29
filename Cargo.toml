@@ -2,15 +2,18 @@
 resolver = "2"
 members = [
   "backend_rs",
+  "chir/interpreter",
+  "chun/spaceship_lasolver",
+  "chun/spaceship_order",
   "common",
   "communicate",
+  "nya/compressor",
   "printer",
   "sandbox/hello",
   "sandbox/lifegame-wasm",
   "sandbox/lifegame",
+  "scmcomp",
   "tanakh/evaluator",
-  "chun/spaceship_order",
-  "tanakh/spaceship", "tanakh/solver", "scmcomp",
-  "chun/spaceship_lasolver",
-  "chir/interpreter",
+  "tanakh/solver",
+  "tanakh/spaceship",
 ]

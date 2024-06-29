@@ -40,6 +40,12 @@ export class WaypointVizState {
       maxX = Math.max(maxX, x);
       maxY = Math.max(maxY, y);
     }
+    for (const [x, y] of reqCheckPoints) {
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+    }
     const dx = maxX - minX;
     const dy = maxY - minY;
     this.viewportSpaceSize = Math.max(dx, dy);

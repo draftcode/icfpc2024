@@ -37,6 +37,23 @@ export interface TeamRankResponse {
   efficiency: ProblemSetRank;
 }
 
+export interface ParsedProblem {
+  category: string;
+  id: number;
+  content: string;
+}
+
+export function useProblem(category: string, id: number) {
+  const { data, error, isLoading } = useSWR<AxiosResponse<ParsedProblem>>(
+    {
+      method: "get",
+      url: `/problems/${category}/${id}`,
+    },
+    client,
+  );
+  return { data: data?.data, error, isLoading };
+}
+
 export function useCommunications(offset?: number, limit?: number) {
   const { data, error, isLoading } = useSWR<AxiosResponse<CommunicationLog[]>>(
     {

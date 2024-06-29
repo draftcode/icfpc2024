@@ -1,9 +1,8 @@
-use std::{str::FromStr, io};
+use std::{io, str::FromStr};
 
 use anyhow::{anyhow, bail, Result};
 
-use common::planar::{Cell, Board, State};
-
+use common::planar::{Board, Cell, State};
 
 fn main() -> Result<()> {
     let s = io::read_to_string(io::stdin())?;
@@ -25,9 +24,11 @@ fn main() -> Result<()> {
 
     println!("{}", state.board);
 
+    let mut turn = 0;
     while state.output.is_none() {
         state.onestep()?;
         println!("{}", state.board);
+        turn += 1;
     }
 
     println!("finished {}", state.output.unwrap());

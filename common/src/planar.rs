@@ -1,13 +1,14 @@
 use std::str::FromStr;
 
 use anyhow::{self, bail};
+use num_bigint::BigInt;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub enum Cell {
     Empty,
     InputA,
     InputB,
-    Number(i32),
+    Number(BigInt),
     Up,
     Down,
     Left,
@@ -44,17 +45,15 @@ impl FromStr for Cell {
             "=" => Cell::Eq,
             "#" => Cell::Neq,
             "S" => Cell::Submit,
-            _ => {
-                match s.parse::<i32>() {
-                    Ok(i) => {
-                        if i <= -100 || i >= 100 {
-                            bail!("Invalid number: {}", s);
-                        }
-                        Cell::Number(i)
+            _ => match s.parse::<i32>() {
+                Ok(i) => {
+                    if i <= -100 || i >= 100 {
+                        bail!("Invalid number: {}", s);
                     }
-                    _ => bail!("Invalid cell: {}", s)
+                    Cell::Number(i.into())
                 }
-            }
+                _ => bail!("Invalid cell: {}", s),
+            },
         };
         Ok(c)
     }
@@ -88,12 +87,19 @@ impl std::fmt::Display for Cell {
 pub struct Board(pub Vec<Vec<Cell>>);
 
 impl std::fmt::Display for Board {
-    fn fmt(&self, f:&mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for l in self.0.iter() {
-            write!(f, "{}", l.iter().map(|c| format!("{}", c)).collect::<Vec<String>>().join(" "))?;
+            write!(
+                f,
+                "{}",
+                l.iter()
+                    .map(|c| format!("{}", c))
+                    .collect::<Vec<String>>()
+                    .join(" ")
+            )?;
             write!(f, "\n")?;
         }
-        
+
         Ok(())
     }
 }
@@ -104,7 +110,7 @@ pub struct State {
     pub history: Vec<Board>,
     pub input_a: i32,
     pub input_b: i32,
-    pub output: Option<i32>,
+    pub output: Option<BigInt>,
     written: Vec<Vec<bool>>,
 }
 
@@ -131,7 +137,7 @@ fn get_cell(board: &Vec<Vec<Cell>>, pos: (i32, i32)) -> Option<Cell> {
     if !inside(board, pos) {
         None
     } else {
-        Some(board[pos.1 as usize][pos.0 as usize])
+        Some(board[pos.1 as usize][pos.0 as usize].clone())
     }
 }
 
@@ -157,26 +163,26 @@ impl State {
         for y in 0..new_board.len() {
             for x in 0..new_board[y].len() {
                 match new_board[y][x] {
-                    Cell::InputA => new_board[y][x] = Cell::Number(self.input_a),
-                    Cell::InputB => new_board[y][x] = Cell::Number(self.input_b),
+                    Cell::InputA => new_board[y][x] = Cell::Number(self.input_a.into()),
+                    Cell::InputB => new_board[y][x] = Cell::Number(self.input_b.into()),
                     Cell::Up => {
                         self.move_v(&mut new_board, x, y, 0, -1)?;
-                    },
+                    }
                     Cell::Down => {
                         self.move_v(&mut new_board, x, y, 0, 1)?;
-                    },
+                    }
                     Cell::Right => {
                         self.move_v(&mut new_board, x, y, 1, 0)?;
-                    },
+                    }
                     Cell::Left => {
                         self.move_v(&mut new_board, x, y, -1, 0)?;
-                    },
-                    Cell::Number(_) => {},
-                    Cell::Empty => {},
-                    Cell::Submit => {},
+                    }
+                    Cell::Number(_) => {}
+                    Cell::Empty => {}
+                    Cell::Submit => {}
                     Cell::Plus | Cell::Minus | Cell::Mul | Cell::Div | Cell::Rem => {
                         self.binop_arith(&mut new_board, x, y)?;
-                    },
+                    }
                     Cell::Eq | Cell::Neq => {
                         self.binop_comp(&mut new_board, x, y)?;
                     }
@@ -200,7 +206,12 @@ impl State {
             new_board = self.history[target_t].0.clone();
             self.history = self.history.split_at(target_t).0.to_vec();
             for (_, x, y, v) in &warp_requests {
-                self.write_to(&mut new_board, *x as usize, *y as usize, Cell::Number(*v))?;
+                self.write_to(
+                    &mut new_board,
+                    *x as usize,
+                    *y as usize,
+                    Cell::Number(v.clone()),
+                )?;
             }
         }
 
@@ -208,22 +219,35 @@ impl State {
         Ok(())
     }
 
-    fn move_v(&mut self, board: &mut Vec<Vec<Cell>>, x: usize, y: usize, dx: i32, dy: i32) -> anyhow::Result<()> {
-        
+    fn move_v(
+        &mut self,
+        board: &mut Vec<Vec<Cell>>,
+        x: usize,
+        y: usize,
+        dx: i32,
+        dy: i32,
+    ) -> anyhow::Result<()> {
         let from_x = x as i32 - dx;
         let from_y = y as i32 - dy;
         let to_x = x as i32 + dx;
         let to_y = y as i32 + dy;
         // eprintln!("move_v {},{} {},{} -> {},{}", x, y, from_x, from_y, to_x, to_y);
         if !inside(&board, (from_x, from_y)) || !inside(&board, (to_x, to_y)) {
-            bail!("Invalid move from {},{} to {},{}", from_x, from_y, to_x, to_y);
+            bail!(
+                "Invalid move from {},{} to {},{}",
+                from_x,
+                from_y,
+                to_x,
+                to_y
+            );
         }
         if !readable(&self.board.0, (from_x, from_y)) {
             // Arg is not ready yet.
-            return Ok(())
+            return Ok(());
         }
         if !self.writable(board, (to_x, to_y)) {
-            bail!("Trying to write the cell twice {},{}", to_x, to_y);
+            return Ok(());
+            // bail!("Trying to write the cell twice {},{}", to_x, to_y);
         }
         let to_x = to_x as usize;
         let to_y = to_y as usize;
@@ -231,17 +255,25 @@ impl State {
             self.write_to(board, to_x, to_y, Cell::Number(i))?;
             // Not updating written
             board[from_y as usize][from_x as usize] = Cell::Empty;
+        } else {
+            bail!("@@@@@@");
         }
 
         Ok(())
     }
 
-    fn write_to(&mut self, board: &mut Vec<Vec<Cell>>, x: usize, y: usize, v: Cell) -> anyhow::Result<()> {
+    fn write_to(
+        &mut self,
+        board: &mut Vec<Vec<Cell>>,
+        x: usize,
+        y: usize,
+        v: Cell,
+    ) -> anyhow::Result<()> {
         if !inside(&board, (x as i32, y as i32)) {
             bail!("Invalid write to {},{}", x, y);
         }
         if let Cell::Submit = board[y][x] {
-            if let Cell::Number(i) = v {
+            if let Cell::Number(i) = v.clone() {
                 self.output = Some(i);
             }
         }
@@ -250,7 +282,12 @@ impl State {
         Ok(())
     }
 
-    fn binop_arith(&mut self, board: &mut Vec<Vec<Cell>>, x: usize, y: usize) -> anyhow::Result<()> {
+    fn binop_arith(
+        &mut self,
+        board: &mut Vec<Vec<Cell>>,
+        x: usize,
+        y: usize,
+    ) -> anyhow::Result<()> {
         let arg1 = (x as i32 - 1, y as i32);
         let arg2 = (x as i32, y as i32 - 1);
         let to1 = (x as i32 + 1, y as i32);
@@ -258,9 +295,6 @@ impl State {
         if !readable(&self.board.0, arg1) || !readable(&self.board.0, arg2) {
             // Args are not ready yet.
             return Ok(());
-        }
-        if !self.writable(board, to1) || !self.writable(board, to2) {
-            bail!("Cell is not writable {:?} or {:?}", to1, to2);
         }
         let op1 = if let Some(v) = self.get_number(arg1) {
             v
@@ -282,8 +316,22 @@ impl State {
             Cell::Rem => op1 % op2,
             _ => bail!("Non arith binop {:?}", board[y][x]),
         };
-        self.write_to(board, to1.0 as usize, to1.1 as usize, Cell::Number(result))?;
-        self.write_to(board, to2.0 as usize, to2.1 as usize, Cell::Number(result))?;
+        if self.writable(board, to1) {
+            self.write_to(
+                board,
+                to1.0 as usize,
+                to1.1 as usize,
+                Cell::Number(result.clone()),
+            )?;
+        }
+        if self.writable(board, to2) {
+            self.write_to(
+                board,
+                to2.0 as usize,
+                to2.1 as usize,
+                Cell::Number(result.clone()),
+            )?;
+        }
         self.write_to(board, arg1.0 as usize, arg1.1 as usize, Cell::Empty)?;
         self.write_to(board, arg2.0 as usize, arg2.1 as usize, Cell::Empty)?;
 
@@ -299,13 +347,14 @@ impl State {
             // Args are not ready yet.
             return Ok(());
         }
-        if !self.writable(board, to1) || !self.writable(board, to2) {
-            bail!("Cell is not writable {:?} or {:?}", to1, to2);
-        }
         let op1 = if let Some(v) = self.get_number(arg1) {
             v
         } else {
-            println!("found arg1 {:?} {}", self.board.0[arg1.1 as usize][arg1.0 as usize], readable(&self.board.0, arg1));
+            println!(
+                "found arg1 {:?} {}",
+                self.board.0[arg1.1 as usize][arg1.0 as usize],
+                readable(&self.board.0, arg1)
+            );
             bail!("non number at {:?}", arg1);
         };
         let op2 = if let Some(v) = self.get_number(arg2) {
@@ -318,13 +367,17 @@ impl State {
         let res = match board[y][x] {
             Cell::Eq => op1 == op2,
             Cell::Neq => op1 != op2,
-            _ => bail!("Invalid comp op {}", board[y][x])
+            _ => bail!("Invalid comp op {}", board[y][x]),
         };
         if res {
-            self.write_to(board, to1.0 as usize, to1.1 as usize, Cell::Number(op2))?;
-            self.write_to(board, to2.0 as usize, to2.1 as usize, Cell::Number(op1))?;
+            if self.writable(board, to1) {
+                self.write_to(board, to1.0 as usize, to1.1 as usize, Cell::Number(op2))?;
+            }
+            if self.writable(&board, to2) {
+                self.write_to(board, to2.0 as usize, to2.1 as usize, Cell::Number(op1))?;
+            }
             self.write_to(board, arg1.0 as usize, arg1.1 as usize, Cell::Empty)?;
-            self.write_to(board, arg2.0 as usize, arg2.1 as usize, Cell::Empty)?;   
+            self.write_to(board, arg2.0 as usize, arg2.1 as usize, Cell::Empty)?;
         }
         Ok(())
     }
@@ -336,19 +389,24 @@ impl State {
         return !self.written[pos.1 as usize][pos.0 as usize];
     }
 
-    fn get_number(&self, pos: (i32, i32)) -> Option<i32> {
-        if !self.writable(&self.board.0, pos) {
+    fn get_number(&self, pos: (i32, i32)) -> Option<BigInt> {
+        if !readable(&self.board.0, pos) {
             return None;
         }
-        match self.board.0[pos.1 as usize][pos.0 as usize] {
-            Cell::Number(i) => Some(i),
-            Cell::InputA => Some(self.input_a),
-            Cell::InputB => Some(self.input_b),
-            _ => None
+        match &self.board.0[pos.1 as usize][pos.0 as usize] {
+            Cell::Number(i) => Some(i.clone()),
+            Cell::InputA => Some(self.input_a.into()),
+            Cell::InputB => Some(self.input_b.into()),
+            _ => None,
         }
     }
 
-    fn warp(&mut self, x: usize, y: usize, warp_requests: &mut Vec<(i32, i32, i32, i32)>) -> anyhow::Result<()> {
+    fn warp(
+        &mut self,
+        x: usize,
+        y: usize,
+        warp_requests: &mut Vec<(i32, i32, i32, BigInt)>,
+    ) -> anyhow::Result<()> {
         const DX: [i32; 4] = [-1, 0, 1, 0];
         const DY: [i32; 4] = [0, -1, 0, 1];
         for i in 0..4 {
@@ -359,17 +417,17 @@ impl State {
             }
             if !readable(&self.board.0, (nx, ny)) {
                 // Argments are not ready yet.
-                return Ok(())
+                return Ok(());
             }
         }
 
         let x = x as i32;
         let y = y as i32;
-        let dx = self.get_number((x - 1, y)).unwrap();
-        let dy = self.get_number((x + 1, y)).unwrap();
+        let dx: i32 = self.get_number((x - 1, y)).unwrap().try_into()?;
+        let dy: i32 = self.get_number((x + 1, y)).unwrap().try_into()?;
         let dt = self.get_number((x, y + 1)).unwrap();
         let v = self.get_number((x, y - 1)).unwrap();
-        warp_requests.push((dt, x as i32 - dx, y as i32 - dy, v));
+        warp_requests.push((dt.try_into()?, x - dx, y - dy, v));
 
         Ok(())
     }
