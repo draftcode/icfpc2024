@@ -207,6 +207,9 @@ impl State {
 
         // Clear labels
         for (l, x, y) in labels.iter() {
+            if *l == 'A' || *l == 'B' {
+                continue;
+            }
             self.board.0[*y][*x] = Cell::Empty;
         }
         Ok(())
