@@ -25,12 +25,9 @@ fn main() -> Result<()> {
 
     println!("{}", state.board);
 
-    for _ in 0..50 {
+    while state.output.is_none() {
         state.onestep()?;
         println!("{}", state.board);
-        if state.output.is_some() {
-            break;
-        }
     }
 
     println!("finished {}", state.output.unwrap());
