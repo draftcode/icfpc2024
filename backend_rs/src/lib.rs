@@ -3,6 +3,7 @@ use common::eval::eval;
 use common::expr::{Expr, Token};
 use common::planar;
 use num_bigint::BigInt;
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 #[pyfunction]
@@ -44,9 +45,12 @@ fn onestep_3d(program: String, a: i32, b: i32, turn: usize) -> PyResult<(String,
         state.board.0.push(row);
     }
 
-    for _ in 0..turn {
+    for t in 0..turn {
         if state.onestep().is_err() {
-            return Ok(("one step evaluaton is failed.".to_owned(), None));
+            return Err(PyErr::new::<PyValueError, _>(format!(
+                "eval failed at turn {}:\n{}",
+                t, state.board
+            )));
         }
     }
 
