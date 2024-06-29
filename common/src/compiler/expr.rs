@@ -51,6 +51,12 @@ impl Expr {
         Expr::Proc(vec![x, y])
     }
 
+    fn is_variadic(&self) -> bool {
+        let Expr::Var(v) = self else { return false };
+
+        v == "string-append"
+    }
+
     pub fn is_buildin_var(&self, check_arity: Option<usize>) -> bool {
         let Expr::Var(v) = self else { return false };
 
@@ -149,7 +155,15 @@ impl Expr {
             Expr::Proc(args) => {
                 args.iter_mut().for_each(Expr::reduce_proc_params);
 
-                if args.len() <= 2 || args[0].is_buildin_var(None) {
+                // Special-case string-append
+                if args.len() > 3 && args[0].is_variadic() {
+                    let lst = args.pop().unwrap();
+                    let before_lst = args.pop().unwrap();
+                    let new_lst = Expr::Proc(vec![args[0].clone(), before_lst, lst]);
+                    args.push(new_lst);
+                    self.reduce_proc_params();
+                    return;
+                } else if args.len() <= 2 || args[0].is_buildin_var(None) {
                     return;
                 }
                 let lst = args.pop().unwrap();

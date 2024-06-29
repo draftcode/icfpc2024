@@ -21,6 +21,8 @@ top level の expression はすべて `(define ...)` 形式である必要があ
 
 以下の関数は定義なしで使える。
 
+string-append は特別に 2 以上の任意個の引数をとれる。
+
 ```
 # Unary
 (- A)               -> U- A'
@@ -84,7 +86,7 @@ Scheme のスペック https://groups.csail.mit.edu/mac/ftpdir/scheme-7.4/doc-ht
 
 は
 
-((lambda (f) B')) A
+((lambda (f) B') A)
 
 と同じ。B' では B に出現する (f) を f に置き換える。
 
