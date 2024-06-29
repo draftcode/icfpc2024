@@ -23,8 +23,11 @@ impl<'a> Iterator for Tokenizer<'a> {
 }
 
 impl<'a> Tokenizer<'a> {
-    pub fn new(cs: Chars<'a>) -> Self {
-        Tokenizer { cs, c: None }
+    pub fn new(input: &'a str) -> Self {
+        Tokenizer {
+            cs: input.chars(),
+            c: None,
+        }
     }
 
     fn next_char(&mut self) -> Option<char> {

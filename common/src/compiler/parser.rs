@@ -7,7 +7,8 @@ use super::{
 };
 
 pub fn parse<'a>(cs: Chars<'a>) -> anyhow::Result<Program> {
-    let toks = Tokenizer::new(cs);
+    let str = cs.collect::<String>();
+    let toks = Tokenizer::new(&str);
 
     let mut parser = Parser::new(toks);
     let mut exprs = vec![];

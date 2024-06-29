@@ -4,7 +4,7 @@ Scheme program を ICFP にコンパイルする
 
 oka/8.scm みたいな Scheme プログラムを書いて、
 
-`cargo run -r --bin scmcomp submit < <(cat oka/8.scm )`
+`cargo run -r --bin scmcomp submit < oka/8.scm`
 
 を実行すると、プログラムをコンパイルして送ります。
 
@@ -48,7 +48,7 @@ res 以外で 0 引数の define があってはならない。
 (string=? A B)      -> B= A' B'
 
 # If
-(if A B)            -> ? A' B'
+(if A B C)            -> ? A' B' C'
 
 # Lambda
 (lambda (x) A)      -> L# A'   // A' 内の自由変数 x の出現を v# で置き換える

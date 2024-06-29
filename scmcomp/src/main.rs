@@ -3,6 +3,7 @@ use common::{
     compiler::{compile::compile_to_lambda, parser::parse},
     eval::eval,
     expr::Expr,
+    optimize::optimize,
 };
 use std::io::Read;
 
@@ -60,7 +61,13 @@ fn submit(#[opt(long, default_value = "")] mut api_token: String) -> anyhow::Res
     let icfp = expr.icfp();
 
     let icfp_prog = icfp.join(" ");
-    eprintln!("{}", icfp_prog);
+    eprintln!("compiled ({} bytes): {}", icfp_prog.len(), icfp_prog);
+
+    let expr = icfp_prog.parse::<Expr>()?;
+    let expr = optimize(expr);
+
+    let icfp_prog = expr.encoded().to_string();
+    eprintln!("optimized ({} bytes): {}", icfp_prog.len(), icfp_prog);
 
     let client = reqwest::blocking::Client::new();
 
