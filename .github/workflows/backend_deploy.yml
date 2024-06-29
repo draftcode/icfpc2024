@@ -27,3 +27,4 @@ jobs:
       - run: ssh icfp.badalloc.com 'cd /root/icfpc2024 && rye sync --force --no-lock'
       - run: ssh icfp.badalloc.com 'cd /root/icfpc2024/backend_py && rye run db-upgrade'
       - run: ssh icfp.badalloc.com 'systemctl reload backend_py.service'
+      - run: ssh icfp.badalloc.com 'systemctl restart celery.service'
