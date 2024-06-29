@@ -15,6 +15,28 @@ export interface CommunicationLog {
   decoded_response: string;
 }
 
+export interface ProblemRank {
+  id: number;
+  rank: number | null;
+  our_score: number | null;
+  best_score: number | null;
+}
+
+export interface ProblemSetRank {
+  updated: string;
+  rank: number;
+  problems: ProblemRank[];
+}
+
+export interface TeamRankResponse {
+  scoreboard_last_updated: string;
+  total_rank: number;
+  lambdaman: ProblemSetRank;
+  spaceship: ProblemSetRank;
+  threed: ProblemSetRank;
+  efficiency: ProblemSetRank;
+}
+
 export function useCommunications(offset?: number, limit?: number) {
   const { data, error, isLoading } = useSWR<AxiosResponse<CommunicationLog[]>>(
     {
@@ -30,7 +52,11 @@ export function useCommunications(offset?: number, limit?: number) {
   return { data: data?.data, error, isLoading };
 }
 
-export function useCommunicationsWithRequestPrefix(prefix: string, offset?: number, limit?: number) {
+export function useCommunicationsWithRequestPrefix(
+  prefix: string,
+  offset?: number,
+  limit?: number,
+) {
   const { data, error, isLoading } = useSWR<AxiosResponse<CommunicationLog[]>>(
     {
       method: "get",
@@ -40,6 +66,17 @@ export function useCommunicationsWithRequestPrefix(prefix: string, offset?: numb
         limit: limit,
         decoded_request_prefix: prefix,
       },
+    },
+    client,
+  );
+  return { data: data?.data, error, isLoading };
+}
+
+export function useTeamRank() {
+  const { data, error, isLoading } = useSWR<AxiosResponse<TeamRankResponse>>(
+    {
+      method: "get",
+      url: "/team_rank",
     },
     client,
   );

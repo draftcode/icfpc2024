@@ -1,176 +1,222 @@
-import { CheckCircleIcon } from "@heroicons/react/24/solid";
+import { useTeamRank } from "@/components/api";
 import clsx from "clsx";
 import Link from "next/link";
-
-const LAMBDAMAN_PROBLEMS = [
-  { id: 1 },
-  { id: 2 },
-  { id: 3 },
-  { id: 4 },
-  { id: 5 },
-  { id: 6 },
-  { id: 7 },
-  { id: 8 },
-  { id: 9 },
-  { id: 10 },
-  { id: 11 },
-  { id: 12 },
-  { id: 13 },
-  { id: 14 },
-  { id: 15 },
-  { id: 16 },
-  { id: 17 },
-  { id: 18 },
-  { id: 19 },
-  { id: 20 },
-  { id: 21 },
-];
-
-const SPACESHIP_PROBLEMS = [
-  { id: 1 },
-  { id: 2 },
-  { id: 3 },
-  { id: 4 },
-  { id: 5 },
-  { id: 6 },
-  { id: 7 },
-  { id: 8 },
-  { id: 9 },
-  { id: 10 },
-  { id: 11 },
-  { id: 12 },
-  { id: 13 },
-  { id: 14 },
-  { id: 15 },
-  { id: 16 },
-  { id: 17 },
-  { id: 18 },
-  { id: 19 },
-  { id: 20 },
-  { id: 21 },
-  { id: 22 },
-  { id: 23 },
-  { id: 24 },
-  { id: 25 },
-];
-
-const THREED_PROBLEMS = [
-  { id: 1 },
-  { id: 2 },
-  { id: 3 },
-  { id: 4 },
-  { id: 5 },
-  { id: 6 },
-  { id: 7 },
-  { id: 8 },
-  { id: 9 },
-  { id: 10 },
-  { id: 11 },
-  { id: 12 },
-];
-
-const EFFICIENCY_PROBLEMS = [
-  { id: 1, solved: true },
-  { id: 2, solved: true },
-  { id: 3, solved: true },
-  { id: 4, solved: true },
-  { id: 5, solved: true },
-  { id: 6, solved: true },
-  { id: 7, solved: true },
-  { id: 8, solved: true },
-  { id: 9, solved: false },
-  { id: 10, solved: false },
-  { id: 11, solved: false },
-  { id: 12, solved: false },
-  { id: 13, solved: true },
-];
+import { useState } from "react";
 
 export default function Sidebar({ current }: { current?: string }) {
+  const [hideTop, setHideTop] = useState(true);
+  const [badgeType, setBadgeType] = useState("rank");
+  const { data, error } = useTeamRank();
+  if (error) {
+    throw error;
+  }
+  if (!data) {
+    return null;
+  }
   return (
-    <ul className="menu menu-xs w-56 my-4 shrink-0">
-      <li>
-        <h2 className="menu-title">Lambdaman</h2>
-        <ul>
-          {LAMBDAMAN_PROBLEMS.map(({ id }) => {
-            return (
-              <li>
-                <Link
-                  className={clsx(
-                    `/lambdaman/${id}` === current ? "active" : null,
-                  )}
-                  href={`/lambdaman/${id}`}
-                >
-                  Lambdaman {id}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </li>
+    <div>
+      <label className="label cursor-pointer justify-normal gap-x-1">
+        <input
+          type="checkbox"
+          checked={hideTop}
+          onChange={(e) => setHideTop(e.target.checked)}
+          className="checkbox checkbox-xs"
+        />
+        <span className="label-text">1位のやつは隠す</span>
+      </label>
+      <hr />
+      <form>
+        <div className="form-control">
+          <label className="label cursor-pointer justify-normal gap-x-1">
+            <input
+              type="radio"
+              name="radio-10"
+              className="radio radio-xs"
+              checked={badgeType === "rank"}
+              onChange={() => setBadgeType("rank")}
+            />
+            <span className="label-text">順位</span>
+          </label>
+        </div>
+        <div className="form-control">
+          <label className="label cursor-pointer justify-normal gap-x-1">
+            <input
+              type="radio"
+              name="radio-10"
+              className="radio radio-xs"
+              checked={badgeType === "score"}
+              onChange={() => setBadgeType("score")}
+            />
+            <span className="label-text">スコア</span>
+          </label>
+        </div>
+        <div className="form-control">
+          <label className="label cursor-pointer justify-normal gap-x-1">
+            <input
+              type="radio"
+              name="radio-10"
+              className="radio radio-xs"
+              checked={badgeType === "diff"}
+              onChange={() => setBadgeType("diff")}
+            />
+            <span className="label-text">差分</span>
+          </label>
+        </div>
+      </form>
+      <hr />
+      <ul className="menu menu-xs w-56 shrink-0">
+        <li>
+          <h2 className="menu-title">Lambdaman</h2>
+          <ul>
+            {data.lambdaman.problems.map(
+              ({ id, rank, our_score, best_score }) => {
+                return (
+                  <li className={clsx(hideTop && rank === 1 && "hidden")}>
+                    <Link
+                      className={clsx(
+                        `/lambdaman/${id}` === current ? "active" : null,
+                      )}
+                      href={`/lambdaman/${id}`}
+                    >
+                      Lambdaman {id}
+                      <Badge
+                        badge_type={badgeType}
+                        rank={rank}
+                        best_score={best_score}
+                        our_score={our_score}
+                      />
+                    </Link>
+                  </li>
+                );
+              },
+            )}
+          </ul>
+        </li>
 
-      <li>
-        <h2 className="menu-title">Spaceship</h2>
-        <ul>
-          {SPACESHIP_PROBLEMS.map(({ id }) => {
-            return (
-              <li>
-                <Link
-                  className={clsx(
-                    `/spaceship/${id}` === current ? "active" : null,
-                  )}
-                  href={`/spaceship/${id}`}
-                >
-                  Spaceship {id}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </li>
+        <li>
+          <h2 className="menu-title">Spaceship</h2>
+          <ul>
+            {data.spaceship.problems.map(
+              ({ id, rank, our_score, best_score }) => {
+                return (
+                  <li className={clsx(hideTop && rank === 1 && "hidden")}>
+                    <Link
+                      className={clsx(
+                        `/spaceship/${id}` === current ? "active" : null,
+                      )}
+                      href={`/spaceship/${id}`}
+                    >
+                      Spaceship {id}
+                      <Badge
+                        badge_type={badgeType}
+                        rank={rank}
+                        best_score={best_score}
+                        our_score={our_score}
+                      />
+                    </Link>
+                  </li>
+                );
+              },
+            )}
+          </ul>
+        </li>
 
-      <li>
-        <h2 className="menu-title">3D</h2>
-        <ul>
-          {THREED_PROBLEMS.map(({ id }) => {
-            return (
-              <li>
-                <Link
-                  className={clsx(
-                    `/3d/${id}` === current ? "active" : null,
-                  )}
-                  href={`/3d/${id}`}
-                >
-                  3D {id}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </li>
+        <li>
+          <h2 className="menu-title">3D</h2>
+          <ul>
+            {data.threed.problems.map(({ id, rank, our_score, best_score }) => {
+              return (
+                <li className={clsx(hideTop && rank === 1 && "hidden")}>
+                  <Link
+                    className={clsx(`/3d/${id}` === current ? "active" : null)}
+                    href={`/3d/${id}`}
+                  >
+                    3D {id}
+                    <Badge
+                      badge_type={badgeType}
+                      rank={rank}
+                      best_score={best_score}
+                      our_score={our_score}
+                    />
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </li>
 
-      <li>
-        <h2 className="menu-title">Efficiency</h2>
-        <ul>
-          {EFFICIENCY_PROBLEMS.map(({ id, solved }) => {
-            const badge = solved ? (
-              <CheckCircleIcon className="size-4 text-blue-500" />
-            ) : null;
-            return (
-              <li>
-                <Link
-                  className={clsx(
-                    `/efficiency/${id}` === current ? "active" : null,
-                  )}
-                  href={`/efficiency/${id}`}
-                >
-                  {badge}
-                  Efficiency {id}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </li>
-    </ul>
+        <li>
+          <h2 className="menu-title">Efficiency</h2>
+          <ul>
+            {data.efficiency.problems.map(
+              ({ id, rank, our_score, best_score }) => {
+                return (
+                  <li className={clsx(hideTop && rank === 1 && "hidden")}>
+                    <Link
+                      className={clsx(
+                        `/efficiency/${id}` === current ? "active" : null,
+                      )}
+                      href={`/efficiency/${id}`}
+                    >
+                      Efficiency {id}
+                      <Badge
+                        badge_type="rank"
+                        rank={rank}
+                        best_score={best_score}
+                        our_score={our_score}
+                      />
+                    </Link>
+                  </li>
+                );
+              },
+            )}
+          </ul>
+        </li>
+      </ul>
+    </div>
   );
+}
+
+function Badge({
+  badge_type,
+  rank,
+  best_score,
+  our_score,
+}: {
+  badge_type: string;
+  rank: number | null;
+  best_score: number | null;
+  our_score: number | null;
+}) {
+  if (badge_type === "rank") {
+    if (rank === 1) {
+      return <div className="badge badge-success">{rank} 位</div>;
+    } else if (rank === null) {
+      return <div className="badge badge-warning">No Rank</div>;
+    }
+    return <div className="badge badge-primary">{rank} 位</div>;
+  }
+  if (badge_type === "score") {
+    if (our_score === best_score) {
+      return <div className="badge badge-success">{our_score}</div>;
+    } else if (our_score === null) {
+      return <div className="badge badge-warning">No Score</div>;
+    }
+    return <div className="badge badge-primary">{our_score}</div>;
+  }
+  if (badge_type === "diff") {
+    if (our_score === null || best_score === null) {
+      return <div className="badge badge-warning">No Score</div>;
+    }
+
+    if (our_score === best_score) {
+      return <div className="badge badge-success">0</div>;
+    }
+    return (
+      <div className="badge badge-primary">
+        {our_score - best_score > 0 ? "+" : ""}
+        {our_score - best_score}
+      </div>
+    );
+  }
 }
