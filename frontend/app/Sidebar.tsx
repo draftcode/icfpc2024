@@ -81,6 +81,14 @@ export default function Sidebar({ current }: { current?: string }) {
             Lambdaman <CategoryBadge rank={data.lambdaman.rank} />
           </h2>
           <ul>
+            <li>
+              <Link
+                className={clsx("/lambdaman" === current ? "active" : null)}
+                href="/lambdaman"
+              >
+                エディタ
+              </Link>
+            </li>
             {data.lambdaman.problems.map(
               ({ id, rank, our_score, best_score }) => {
                 return (
@@ -113,7 +121,14 @@ export default function Sidebar({ current }: { current?: string }) {
           </h2>
           <ul>
             <li>
-              <Link href="/spaceship/editor">エディタ</Link>
+              <Link
+                className={clsx(
+                  "/spaceship/editor" === current ? "active" : null,
+                )}
+                href="/spaceship/editor"
+              >
+                エディタ
+              </Link>
             </li>
             {data.spaceship.problems.map(
               ({ id, rank, our_score, best_score }) => {
