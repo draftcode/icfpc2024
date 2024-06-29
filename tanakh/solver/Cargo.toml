@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+common = { path = "../../common/" }
+anyhow = "1.0.86"
+euclid = "0.22.10"
 memoise = "0.3.2"
 num-bigint = "0.4.6"
 z3 = "0.12.1"
+argopt = "0.3.0"

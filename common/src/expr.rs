@@ -354,6 +354,38 @@ impl Expr {
             e => bail!("invalid expr: {e:?}"),
         })
     }
+
+    pub fn to_tokens(&self) -> Vec<Token> {
+        match self {
+            Expr::Bool(b) => vec![Token::Bool(*b)],
+            Expr::Int(n) => vec![Token::Int(n.as_ref().clone())],
+            Expr::String(s) => vec![Token::String(s.as_ref().clone())],
+            Expr::Var(v) => vec![Token::Var(*v)],
+            Expr::Un(op, e) => {
+                let mut ret = vec![Token::Un(*op)];
+                ret.extend(e.to_tokens());
+                ret
+            }
+            Expr::Bin(op, l, r) => {
+                let mut ret = vec![Token::Bin(*op)];
+                ret.extend(l.to_tokens());
+                ret.extend(r.to_tokens());
+                ret
+            }
+            Expr::If(cond, th, el) => {
+                let mut ret = vec![Token::If];
+                ret.extend(cond.to_tokens());
+                ret.extend(th.to_tokens());
+                ret.extend(el.to_tokens());
+                ret
+            }
+            Expr::Lambda(v, e) => {
+                let mut ret = vec![Token::Lambda(*v)];
+                ret.extend(e.to_tokens());
+                ret
+            }
+        }
+    }
 }
 
 impl FromStr for Expr {
