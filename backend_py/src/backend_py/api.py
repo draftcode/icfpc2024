@@ -3,7 +3,7 @@ import importlib.resources as pkg_resources
 from typing import Sequence
 
 import httpx
-from backend_rs import decode_message  # type: ignore
+from backend_rs import decode_message, evaluate_message  # type: ignore
 from fastapi import Body, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, RedirectResponse
@@ -45,14 +45,18 @@ async def communicate(
         raise HTTPException(status_code=resp.status_code, detail=resp.text)
 
     resp_str = resp.text
-    req_str = decode_message(body)
+    decoded_response = decode_message(resp_str)
+    if decoded_response.startswith("Correct, you solved lambdaman"):
+        req_str = evaluate_message(body)
+    else:
+        req_str = decode_message(body)
     log = CommunicationLog(
         created=datetime.datetime.now(),
         request=body,
         response=resp_str,
         decoded_request_prefix=req_str[:100],
         decoded_request=req_str,
-        decoded_response=decode_message(resp_str),
+        decoded_response=decoded_response,
     )
     session.add(log)
     session.commit()
