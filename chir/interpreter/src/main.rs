@@ -25,9 +25,11 @@ fn main() -> Result<()> {
 
     println!("{}", state.board);
 
+    let mut turn = 0;
     while state.output.is_none() {
         state.onestep()?;
-        println!("{}", state.board);
+        // println!("{}", state.board);
+        turn += 1;
     }
 
     println!("finished {}", state.output.unwrap());
