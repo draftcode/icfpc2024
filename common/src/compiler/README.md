@@ -1,39 +1,26 @@
-Scheme program を ICFP にコンパイルする。(WIP)
+Scheme program を ICFP にコンパイルする
+
+# 使い方
+
+oka/8.scm みたいな Scheme プログラムを書いて、
+
+`cargo run -r --bin scmcomp submit < <(cat oka/8.scm )`
+
+を実行すると、プログラムをコンパイルして送ります。
 
 # 制約条件
 
 (サンプル oka/8.scm を参照)
 
-top level の expression はすべて (define ...) 形式である必要がある。
+top level の expression はすべて `(define ...)` 形式である必要がある。
 また、`(define (res) ...)` が存在する必要があり、res の値に評価されるような ICFP を出力する。
-それ以外で 0 引数の define があってはならない。
+res 以外で 0 引数の define があってはならない。
 
-# 実装メモ
-
-ICFP のスペック https://icfpcontest2024.github.io/icfp.html
-Scheme のスペック https://groups.csail.mit.edu/mac/ftpdir/scheme-7.4/doc-html/scheme_7.html
-
-## 2 引数以上の define
-
-(define (f x1 x2) A)
-
-は
-
-(define (f x1) ((lambda (x2) A)))
-
-とおなじ
-
-## 1 引数の define
-
-(define (f x) A) B
-
-は
-
-((lambda (f) B) (lambda (x) A))
-
-とおなじ
+`string-take` と `string-drop` の実装は書いても書かなくてもよい（無視される）。
 
 ## 組み込み関数
+
+以下の関数は定義なしで使える。
 
 ```
 # Unary
@@ -67,6 +54,31 @@ Scheme のスペック https://groups.csail.mit.edu/mac/ftpdir/scheme-7.4/doc-ht
 (lambda (x) A)      -> L# A'   // A' 内の自由変数 x の出現を v# で置き換える
 ```
 
+# 実装メモ
+
+ICFP のスペック https://icfpcontest2024.github.io/icfp.html
+Scheme のスペック https://groups.csail.mit.edu/mac/ftpdir/scheme-7.4/doc-html/scheme_7.html
+
+## 2 引数以上の define
+
+(define (f x1 x2) A)
+
+は
+
+(define (f x1) ((lambda (x2) A)))
+
+とおなじ
+
+## 1 引数の define
+
+(define (f x) A) B
+
+は
+
+((lambda (f) B) (lambda (x) A))
+
+とおなじ
+
 ## 再帰関数の変換
 
 (define (f x) A) B
@@ -82,8 +94,3 @@ B
 B
 
 に書き換えられる
-
-##　ばんかバグる
-
-Bin(App),
-Lambda(0), Bin(App), Lambda(1), Bin(App), Var(1), Int(5), Lambda(1), Bin(App), Bin(App), Var(0), Lambda(2), Lambda(3), If, Bin(Eq), Var(3), Int(1), Int(1), Bin(Mul), Var(3), Bin(App), Var(2), Un(Neg), Var(3), Int(1), Var(1), Lambda(0), Bin(App), Lambda(1), Bin(App), Var(0), Lambda(2), Bin(App), Bin(App), Var(1), Var(1), Var(2), Lambda(1), Bin(App), Var(0), Lambda(2), Bin(App), Bin(App), Var(1), Var(1), Var(2)
