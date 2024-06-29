@@ -60,7 +60,7 @@ impl FromStr for Cell {
                         let mut it = s.chars();
                         it.next();
                         let l: char = it.next().unwrap();
-                        if !l.is_lowercase() {
+                        if !l.is_lowercase() && l != 'A' && l != 'B' {
                             bail!("label should be lower case")
                         } else {
                             Cell::Warp(l)
@@ -181,6 +181,10 @@ impl State {
             for x in 0..self.board.0[y].len() {
                 if let Cell::Label(c) = self.board.0[y][x] {
                     labels.push((c, x, y));
+                } else if let Cell::InputA = self.board.0[y][x] {
+                    labels.push(('A', x, y));
+                } else if let Cell::InputB = self.board.0[y][x] {
+                    labels.push(('B', x, y));
                 } else if let Cell::Warp(c) = self.board.0[y][x] {
                     if c == '_' {
                         continue;
