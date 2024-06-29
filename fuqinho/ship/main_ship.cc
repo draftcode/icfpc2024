@@ -5,14 +5,13 @@
 #include <bitset>
 using namespace std;
 
-constexpr int MIN_V = -20;
-constexpr int MAX_V = 20;
+constexpr int MIN_V = -40;
+constexpr int MAX_V = 40;
 constexpr int NUM_V = MAX_V - MIN_V + 1;
-constexpr int MIN_D = -1000;
-constexpr int MAX_D = 1000;
+constexpr int MIN_D = -4000;
+constexpr int MAX_D = 4000;
 constexpr int NUM_D = MAX_D - MIN_D + 1;
-constexpr int MAX_NODES = 100;
-constexpr int BEAM_WIDTH = 20000;
+constexpr int BEAM_WIDTH = 100;
 
 constexpr int AX[] = {-1, 0, 1};
 
@@ -77,6 +76,50 @@ vector<MovePack> get_moves_with_steps(int v, int dx, int steps, int max_results,
         if (steps1 != steps) continue;
         moves.emplace_back(steps1, ve);
     }
+    if (steps >= 1) {
+        for (int k = 0; k < 3; k++) {
+            int nv = v + AX[k];
+            int ndx = dx - nv;
+            if (nv < MIN_V || nv >= MAX_V) continue;
+            if (ndx < MIN_D || ndx >= MAX_D) continue;
+            for (int ve = MIN_V; ve < MAX_V; ve++) {
+                int steps1 = min_steps[nv-MIN_V][ve-MIN_V][ndx-MIN_D];
+                if (steps1 == steps - 1) {
+                    moves.emplace_back(steps, ve);
+                }
+            }
+            //vector<MovePack> moves1 = get_moves_with_steps(nv, ndx, steps - 1, max_results, min_steps);
+            //for (int i = 0; i < moves1.size(); i++) {
+            //    moves.emplace_back(steps, moves1[i].terminal_velocity);
+            //}
+        }
+    }
+    if (steps >= 2) {
+        for (int a0 = -1; a0 <= 1; a0++) {
+            for (int a1 = -1; a1 <= 1; a1++) {
+                int nv1 = v + a0;
+                int ndx1 = dx - nv1;
+                int nv2 = nv1 + a1;
+                int ndx2 = ndx1 - nv2;
+                if (nv2 < MIN_V || nv2 >= MAX_V) continue;
+                if (ndx2 < MIN_D || ndx2 >= MAX_D) continue;
+                for (int ve = MIN_V; ve < MAX_V; ve++) {
+                    int steps1 = min_steps[nv2-MIN_V][ve-MIN_V][ndx2-MIN_D];
+                    if (steps1 == steps - 2) {
+                        moves.emplace_back(steps, ve);
+                    }
+                }
+            }
+        }
+    }
+
+    /*
+    if (steps == 1) {
+        for (int i=0; i<moves.size(); i++) {
+            cerr << "steps: " << moves[i].steps << " vel: " << moves[i].terminal_velocity << endl;
+        }
+    }
+     */
     if (moves.empty()) {
         //cerr << "get_moves_with_steps(v: " << v << ", dx: " << dx << ", steps: " << steps << ") -  Moves are empty" << endl;
         return moves;
@@ -92,6 +135,39 @@ vector<MovePack> get_moves_with_steps(int v, int dx, int steps, int max_results,
     return moves;
 }
 
+bool can_reach(int vs, int ve, int dx, int steps, const vector<vector<vector<int>>>& min_steps) {
+    if (min_steps[vs-MIN_V][ve-MIN_V][dx-MIN_D] == steps) {
+        return true;
+    }
+    if (steps >= 1) {
+        for (int k = 0; k < 3; k++) {
+            int nv = vs + AX[k];
+            int ndx = dx - nv;
+            if (nv < MIN_V || nv >= MAX_V) continue;
+            if (ndx < MIN_D || ndx >= MAX_D) continue;
+            if (min_steps[nv-MIN_V][ve-MIN_V][ndx-MIN_D] == steps - 1) {
+                return true;
+            }
+        }
+    }
+    if (steps >= 2) {
+        for (int a0 = -1; a0 <= 1; a0++) {
+            for (int a1 = -1; a1 <= 1; a1++) {
+                int nv1 = vs + a0;
+                int ndx1 = dx - nv1;
+                int nv2 = nv1 + a1;
+                int ndx2 = ndx1 - nv2;
+                if (nv2 < MIN_V || nv2 >= MAX_V) continue;
+                if (ndx2 < MIN_D || ndx2 >= MAX_D) continue;
+                if (min_steps[nv2-MIN_V][ve-MIN_V][ndx2-MIN_D] == steps - 2) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
 vector<int> reconstruct_steps(int dx, int vs, int ve, int steps, const vector<vector<vector<int>>>& min_steps) {
     vector<int> result;
     int v = vs;
@@ -101,7 +177,7 @@ vector<int> reconstruct_steps(int dx, int vs, int ve, int steps, const vector<ve
             int ndx = dx - nv;
             if (nv < MIN_V || nv >= MAX_V) continue;
             if (ndx < MIN_D || ndx >= MAX_D) continue;
-            if (min_steps[nv-MIN_V][ve-MIN_V][ndx-MIN_D] == steps - i - 1) {
+            if (can_reach(nv, ve, ndx, steps - i - 1, min_steps)) {
                 v = nv;
                 dx = ndx;
                 result.push_back(AX[k]);
@@ -148,14 +224,35 @@ int main() {
     vector<vector<BeamState>> beams(nodes.size() + 1);
     beams[0].push_back({0, 0, 0, nullptr});
     for (int i = 0; i < nodes.size(); i++) {
+        //cerr << "(" << x << ", " << y << ") to (" << nodes[i].x << ", " << nodes[i].y << ")" << endl;
         for (int j = 0; j < beams[i].size(); j++) {
             int cur_vx = beams[i][j].vx;
             int cur_vy = beams[i][j].vy;
             int cur_moves = beams[i][j].moves;
 
             // Find the minimum steps to move to the node in X/Y axis
-            vector<MovePack> moves_x = get_moves(cur_vx, nodes[i].x - x, 10, min_steps);
-            vector<MovePack> moves_y = get_moves(cur_vy, nodes[i].y - y, 10, min_steps);
+            vector <MovePack> moves_x = get_moves(cur_vx, nodes[i].x - x, 10, min_steps);
+
+            /*
+            if (x == -28 && y == 106) {
+                cerr << "Moves X: " << moves_x.size() << " / " << "cur_vx: " << cur_vx << " dx: " << (nodes[i].x - x)
+                     << endl;
+                for (int k = 0; k < moves_x.size(); k++) {
+                    cerr << "steps: " << moves_x[k].steps << " vel: " << moves_x[k].terminal_velocity << endl;
+                }
+            }
+             */
+
+            vector <MovePack> moves_y = get_moves(cur_vy, nodes[i].y - y, 10, min_steps);
+            /*
+            if (x == -28 && y == 106) {
+                cerr << "Moves Y: " << moves_y.size() << " / " << "cur_vy: " << cur_vy << " dy: " << (nodes[i].y - y)
+                     << endl;
+                for (int k = 0; k < moves_y.size(); k++) {
+                    cerr << "steps: " << moves_y[k].steps << " vel: " << moves_y[k].terminal_velocity << endl;
+                }
+            }
+             */
             if (moves_x.empty() || moves_y.empty()) continue;
 
             // Find the minimum steps to move to the node in X/Y axis with the same steps
@@ -174,12 +271,24 @@ int main() {
         }
 
         sort(beams[i+1].begin(), beams[i+1].end(), [](const BeamState& a, const BeamState& b) {
-            return a.moves < b.moves;
+            return a.moves < b.moves || (a.moves == b.moves && (abs(a.vx) + abs(a.vy) < abs(b.vx) + abs(b.vy))) ||
+                    (a.moves == b.moves && (abs(a.vx) + abs(a.vy) == abs(b.vx) + abs(b.vy)) && a.vx < b.vx) ||
+                    (a.moves == b.moves && (abs(a.vx) + abs(a.vy) == abs(b.vx) + abs(b.vy)) && a.vx == b.vx && a.vy < b.vy);
+        });
+        unique(beams[i+1].begin(), beams[i+1].end(), [](const BeamState& a, const BeamState& b) {
+            return a.vx == b.vx && a.vy == b.vy && a.moves == b.moves;
         });
 
         if (beams[i+1].size() > BEAM_WIDTH) {
             beams[i+1].resize(BEAM_WIDTH);
         }
+        /*
+        cerr << "------------------" << endl;
+        for (int j = 0; j < beams[i+1].size(); j++) {
+            cerr << beams[i+1][j].moves << " " << beams[i+1][j].vx << " " << beams[i+1][j].vy << endl;
+        }
+         */
+        //if (i == 1) return 1;
         x = nodes[i].x;
         y = nodes[i].y;
     }
@@ -240,11 +349,6 @@ int main() {
         cvy = nvy;
     }
 
-
-    cerr << "VXS size: " << vxs.size() << endl;
-    for (int i=0; i<vxs.size(); i++) {
-        cerr << vxs[i] << " " << vys[i] << endl;
-    }
     cout << ans << endl;
 
     return 0;
