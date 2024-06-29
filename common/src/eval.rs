@@ -80,10 +80,7 @@ fn reduce_to_nf(e: &Expr, env: &mut Env) -> anyhow::Result<Expr> {
                 let g = reduce_to_nf(r.as_ref(), env)?;
                 match f {
                     Expr::Lambda(v, e) => {
-                        return reduce_to_nf(
-                            &beta_reduction(e.as_ref(), v, &g, &mut vec![])?,
-                            env,
-                        );
+                        return reduce_to_nf(&beta_reduction(e.as_ref(), v, &g, &mut vec![])?, env);
                     }
                     _ => bail!("Invalid operator for appv: {f}"),
                 }

@@ -68,7 +68,6 @@ export default function Page({
               type="radio"
               name="radio-10"
               className="radio checked:bg-blue-500"
-              defaultChecked
               onClick={() => sedEditProg(false)}
             />
           </label>

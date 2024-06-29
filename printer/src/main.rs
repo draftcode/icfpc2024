@@ -1,9 +1,9 @@
 use anyhow::Result;
 use std::io;
 
-use common::expr::{BinOp, Expr, UnOp};
-use common::eval::eval;
 use common::cps::cps_conversion;
+use common::eval::eval;
+use common::expr::{BinOp, Expr, UnOp};
 
 pub fn pretty_print_scheme(expr: &Expr) -> String {
     match expr {
@@ -83,10 +83,10 @@ pub fn pretty_print_scheme(expr: &Expr) -> String {
                 }
                 BinOp::App => {
                     format!("({} {})", l, r)
-                },
+                }
                 BinOp::AppL => {
                     format!("(delay {} {})", l, r)
-                },
+                }
                 BinOp::AppV => {
                     format!("(AppV {} {})", l, r)
                 }
