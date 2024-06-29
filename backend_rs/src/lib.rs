@@ -40,6 +40,11 @@ fn onestep_3d(program: String, a: i32, b: i32, turn: usize) -> PyResult<(String,
         for c in l.split_whitespace() {
             if let Ok(cell) = c.parse::<planar::Cell>() {
                 row.push(cell);
+            } else {
+                return Err(PyErr::new::<PyValueError, _>(format!(
+                    "Invalid cell: {}",
+                    c
+                )));
             }
         }
         state.board.0.push(row);
