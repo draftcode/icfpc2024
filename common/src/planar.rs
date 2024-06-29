@@ -147,6 +147,11 @@ fn readable(board: &Vec<Vec<Cell>>, pos: (i32, i32)) -> bool {
 impl State {
     pub fn onestep(&mut self) -> anyhow::Result<()> {
         self.history.push(self.board.clone());
+
+        // eprintln!("one step: t = {}, board = {}", self.history.len(), self.board);
+
+        let mut warp_requests = vec![];
+
         let mut new_board = self.board.0.clone();
         self.written = vec![vec![false; new_board[0].len()]; new_board.len()];
         for y in 0..new_board.len() {
@@ -176,23 +181,46 @@ impl State {
                         self.binop_comp(&mut new_board, x, y)?;
                     }
                     Cell::Warp => {
-                        println!("not implemented");
+                        self.warp(x, y, &mut warp_requests)?;
                     }
                     _ => bail!("Not implemented {:?}", new_board[y][x]),
                 }
             }
         }
+
+        if !warp_requests.is_empty() {
+            // eprintln!("warp reuqest is coming");
+            let dt = warp_requests[0].0;
+            for (ddt, _, _, _) in &warp_requests {
+                if dt != *ddt {
+                    bail!("warp: dt is not consistent {} vs {}", dt, ddt);
+                }
+            }
+            let target_t = (self.history.len() as i32 - dt - 1) as usize;
+            new_board = self.history[target_t].0.clone();
+            self.history = self.history.split_at(target_t).0.to_vec();
+            for (_, x, y, v) in &warp_requests {
+                self.write_to(&mut new_board, *x as usize, *y as usize, Cell::Number(*v))?;
+            }
+        }
+
         self.board.0 = new_board;
         Ok(())
     }
 
     fn move_v(&mut self, board: &mut Vec<Vec<Cell>>, x: usize, y: usize, dx: i32, dy: i32) -> anyhow::Result<()> {
+        
         let from_x = x as i32 - dx;
         let from_y = y as i32 - dy;
         let to_x = x as i32 + dx;
         let to_y = y as i32 + dy;
+        // eprintln!("move_v {},{} {},{} -> {},{}", x, y, from_x, from_y, to_x, to_y);
         if !inside(&board, (from_x, from_y)) || !inside(&board, (to_x, to_y)) {
             bail!("Invalid move from {},{} to {},{}", from_x, from_y, to_x, to_y);
+        }
+        if !readable(&self.board.0, (from_x, from_y)) {
+            // Arg is not ready yet.
+            return Ok(())
         }
         if !self.writable(board, (to_x, to_y)) {
             bail!("Trying to write the cell twice {},{}", to_x, to_y);
@@ -318,5 +346,31 @@ impl State {
             Cell::InputB => Some(self.input_b),
             _ => None
         }
+    }
+
+    fn warp(&mut self, x: usize, y: usize, warp_requests: &mut Vec<(i32, i32, i32, i32)>) -> anyhow::Result<()> {
+        const DX: [i32; 4] = [-1, 0, 1, 0];
+        const DY: [i32; 4] = [0, -1, 0, 1];
+        for i in 0..4 {
+            let nx = x as i32 + DX[i];
+            let ny = y as i32 + DY[i];
+            if !inside(&self.board.0, (nx, ny)) {
+                bail!("Outside of board {},{}", nx, ny);
+            }
+            if !readable(&self.board.0, (nx, ny)) {
+                // Argments are not ready yet.
+                return Ok(())
+            }
+        }
+
+        let x = x as i32;
+        let y = y as i32;
+        let dx = self.get_number((x - 1, y)).unwrap();
+        let dy = self.get_number((x + 1, y)).unwrap();
+        let dt = self.get_number((x, y + 1)).unwrap();
+        let v = self.get_number((x, y - 1)).unwrap();
+        warp_requests.push((dt, x as i32 - dx, y as i32 - dy, v));
+
+        Ok(())
     }
 }
