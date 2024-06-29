@@ -151,12 +151,17 @@ function SubmittedSpaceshipProblem({
 
   return (
     <CommunicationContainer log={log}>
-      <div className="font-mono bg-base-200 border p-2">
-        <div className="font-mono">
-          <textarea className="w-full" rows={1} disabled>
-            {log.decoded_request}
-          </textarea>
+      <div className="flex space-x-2">
+        <div className="font-mono bg-base-200 border p-2 grow">
+          <div className="font-mono">
+            <textarea className="w-full" rows={1} disabled>
+              {log.decoded_request}
+            </textarea>
+          </div>
         </div>
+        <Link className="btn" href={`/spaceship/editor?base=${log.id}`}>
+          編集
+        </Link>
       </div>
       <SingleViz path={solution} reqPoints={reqPoints} />
       <div className="bg-base-200 border-base-300 p-2">

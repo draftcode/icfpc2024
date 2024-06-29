@@ -1,6 +1,7 @@
 import axios from "axios";
 import type { AxiosResponse } from "axios";
 import useSWR from "swr";
+import useSWRMutation from "swr/mutation";
 
 const client = axios.create({
   baseURL: "https://icfp-api.badalloc.com/",
@@ -48,6 +49,33 @@ export function useProblem(category: string, id: number) {
     {
       method: "get",
       url: `/problems/${category}/${id}`,
+    },
+    client,
+  );
+  return { data: data?.data, error, isLoading };
+}
+
+export function useCommunicationSubmit(request: string) {
+  const { data, error, trigger, isMutating } = useSWRMutation<
+    AxiosResponse<CommunicationLog>
+  >(
+    {
+      method: "post",
+      url: "/communicate/submit",
+      data: {
+        plaintext: request,
+      },
+    },
+    client,
+  );
+  return { data: data?.data, error, isMutating, trigger };
+}
+
+export function useCommunicationLog(id: number) {
+  const { data, error, isLoading } = useSWR<AxiosResponse<CommunicationLog>>(
+    {
+      method: "get",
+      url: `/communications/${id}`,
     },
     client,
   );

@@ -1,25 +1,66 @@
 "use client";
 
-import { useProblem } from "@/components/api";
+import {
+  useCommunicationLog,
+  useCommunicationSubmit,
+  useProblem,
+} from "@/components/api";
 import {
   WaypointVizState,
   calculateSplitWaypoints,
 } from "@/components/spaceviz/state";
 import { parseReqPoints } from "@/components/spaceviz/state";
-import { warn } from "console";
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const CANVAS_SIZE = 4000;
 
-export default function Page() {
+export default function Page({
+  searchParams: { base },
+}: {
+  searchParams: { base: string };
+}) {
+  if (!base || !/^\d+$/.test(base)) {
+    return <Editor />;
+  }
+  const { data: baseData, error: baseError } = useCommunicationLog(
+    parseInt(base),
+  );
+  if (baseError) {
+    throw baseError;
+  }
+  if (!baseData) {
+    return null;
+  }
+  const ss = baseData.decoded_request.split(" ");
+  if (
+    ss.length !== 3 ||
+    ss[0] !== "solve" ||
+    !/^spaceship\d+$/.test(ss[1]) ||
+    !/^\d+$/.test(ss[2])
+  ) {
+    return <Editor />;
+  }
+  const initProblemID = parseInt(ss[1].replace("spaceship", ""));
+  const initPath = ss[2];
+  return <Editor initProblemID={initProblemID} initPath={initPath} />;
+}
+
+function Editor({
+  initProblemID,
+  initPath,
+}: {
+  initProblemID?: number;
+  initPath?: string;
+}) {
   const canvasCancelRef = useRef<(() => void) | null>(null);
   const vizStateRef = useRef<WaypointVizState>(new WaypointVizState());
-  const [problem, setProblem] = useState(1);
+  const [problem, setProblem] = useState(initProblemID ?? 1);
   const { data: problemData, error: problemError } = useProblem(
     "spaceship",
     problem,
   );
-  const [path, setPath] = useState("");
+  const [path, setPath] = useState(initPath ?? "");
   const [debugStep, setDebugStep] = useState(0);
 
   useEffect(() => {
@@ -34,6 +75,12 @@ export default function Page() {
     );
     vizStateRef.current.setWaypoints(w1, w2);
   }, [path, debugStep]);
+  const {
+    trigger: triggerSubmit,
+    isMutating,
+    data: submitData,
+    error: submitError,
+  } = useCommunicationSubmit(`solve spaceship${problem} ${path}`);
 
   const initCanvas = useCallback((canvas: HTMLCanvasElement | null) => {
     if (canvas) {
@@ -62,6 +109,9 @@ export default function Page() {
 
   if (problemError) {
     throw problemError;
+  }
+  if (submitError) {
+    throw submitError;
   }
   if (!problemData) {
     return null;
@@ -197,6 +247,27 @@ export default function Page() {
           >
             現在の一文字削除
           </button>
+
+          <button
+            className="btn btn-sm bg-primary text-white"
+            disabled={isMutating}
+            onClick={() => triggerSubmit()}
+          >
+            提出
+          </button>
+
+          {submitData && (
+            <div>
+              <Link
+                href={`/spaceship/editor?base=${submitData.id}`}
+                className="underline text-blue-500"
+                target="_blank"
+              >
+                保存されたリクエストへのパーマリンク
+              </Link>
+              <div>{submitData.decoded_response}</div>
+            </div>
+          )}
         </div>
       </div>
     </div>
