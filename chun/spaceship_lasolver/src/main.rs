@@ -181,12 +181,13 @@ fn calc_additional_estimate(
     }
 }
 
-fn solve_lookahead(
+fn solve_lookahead_impl(
     inip: Point,
     iniv: Velocity,
     midpt: Point,
     endpt: Point,
-) -> (Vec<Acceleration>, Vec<Acceleration>, Velocity) {
+    force_run: bool,
+) -> Result<(Vec<Acceleration>, Vec<Acceleration>, Velocity), ()> {
     let mut heap = BinaryHeap::new();
     let mut backtrack: HashMap<(Point, Velocity), Acceleration> = HashMap::new();
     let mut combinedscore: HashMap<(Point, Velocity), i32> = HashMap::new();
@@ -232,7 +233,7 @@ fn solve_lookahead(
                     midv = Some(curv);
                 }
             }
-            return (move_before_mid, move_after_mid, midv.unwrap());
+            return Ok((move_before_mid, move_after_mid, midv.unwrap()));
         }
         let base_truescore = *truescore.get(&(position, velocity)).unwrap();
         //let base_combinedscore = base_truescore + calc_additional_estimate(position, velocity, passed_mid, midpt, endpt);
@@ -259,13 +260,32 @@ fn solve_lookahead(
                 }
             }
         }
+        if heap.len() > 1_000_000 && !force_run {
+            return Err(());
+        }
     }
     panic!("Could not find solution");
 }
 
 fn solve_onept(curp: Point, curv: Velocity, endpt: Point) -> Vec<Acceleration> {
-    let (va, _ve, _midv) = solve_lookahead(curp, curv, endpt, endpt);
+    let (va, _ve, _midv) = solve_lookahead_impl(curp, curv, endpt, endpt, true).unwrap();
     return va;
+}
+
+fn solve_lookahead(
+    inip: Point,
+    iniv: Velocity,
+    midpt: Point,
+    endpt: Point,
+) -> (Vec<Acceleration>, Vec<Acceleration>, Velocity) {
+    let res = solve_lookahead_impl(inip, iniv, midpt, endpt, false);
+    match res {
+        Ok(x) => return x,
+        Err(_) => {
+            eprintln!("Exceeded search limit, shrinking the search space...");
+            return solve_lookahead_impl(inip, iniv, midpt, midpt, true).unwrap();
+        }
+    }
 }
 
 fn solve(points: Vec<(i32, i32)>) -> String {
