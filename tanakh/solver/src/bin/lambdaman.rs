@@ -1,4 +1,4 @@
-use std::{io::Read, path::PathBuf};
+use std::path::PathBuf;
 
 use common::expr::{BinOp, Expr};
 use num_bigint::BigInt;
@@ -91,6 +91,15 @@ macro_rules! icfp {
     (== $a1:tt $a2:tt) => {
         Expr::Bin(BinOp::Eq, Box::new(icfp!{ $a1 }), Box::new(icfp!{ $a2 }))
     };
+    (+ $a1:tt $a2:tt) => {
+        Expr::Bin(BinOp::Add, Box::new(icfp!{ $a1 }), Box::new(icfp!{ $a2 }))
+    };
+    (- $a1:tt $a2:tt) => {
+        Expr::Bin(BinOp::Sub, Box::new(icfp!{ $a1 }), Box::new(icfp!{ $a2 }))
+    };
+    (* $a1:tt $a2:tt) => {
+        Expr::Bin(BinOp::Mul, Box::new(icfp!{ $a1 }), Box::new(icfp!{ $a2 }))
+    };
     (/ $a1:tt $a2:tt) => {
         Expr::Bin(BinOp::Div, Box::new(icfp!{ $a1 }), Box::new(icfp!{ $a2 }))
     };
@@ -123,15 +132,68 @@ fn varid(s: &str) -> usize {
 }
 
 fn problem6() -> Expr {
+    let header = "solve lambdaman6 ";
     icfp! {
         let x = "RRRRRRRRRRRRR" in
         let x = (concat (concat x x) (concat x x)) in
-        (concat (concat x x) (concat x x))
+        (concat (#header) (concat (concat x x) (concat x x)))
     }
 }
 
-#[argopt::cmd]
-fn main(pid: usize, path: PathBuf) {
+fn problem8() -> Expr {
+    let header = "solve lambdaman8 ";
+    icfp! {
+        fix (fn f c p q s ->
+            (if (== c 50) {
+              s
+            } else {
+              f (+ c 1)
+                (concat "DD" (concat p "LL"))
+                (concat "UU" (concat q "RR"))
+                (concat s (if (== (% c 2) 1) { p } else { q }))
+            })
+        ) 0 "" "" (#header)
+    }
+}
+
+fn problem9() -> Expr {
+    let header = "solve lambdaman9 ";
+    icfp! {
+        let r =
+            (let s = "RRRRRRRRRRRR" in
+                concat (concat (concat s s) (concat s s)) "RD") in
+        let l =
+            (let s = "LLLLLLLLLLLL" in
+                concat (concat (concat s s) (concat s s)) "LD") in
+        let p = (concat r l) in
+        let q = (concat (concat p p) p) in
+        let r = (concat q q) in
+        let s = (concat r r) in
+        (concat (#header) (concat (concat s s) p))
+    }
+}
+
+#[argopt::subcmd]
+fn special(pid: usize) {
+    let e = match pid {
+        6 => problem6(),
+        8 => problem8(),
+        9 => problem9(),
+        _ => unimplemented!(),
+    };
+
+    let tokens = e.to_tokens();
+    let s = tokens
+        .into_iter()
+        .map(|token| token.encoded().to_string())
+        .collect::<Vec<_>>()
+        .join(" ");
+
+    println!("{}", s);
+}
+
+#[argopt::subcmd]
+fn comp(pid: usize, path: PathBuf) {
     if pid == 6 {
         let code = problem6();
         let code = icfp! {
@@ -176,3 +238,6 @@ fn main(pid: usize, path: PathBuf) {
 
     println!("{}", s);
 }
+
+#[argopt::cmd_group(commands = [special, comp])]
+fn main() {}
