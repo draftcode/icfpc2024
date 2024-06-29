@@ -34,11 +34,14 @@ struct Args {
     #[arg(long, default_value_t = get_api_url_from_env())]
     api_url: String,
 
+    #[arg(long)]
+    raw_input: bool,
+
     request: Option<String>,
 }
 
 fn main() -> Result<ExitCode> {
-    let args = Args::parse();
+    let mut args = Args::parse();
 
     if args.api_token.is_empty() {
         eprintln!("API token it not set. Set $API_TOKEN or pass --api-token");
@@ -48,13 +51,17 @@ fn main() -> Result<ExitCode> {
     let client = reqwest::blocking::Client::new();
 
     if let Some(request) = args.request {
-        let input_expr = Token::String(request);
+        let request = if args.raw_input {
+            request
+        } else {
+            Token::String(request).encoded().to_string()
+        };
 
         let response = client
             .post(&args.api_url)
             .header("Authorization", format!("Bearer {}", args.api_token))
             .header("Content-Type", "text/plain")
-            .body(input_expr.encoded().to_string())
+            .body(request)
             .send()?;
         ensure!(
             response.status().is_success(),
@@ -83,21 +90,48 @@ fn main() -> Result<ExitCode> {
     let mut rl = DefaultEditor::new()?;
     rl.load_history(&history_path).ok();
 
+    eprintln!("Welcome to the Communicate shell!");
+    eprintln!("Tips: Use !raw to send raw input, !text to send text input");
+
     loop {
-        let line = match rl.readline(">>> ") {
+        let prompt = if args.raw_input { "raw>> " } else { "text>> " };
+        let line = match rl.readline(prompt) {
             Ok(line) => line,
             Err(ReadlineError::Interrupted) | Err(ReadlineError::Eof) => break,
             Err(err) => return Err(err.into()),
         };
+        let line = line.trim().to_string();
         rl.add_history_entry(&line)?;
 
-        let input_token = Token::String(line.trim().to_string());
+        if let Some(command) = line.strip_prefix('!') {
+            let command = command.trim();
+            match command {
+                "raw" => {
+                    args.raw_input = true;
+                    continue;
+                }
+                "text" => {
+                    args.raw_input = false;
+                    continue;
+                }
+                _ => {
+                    eprintln!("Unknown command: {}", command);
+                    continue;
+                }
+            }
+        }
+
+        let request = if args.raw_input {
+            line
+        } else {
+            Token::String(line).encoded().to_string()
+        };
 
         let response = client
             .post(&args.api_url)
             .header("Authorization", format!("Bearer {}", args.api_token))
             .header("Content-Type", "text/plain")
-            .body(input_token.encoded().to_string())
+            .body(request)
             .send()?;
         ensure!(
             response.status().is_success(),
