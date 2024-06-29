@@ -54,8 +54,8 @@ Scheme のスペック https://groups.csail.mit.edu/mac/ftpdir/scheme-7.4/doc-ht
 (| A B)             -> B| A' B'
 (& A B)             -> B& A' B'
 (string-append A B) -> B. A' B'
-(string-head A B)   -> BT A' B'
-(string-tail A B)   -> BD A' B'
+(string-take A B)   -> BT A' B'
+(string-drop A B)   -> BD A' B'
 (A B)               -> B$ A' B'
 
 (string=? A B)      -> B= A' B'
@@ -82,3 +82,8 @@ B
 B
 
 に書き換えられる
+
+##　ばんかバグる
+
+Bin(App),
+Lambda(0), Bin(App), Lambda(1), Bin(App), Var(1), Int(5), Lambda(1), Bin(App), Bin(App), Var(0), Lambda(2), Lambda(3), If, Bin(Eq), Var(3), Int(1), Int(1), Bin(Mul), Var(3), Bin(App), Var(2), Un(Neg), Var(3), Int(1), Var(1), Lambda(0), Bin(App), Lambda(1), Bin(App), Var(0), Lambda(2), Bin(App), Bin(App), Var(1), Var(1), Var(2), Lambda(1), Bin(App), Var(0), Lambda(2), Bin(App), Bin(App), Var(1), Var(1), Var(2)

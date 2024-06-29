@@ -11,8 +11,9 @@ fn oneline() -> anyhow::Result<()> {
     let expr = compile_to_lambda(input)?;
 
     println!(
-        "(define (string-head s n) (substring s 0 n))
-(define (string-tail s n) (substring s n (string-length s)))
+        "(define (string-take n s) (substring s 0 n))
+(define (string-drop n s) (substring s n (string-length s)))
+
 (print {})",
         expr
     );

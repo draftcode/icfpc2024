@@ -3,7 +3,7 @@ use crate::compiler::{expr, parser::parse};
 use super::{expr::Expr, parser::parse_str, program::Program};
 
 pub fn compile_to_lambda(prog: String) -> anyhow::Result<Expr> {
-    let define_z = parse_str(
+    let mut define_z = parse_str(
         r#"(define (Z f) (
     (lambda (x) (f (lambda (y) ((x x) y))))
     (lambda (x) (f (lambda (y) ((x x) y))))
@@ -12,6 +12,8 @@ pub fn compile_to_lambda(prog: String) -> anyhow::Result<Expr> {
     )?
     .exprs[0]
         .clone();
+    define_z.recude_define_params();
+    define_z.reduce_proc_params();
 
     let mut program = parse(prog.chars())?;
 

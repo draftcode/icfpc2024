@@ -14,14 +14,10 @@ pub fn binary_op(s: &str) -> Option<String> {
     match s {
         "+" | "-" | "*" | "/" | "%" | "<" | ">" | "=" | "|" | "&" => Some(b + s),
         "string-append" => Some(b + "."),
-        "string-head" => Some(b + "T"),
-        "string-tail" => Some(b + "D"),
+        "string-take" => Some(b + "T"),
+        "string-drop" => Some(b + "D"),
 
         "string=?" => Some(b + "="),
         _ => None,
     }
-}
-
-pub fn variable(n: i32) -> String {
-    format!("V{}", n)
 }

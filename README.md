@@ -2,20 +2,20 @@
 
 ## Toolchains
 
-RustもPythonもこのToolchainインストーラーでなんとかしましょう。
+Rust も Python もこの Toolchain インストーラーでなんとかしましょう。
 
-* https://rustup.rs/
-* https://rye.astral.sh/
+- https://rustup.rs/
+- https://rye.astral.sh/
 
 ## Pre-commit
 
-Gitのpre-commit hookでformatterをかけてしましましょう。
+Git の pre-commit hook で formatter をかけてしましましょう。
 
 ```bash
 rye install pre-commit
 pre-commit install
 ```
 
-これでgit commitごとにformatterがかかります。 https://pre-commit.com/hooks.html
-にいろいろhookがあるので、ほしいものがあれば.pre-commit-config.yamlを編集してく
+これで git commit ごとに formatter がかかります。 https://pre-commit.com/hooks.html
+にいろいろ hook があるので、ほしいものがあれば.pre-commit-config.yaml を編集してく
 ださい。

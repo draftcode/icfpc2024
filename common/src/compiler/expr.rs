@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::base94::encode_base94;
+use crate::base94::{encode_base94, encode_base94_int, encode_str};
 
 use super::icfp::{binary_op, unary_op};
 
@@ -204,16 +204,18 @@ impl Expr {
     pub fn icfp(&self) -> Vec<String> {
         let mut res = vec![];
         let mut env = BTreeMap::new();
-        self.icfp_inner(&mut res, &mut env);
+        self.icfp_inner(&mut res, &mut env, false);
         res
     }
 
-    fn icfp_inner(&self, res: &mut Vec<String>, env: &mut BTreeMap<String, i32>) {
+    fn icfp_inner(&self, res: &mut Vec<String>, env: &mut BTreeMap<String, i32>, unary: bool) {
         match self {
             Expr::Var(k) => {
-                if let Some(u) = unary_op(k) {
-                    res.push(u);
-                    return;
+                if unary {
+                    if let Some(u) = unary_op(k) {
+                        res.push(u);
+                        return;
+                    }
                 }
                 if let Some(b) = binary_op(k) {
                     res.push(b);
@@ -223,21 +225,27 @@ impl Expr {
                     res.push("?".to_string());
                     return;
                 }
+                assert_ne!(k, "lambda", "lambda should be reduced");
+
                 let v = env.get(k).expect(format!("not found {}", k).as_str());
                 res.push(format!(
                     "v{}",
                     encode_base94(*v as i64).expect("more than 94 vars")
                 ));
+                return;
             }
             Expr::Proc(args) => {
                 if !args[0].is_buildin_var() {
                     assert_eq!(args.len(), 2, "{}", self);
                     res.push("B$".to_string());
                 }
-                args.iter().for_each(|arg| arg.icfp_inner(res, env))
+                args.iter()
+                    .for_each(|arg| arg.icfp_inner(res, env, args.len() == 2))
             }
             Expr::Lambda(name, expr) => {
                 let new_num = (0..).find(|i| !env.values().any(|v| v == i)).unwrap();
+                // let new_num = *ii;
+                // *ii += 1;
 
                 res.push(format!(
                     "L{}",
@@ -248,13 +256,18 @@ impl Expr {
 
                 env.insert(name.to_string(), new_num);
 
-                expr.icfp_inner(res, env);
+                expr.icfp_inner(res, env, false);
 
                 if let Some(orig) = orig {
                     env.insert(name.to_string(), orig);
+                } else {
+                    env.remove(name);
                 }
             }
-            _ => {}
+            Expr::Str(s) => res.push("S".to_string() + &encode_str(s).unwrap()),
+            Expr::Num(n) => {
+                res.push(format!("I{}", encode_base94_int(*n as i64).unwrap()));
+            }
         }
     }
 }
