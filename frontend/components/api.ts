@@ -52,6 +52,26 @@ export function useCommunications(offset?: number, limit?: number) {
   return { data: data?.data, error, isLoading };
 }
 
+export function useCommunicationsWithExactRequest(
+  request: string,
+  offset?: number,
+  limit?: number,
+) {
+  const { data, error, isLoading } = useSWR<AxiosResponse<CommunicationLog[]>>(
+    {
+      method: "get",
+      url: "/communications",
+      params: {
+        offset: offset,
+        limit: limit,
+        decoded_request: request,
+      },
+    },
+    client,
+  );
+  return { data: data?.data, error, isLoading };
+}
+
 export function useCommunicationsWithRequestPrefix(
   prefix: string,
   offset?: number,

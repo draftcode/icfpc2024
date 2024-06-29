@@ -2,7 +2,10 @@
 
 import Communication from "@/app/Communication";
 import Sidebar from "@/app/Sidebar";
-import { useCommunicationsWithRequestPrefix } from "@/components/api";
+import {
+  useCommunicationsWithExactRequest,
+  useCommunicationsWithRequestPrefix,
+} from "@/components/api";
 import Link from "next/link";
 
 export default function Home({
@@ -13,21 +16,29 @@ export default function Home({
   searchParams: { page: string };
 }) {
   const page = parseInt(searchParams.page ?? "1") - 1;
+  const { data: problemData, error: problemError } =
+    useCommunicationsWithExactRequest(`get spaceship${idStr}`, 0, 1);
   const { data, error } = useCommunicationsWithRequestPrefix(
     `solve spaceship${idStr} `,
     page * 10,
     10,
   );
-  if (!data) {
+  if (!data || !problemData) {
     return null;
   }
   if (error) {
     throw error;
   }
+  if (problemError) {
+    throw problemError;
+  }
   return (
     <div className="flex gap-x-4">
       <Sidebar current={`/spaceship/${idStr}`} />
       <div className="grow">
+        {problemData.map((log) => {
+          return <Communication key={log.id} log={log} />;
+        })}
         <div className="space-y-4">
           {data.map((log) => {
             return <Communication key={log.id} log={log} />;
