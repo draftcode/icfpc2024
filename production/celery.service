@@ -1,0 +1,9 @@
+[Unit]
+Description=celery
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+WorkingDirectory=/root/icfpc2024/backend_py
+ExecStart=/root/icfpc2024/.venv/bin/celery --app backend_py.tasks.app worker --concurrency 4 --task-events --beat

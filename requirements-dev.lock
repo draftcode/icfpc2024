@@ -12,19 +12,35 @@
 -e file:backend_rs
     # via backend-py
 alembic==1.13.1
+amqp==5.2.0
+    # via kombu
 annotated-types==0.7.0
     # via pydantic
 anyio==4.4.0
     # via httpx
     # via starlette
     # via watchfiles
+billiard==4.2.0
+    # via celery
+celery==5.4.0
+    # via backend-py
 certifi==2024.6.2
     # via httpcore
     # via httpx
 click==8.1.7
+    # via celery
+    # via click-didyoumean
+    # via click-plugins
+    # via click-repl
     # via granian
     # via typer
     # via uvicorn
+click-didyoumean==0.3.1
+    # via celery
+click-plugins==1.1.1
+    # via celery
+click-repl==0.3.0
+    # via celery
 dnspython==2.6.1
     # via email-validator
 email-validator==2.1.1
@@ -53,6 +69,8 @@ idna==3.7
     # via httpx
 jinja2==3.1.3
     # via fastapi
+kombu==5.3.7
+    # via celery
 mako==1.3.5
     # via alembic
 markdown-it-py==3.0.0
@@ -64,6 +82,8 @@ mdurl==0.1.2
     # via markdown-it-py
 orjson==3.10.3
     # via fastapi
+prompt-toolkit==3.0.47
+    # via click-repl
 psycopg==3.1.19
     # via backend-py
 psycopg-binary==3.1.19
@@ -78,6 +98,8 @@ pydantic-settings==2.2.1
     # via backend-py
 pygments==2.18.0
     # via rich
+python-dateutil==2.9.0.post0
+    # via celery
 python-dotenv==1.0.1
     # via backend-py
     # via pydantic-settings
@@ -86,10 +108,14 @@ python-multipart==0.0.9
     # via fastapi
 pyyaml==6.0.1
     # via uvicorn
+redis==5.0.7
+    # via celery
 rich==13.7.1
     # via typer
 shellingham==1.5.4
     # via typer
+six==1.16.0
+    # via python-dateutil
 sniffio==1.3.1
     # via anyio
     # via httpx
@@ -110,6 +136,8 @@ typing-extensions==4.12.1
     # via pydantic-core
     # via sqlalchemy
     # via typer
+tzdata==2024.1
+    # via celery
 ujson==5.10.0
     # via fastapi
 uvicorn==0.30.1
@@ -117,7 +145,13 @@ uvicorn==0.30.1
 uvloop==0.19.0
     # via granian
     # via uvicorn
+vine==5.1.0
+    # via amqp
+    # via celery
+    # via kombu
 watchfiles==0.22.0
     # via uvicorn
+wcwidth==0.2.13
+    # via prompt-toolkit
 websockets==12.0
     # via uvicorn
