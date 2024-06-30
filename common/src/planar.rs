@@ -177,6 +177,36 @@ fn readable(board: &Vec<Vec<Cell>>, pos: (i32, i32)) -> bool {
     }
 }
 
+pub fn print_for_submit(state: &State) -> String {
+    let mut col_len = vec![0; state.board.0[0].len()];
+
+    for l in state.board.0.iter() {
+        for (idx, c) in l.iter().enumerate() {
+            let len = if let Cell::Warp(_) = c {
+                1
+            } else {
+                format!("{}", c).len()
+            };
+            col_len[idx] = col_len[idx].max(len);
+        }
+    }
+
+    let mut s = String::new();
+    for l in state.board.0.iter() {
+        let mut cols = vec![];
+        for (idx, c) in l.iter().enumerate() {
+            let cs = if let Cell::Warp(_) = c {
+                "@".to_owned()
+            } else {
+                format!("{}", c)
+            };
+            cols.push(" ".repeat(0.max(col_len[idx] - cs.len())) + &cs);
+        }
+        s += format!("{}\n", cols.join(" ")).as_str();
+    }
+    s
+}
+
 impl State {
     pub fn new(board: &str, a: i32, b: i32) -> anyhow::Result<Self> {
         let mut s: State = Default::default();

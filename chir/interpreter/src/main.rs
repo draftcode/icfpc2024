@@ -18,7 +18,17 @@ fn parse_input(s: &str) -> Result<State> {
     }
 }
 
-fn main() -> Result<()> {
+#[argopt::subcmd]
+fn resolve_label() -> Result<()> {
+    let s = io::read_to_string(io::stdin())?;
+    let mut state = State::new(s.as_str(), 0, 0)?;
+    state.resolve_label()?;
+    println!("{}", common::planar::print_for_submit(&state));
+    Ok(())
+}
+
+#[argopt::subcmd]
+fn run() -> Result<()> {
     let s = io::read_to_string(io::stdin())?;
 
     let mut state = parse_input(s.as_str())?;
@@ -39,3 +49,6 @@ fn main() -> Result<()> {
     println!("finished {}", state.output.unwrap());
     Ok(())
 }
+
+#[argopt::cmd_group(commands = [resolve_label, run])]
+fn main() -> Result<()> {}
