@@ -342,14 +342,32 @@ impl State {
             }
         }
 
-        for (c, x, y) in refs {
-            for (l, tx, ty, init) in labels.iter() {
-                if c == *l {
-                    let dx = x as i32 - *tx as i32;
-                    let dy = y as i32 - *ty as i32;
-                    self.board.0[y][x - 1] = Cell::Number(dx.into());
-                    self.board.0[y][x + 1] = Cell::Number(dy.into());
+        for (l, tx, ty, _) in labels.iter() {
+            let mut found = false;
+            for (c, x, y) in refs.iter() {
+                if *c == *l {
+                    found = true;
+                    break;
                 }
+            }
+            if !found {
+                bail!("Label {} at {},{} is not used", l, tx, ty);
+            }
+        }
+
+        for (c, x, y) in refs.iter() {
+            let mut found = false;
+            for (l, tx, ty, _) in labels.iter() {
+                if *c == *l {
+                    found = true;
+                    let dx = *x as i32 - *tx as i32;
+                    let dy = *y as i32 - *ty as i32;
+                    self.board.0[*y][x - 1] = Cell::Number(dx.into());
+                    self.board.0[*y][x + 1] = Cell::Number(dy.into());
+                }
+            }
+            if !found {
+                bail!("Label {} not found used by {},{}", c, x, y);
             }
         }
 
