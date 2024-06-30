@@ -2,15 +2,16 @@ use anyhow::Result;
 use std::cmp::max;
 use std::collections::VecDeque;
 use std::io::stdin;
+//use rand::prelude::SliceRandom;
 
-const MIN_V: i32 = -40;
-const MAX_V: i32 = 40;
+const MIN_V: i32 = -50;
+const MAX_V: i32 = 50;
 const NUM_V: usize = (MAX_V - MIN_V + 1) as usize;
-const MIN_D: i32 = -4000;
-const MAX_D: i32 = 4000;
+const MIN_D: i32 = -10000;
+const MAX_D: i32 = 10000;
 const NUM_D: usize = (MAX_D - MIN_D + 1) as usize;
 const INF: i32 = 1e9 as i32;
-const BEAM_WIDTH: usize = 100;
+const BEAM_WIDTH: usize = 200;
 
 struct Problem {
     v: Vec<(i32, i32)>,
@@ -48,6 +49,11 @@ struct MoveInfo {
     steps: i32,
     terminal_velocity: i32,
 }
+impl PartialEq for MoveInfo {
+    fn eq(&self, other: &Self) -> bool {
+        self.steps == other.steps && self.terminal_velocity == other.terminal_velocity
+    }
+}
 
 fn main() -> Result<()> {
     // Read problem text from stdin.
@@ -61,54 +67,43 @@ fn main() -> Result<()> {
 }
 
 fn solve(problem: &Problem) -> String {
-    // Solve the problem.
-
-    // Precalculate minimum steps.
     // min_steps[v0][v][pos] = minimum steps to move from 0 to pos with initial velocity v0 and terminal velocity v.
-    let mut min_steps = vec![vec![vec![INF; NUM_D]; NUM_V]; NUM_V];
-    let mut q = VecDeque::new();
-    for v in MIN_V..=MAX_V {
-        min_steps[(v - MIN_V) as usize][(v - MIN_V) as usize][(0 - MIN_D) as usize] = 0;
-        q.push_back((v, v, 0, 0));
-    }
-    while let Some((v0, v, pos, steps)) = q.pop_front() {
-        if min_steps[(v0 - MIN_V) as usize][(v - MIN_V) as usize][(pos - MIN_D) as usize] < steps {
-            continue;
-        }
-        for a in -1..=1 {
-            let nv = v + a;
-            let npos = pos + nv;
-            if nv < MIN_V || nv > MAX_V {
-                continue;
-            }
-            if npos < MIN_D || npos > MAX_D {
-                continue;
-            }
-            if min_steps[(v0 - MIN_V) as usize][(nv - MIN_V) as usize][(npos - MIN_D) as usize]
-                <= steps + 1
-            {
-                continue;
-            }
+    let min_steps = precompute_min_steps();
 
-            min_steps[(v0 - MIN_V) as usize][(nv - MIN_V) as usize][(npos - MIN_D) as usize] =
-                steps + 1;
-            q.push_back((v0, nv, npos, steps + 1));
+    let checkpoints = problem.v.clone();
+
+    // Solve the problem on the give visiting order |checkpoints|.
+    let best_answer = solve_one(&checkpoints, &min_steps);
+
+    /*
+    let mut rng = rand::thread_rng();
+    for t in 0..100 {
+        checkpoints.shuffle(&mut rng);
+        let answer = solve_one(&checkpoints, &min_steps);
+        if answer.len() < best_answer.len() {
+            eprintln!("Update best answer: {} -> {}", best_answer.len(), answer.len());
+            best_answer = answer;
         }
     }
+     */
 
+    best_answer
+}
+
+fn solve_one(checkpoints: &Vec<(i32, i32)>, min_steps: &Vec<Vec<Vec<i32>>>) -> String {
     // Beam search
     let mut x = 0;
     let mut y = 0;
-    let mut beams = vec![vec![]; problem.v.len() + 1];
+    let mut beams = vec![vec![]; checkpoints.len() + 1];
     beams[0].push(BeamState {
         num_steps: 0,
         vx: 0,
         vy: 0,
         prev_index: 0,
     });
-    for i in 0..problem.v.len() {
-        let dx = problem.v[i].0 - x;
-        let dy = problem.v[i].1 - y;
+    for i in 0..checkpoints.len() {
+        let dx = checkpoints[i].0 - x;
+        let dy = checkpoints[i].1 - y;
         for j in 0..beams[i].len() {
             let BeamState {
                 num_steps,
@@ -145,18 +140,18 @@ fn solve(problem: &Problem) -> String {
         beams[i + 1].dedup();
         beams[i + 1].truncate(BEAM_WIDTH);
 
-        x = problem.v[i].0;
-        y = problem.v[i].1;
+        x = checkpoints[i].0;
+        y = checkpoints[i].1;
     }
 
-    eprintln!("Minimum steps: {}", beams[problem.v.len()][0].num_steps);
+    eprintln!("Minimum steps: {}", beams[checkpoints.len()][0].num_steps);
 
     // Reconstruct the steps.
     let mut vxs = vec![];
     let mut vys = vec![];
     let mut steps_history = vec![];
     let mut beam_idx = 0;
-    for i in (1..=problem.v.len()).rev() {
+    for i in (1..=checkpoints.len()).rev() {
         let BeamState {
             num_steps,
             vx,
@@ -179,9 +174,9 @@ fn solve(problem: &Problem) -> String {
     let mut cy = 0;
     let mut cvx = 0;
     let mut cvy = 0;
-    for i in 0..problem.v.len() {
-        let nx = problem.v[i].0;
-        let ny = problem.v[i].1;
+    for i in 0..checkpoints.len() {
+        let nx = checkpoints[i].0;
+        let ny = checkpoints[i].1;
         let nvx = vxs[i + 1];
         let nvy = vys[i + 1];
         let steps_x = reconstruct_steps(nx - cx, cvx, nvx, steps_history[i], &min_steps);
@@ -215,6 +210,40 @@ fn solve(problem: &Problem) -> String {
         cvy = nvy;
     }
     ans
+}
+
+fn precompute_min_steps() -> Vec<Vec<Vec<i32>>> {
+    let mut min_steps = vec![vec![vec![INF; NUM_D]; NUM_V]; NUM_V];
+    let mut q = VecDeque::new();
+    for v in MIN_V..=MAX_V {
+        min_steps[(v - MIN_V) as usize][(v - MIN_V) as usize][(0 - MIN_D) as usize] = 0;
+        q.push_back((v, v, 0, 0));
+    }
+    while let Some((v0, v, pos, steps)) = q.pop_front() {
+        if min_steps[(v0 - MIN_V) as usize][(v - MIN_V) as usize][(pos - MIN_D) as usize] < steps {
+            continue;
+        }
+        for a in -1..=1 {
+            let nv = v + a;
+            let npos = pos + nv;
+            if nv < MIN_V || nv > MAX_V {
+                continue;
+            }
+            if npos < MIN_D || npos > MAX_D {
+                continue;
+            }
+            if min_steps[(v0 - MIN_V) as usize][(nv - MIN_V) as usize][(npos - MIN_D) as usize]
+                <= steps + 1
+            {
+                continue;
+            }
+
+            min_steps[(v0 - MIN_V) as usize][(nv - MIN_V) as usize][(npos - MIN_D) as usize] =
+                steps + 1;
+            q.push_back((v0, nv, npos, steps + 1));
+        }
+    }
+    min_steps
 }
 
 fn get_moves(v: i32, dx: i32, max_results: usize, min_steps: &Vec<Vec<Vec<i32>>>) -> Vec<MoveInfo> {
@@ -295,7 +324,67 @@ fn get_moves_with_steps(
         }
     }
 
-    results.sort_by_key(|x| x.terminal_velocity.abs());
+    if steps >= 3 {
+        for a0 in -1..=1 {
+            for a1 in -1..=1 {
+                for a2 in -1..=1 {
+                    let nv0 = v + a0;
+                    let ndx0 = dx - nv0;
+                    let nv1 = nv0 + a1;
+                    let ndx1 = ndx0 - nv1;
+                    let nv2 = nv1 + a2;
+                    let ndx2 = ndx1 - nv2;
+                    if nv2 < MIN_V || nv2 > MAX_V || ndx2 < MIN_D || ndx2 > MAX_D {
+                        continue;
+                    }
+                    for ve in MIN_V..=MAX_V {
+                        let steps1 = min_steps[(nv2 - MIN_V) as usize][(ve - MIN_V) as usize]
+                            [(ndx2 - MIN_D) as usize];
+                        if steps1 == steps - 3 {
+                            results.push(MoveInfo {
+                                steps,
+                                terminal_velocity: ve,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if steps >= 4 {
+        for a0 in -1..=1 {
+            for a1 in -1..=1 {
+                for a2 in -1..=1 {
+                    for a3 in -1..=1 {
+                        let nv0 = v + a0;
+                        let ndx0 = dx - nv0;
+                        let nv1 = nv0 + a1;
+                        let ndx1 = ndx0 - nv1;
+                        let nv2 = nv1 + a2;
+                        let ndx2 = ndx1 - nv2;
+                        let nv3 = nv2 + a3;
+                        let ndx3 = ndx2 - nv3;
+                        if nv3 < MIN_V || nv3 > MAX_V || ndx3 < MIN_D || ndx3 > MAX_D {
+                            continue;
+                        }
+                        for ve in MIN_V..=MAX_V {
+                            let steps1 = min_steps[(nv3 - MIN_V) as usize][(ve - MIN_V) as usize]
+                                [(ndx3 - MIN_D) as usize];
+                            if steps1 == steps - 4 {
+                                results.push(MoveInfo {
+                                    steps,
+                                    terminal_velocity: ve,
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    results.sort_by_key(|x| (x.terminal_velocity.abs(), x.terminal_velocity));
+    results.dedup();
     results.truncate(max_results);
     results
 }
@@ -340,6 +429,85 @@ fn can_reach(vs: i32, ve: i32, dx: i32, steps: i32, min_steps: &Vec<Vec<Vec<i32>
                     == steps - 2
                 {
                     return true;
+                }
+            }
+        }
+    }
+
+    if steps >= 3 {
+        for a0 in -1..=1 {
+            for a1 in -1..=1 {
+                for a2 in -1..=1 {
+                    let nv0 = vs + a0;
+                    let ndx0 = dx - nv0;
+                    let nv1 = nv0 + a1;
+                    let ndx1 = ndx0 - nv1;
+                    let nv2 = nv1 + a2;
+                    let ndx2 = ndx1 - nv2;
+                    if nv0 < MIN_V
+                        || nv0 > MAX_V
+                        || nv1 < MIN_V
+                        || nv1 > MAX_V
+                        || nv2 < MIN_V
+                        || nv2 > MAX_V
+                        || ndx0 < MIN_D
+                        || ndx0 > MAX_D
+                        || ndx1 < MIN_D
+                        || ndx1 > MAX_D
+                        || ndx2 < MIN_D
+                        || ndx2 > MAX_D
+                    {
+                        continue;
+                    }
+                    if min_steps[(nv2 - MIN_V) as usize][(ve - MIN_V) as usize]
+                        [(ndx2 - MIN_D) as usize]
+                        == steps - 3
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    if steps >= 4 {
+        for a0 in -1..=1 {
+            for a1 in -1..=1 {
+                for a2 in -1..=1 {
+                    for a3 in -1..=1 {
+                        let nv0 = vs + a0;
+                        let ndx0 = dx - nv0;
+                        let nv1 = nv0 + a1;
+                        let ndx1 = ndx0 - nv1;
+                        let nv2 = nv1 + a2;
+                        let ndx2 = ndx1 - nv2;
+                        let nv3 = nv2 + a3;
+                        let ndx3 = ndx2 - nv3;
+                        if nv0 < MIN_V
+                            || nv0 > MAX_V
+                            || nv1 < MIN_V
+                            || nv1 > MAX_V
+                            || nv2 < MIN_V
+                            || nv2 > MAX_V
+                            || nv3 < MIN_V
+                            || nv3 > MAX_V
+                            || ndx0 < MIN_D
+                            || ndx0 > MAX_D
+                            || ndx1 < MIN_D
+                            || ndx1 > MAX_D
+                            || ndx2 < MIN_D
+                            || ndx2 > MAX_D
+                            || ndx3 < MIN_D
+                            || ndx3 > MAX_D
+                        {
+                            continue;
+                        }
+                        if min_steps[(nv3 - MIN_V) as usize][(ve - MIN_V) as usize]
+                            [(ndx3 - MIN_D) as usize]
+                            == steps - 4
+                        {
+                            return true;
+                        }
+                    }
                 }
             }
         }
