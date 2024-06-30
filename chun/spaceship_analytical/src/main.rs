@@ -436,6 +436,45 @@ fn generate_visit_plan(
     return ret;
 }
 
+fn generate_pow2_visit_plan(
+    curp: Point,
+    curv: Velocity,
+    targetp: Point,
+    numplan: usize,
+) -> Vec<(i32, Velocity)> {
+    let mut ret = Vec::new();
+    let dx = targetp.0 - curp.0;
+    let dy = targetp.1 - curp.1;
+    let mut tbase: i32 = 1;
+    let mut tfirstfound = -1;
+    while ret.len() < numplan {
+        let t = if tfirstfound == -1 {
+            tbase
+        } else {
+            tfirstfound + 1 << (tbase - tfirstfound)
+        };
+        tbase += 1;
+        let xvr = get_available_vrange(dx, curv.0, t);
+        let yvr = get_available_vrange(dy, curv.1, t);
+        match (xvr, yvr) {
+            (Some(xvr), Some(yvr)) => {
+                if tfirstfound == -1 {
+                    tfirstfound = tbase
+                };
+                for vx in (xvr.0..xvr.1 + 1).step_by((tbase - tfirstfound + 1) as usize) {
+                    for vy in (yvr.0..yvr.1 + 1).step_by((tbase - tfirstfound + 1) as usize) {
+                        ret.push((t, (vx, vy)));
+                    }
+                }
+            }
+            _ => {
+                continue;
+            }
+        }
+    }
+    return ret;
+}
+
 fn actualize_visit_plan(
     curp: Point,
     curv: Velocity,
@@ -497,12 +536,12 @@ fn solve_greedy(v: Vec<(i32, i32)>) {
     println!("{}", buffer);
 }
 
-fn solve_la1(v: Vec<(i32, i32)>) {
+fn solve_la1(v: Vec<(i32, i32)>, nplan: usize) {
     let mut curpt = (0, 0);
     let mut curvel = (0, 0);
     let mut buffer = String::new();
-    let nplan1 = 100;
-    let nplan2 = 100;
+    let nplan1 = nplan;
+    let nplan2 = nplan;
     for i in 0..v.len() - 1 {
         let mut fastest_time = i32::MAX;
         let mut fastest = None;
@@ -518,6 +557,62 @@ fn solve_la1(v: Vec<(i32, i32)>) {
             }
         }
         let (t1, v1, _t2, _v2) = fastest.unwrap();
+        let accl = actualize_visit_plan(curpt, curvel, v[i], v1, t1);
+        let encoded = encode_thrust_into_keypad(accl);
+        buffer += encoded.as_str();
+        eprintln!(
+            "{i}/{} {curpt:?} {curvel:?} to {:?} {v1:?} lookahead {:?}  res=\"{encoded}\"",
+            v.len(),
+            v[i],
+            v[i + 1]
+        );
+        curpt = v[i];
+        curvel = v1;
+    }
+    let targetpt = *v.last().unwrap();
+    let (accl, vend) = visit_point(curpt, curvel, targetpt);
+    let encoded = encode_thrust_into_keypad(accl);
+    buffer += encoded.as_str();
+    eprintln!(
+        "{}/{} {curpt:?} {curvel:?} to {targetpt:?} {vend:?} res=\"{encoded}\"",
+        v.len() - 1,
+        v.len()
+    );
+    curpt = *v.last().unwrap();
+    curvel = vend;
+    println!("{}", buffer);
+    eprintln!("Solution length = {}", buffer.len());
+}
+
+fn solve_la2(v: Vec<(i32, i32)>, nplan: usize) {
+    let mut curpt = (0, 0);
+    let mut curvel = (0, 0);
+    let mut buffer = String::new();
+    let nplan1 = nplan * 2;
+    let nplan2 = nplan;
+    let nplan3 = nplan / 2;
+    for i in 0..v.len() - 1 {
+        let mut fastest_time = i32::MAX;
+        let mut fastest = None;
+        let plan1 = generate_visit_plan(curpt, curvel, v[i], nplan1);
+        for (t1, v1) in plan1 {
+            let plan2 = generate_visit_plan(v[i], v1, v[i + 1], nplan2);
+            for (t2, v2) in plan2 {
+                let plan3 = if i != v.len() - 2 {
+                    generate_visit_plan(v[i + 1], v2, v[i + 2], nplan3)
+                } else {
+                    vec![(0, (0, 0))]
+                };
+                for (t3, _v3) in plan3 {
+                    let t = t1 + t2 + t3;
+                    if t < fastest_time {
+                        fastest = Some((t1, v1));
+                        fastest_time = t;
+                    }
+                }
+            }
+        }
+        let (t1, v1) = fastest.unwrap();
         let accl = actualize_visit_plan(curpt, curvel, v[i], v1, t1);
         let encoded = encode_thrust_into_keypad(accl);
         buffer += encoded.as_str();
@@ -581,7 +676,17 @@ fn main() {
     if args[1] == "greedy" {
         solve_greedy(v);
     } else if args[1] == "la1" {
-        solve_la1(v);
+        let mut nplan = 1000;
+        if args.len() >= 3 {
+            nplan = args[2].parse::<usize>().unwrap();
+        }
+        solve_la1(v, nplan);
+    } else if args[1] == "la2" {
+        let mut nplan = 100;
+        if args.len() >= 3 {
+            nplan = args[2].parse::<usize>().unwrap();
+        }
+        solve_la2(v, nplan);
     } else {
         eprintln!("Usage: (cargo run) greedy < foo.txt");
     }
