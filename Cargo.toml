@@ -16,4 +16,5 @@ members = [
   "tanakh/evaluator",
   "tanakh/solver",
   "tanakh/spaceship", "chun/spaceship_trivialsolver",
+  "fuqinho/fuqinho-spaceship",
 ]
