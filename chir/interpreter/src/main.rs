@@ -167,6 +167,7 @@ fn placement() -> Result<()> {
 fn run(
     #[opt(short = 'p', long = "program")] program: std::path::PathBuf,
     #[opt(short = 't', long = "turn")] turn: Option<u32>,
+    #[opt(short = 'd', long = "debug")] debug: bool,
 ) -> Result<()> {
     let s = fs::read_to_string(program)?;
 
@@ -181,29 +182,40 @@ fn run(
 
     let mut state = State::new(&s, a_and_b[0].clone(), a_and_b[1].clone())?;
 
-    println!("before label processing");
-    println!("{}", state.board);
+    if debug {
+        println!("before label processing");
+        println!("{}", state.board);
+    }
     state.resolve_label()?;
-    println!("after label processing");
-    println!("{}", state.board);
+    if debug {
+        println!("after label processing");
+        println!("{}", state.board);
+    }
 
     let max_turn = if let Some(t) = turn { t } else { 1000000 };
     let mut turn = 0;
     while state.output.is_none() && turn < max_turn {
         state.onestep()?;
-        println!(
-            "[time={},tick={},x={},y={}]",
-            state.monotonic_tick,
-            state.tick,
-            state.used_x(),
-            state.used_y()
-        );
-        println!("{}", state.board);
+        if debug {
+            println!(
+                "[time={},tick={},x={},y={}]",
+                state.monotonic_tick,
+                state.tick,
+                state.used_x(),
+                state.used_y()
+            );
+            println!("{}", state.board);
+        }
         turn += 1;
     }
 
     let score = state.score();
-    println!("finished {}, score = {}", state.output.unwrap(), score);
+    println!(
+        "finished {}, score = {}, time = {}",
+        state.output.unwrap(),
+        score,
+        state.monotonic_tick
+    );
     Ok(())
 }
 
