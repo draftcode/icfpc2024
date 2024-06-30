@@ -18,11 +18,11 @@ pub enum Cell {
     Mul,
     Div,
     Rem,
-    Warp(char),
+    Warp(String),
     Eq,
     Neq,
     Submit,
-    Label(char),
+    Label(String),
 }
 
 impl FromStr for Cell {
@@ -42,7 +42,7 @@ impl FromStr for Cell {
             "*" => Cell::Mul,
             "/" => Cell::Div,
             "%" => Cell::Rem,
-            "@" => Cell::Warp('_'),
+            "@" => Cell::Warp("_".to_string()),
             "=" => Cell::Eq,
             "#" => Cell::Neq,
             "S" => Cell::Submit,
@@ -54,17 +54,14 @@ impl FromStr for Cell {
                     Cell::Number(i.into())
                 }
                 _ => {
-                    if s.len() == 1 && s.chars().next().unwrap().is_lowercase() {
-                        Cell::Label(s.chars().next().unwrap())
-                    } else if s.len() == 2 && s.chars().next().unwrap() == '@' {
-                        let mut it = s.chars();
-                        it.next();
-                        let l: char = it.next().unwrap();
-                        if !l.is_lowercase() && l != 'A' && l != 'B' {
+                    if s.len() >= 1 && s.chars().nth(0).unwrap() != '@' {
+                        Cell::Label(s.to_owned())
+                    } else if s.len() >= 2 && s.chars().next().unwrap() == '@' {
+                        let label = &s[1..];
+                        if !label.chars().all(|c| c.is_lowercase()) {
                             bail!("label should be lower case")
-                        } else {
-                            Cell::Warp(l)
                         }
+                        Cell::Warp(label.to_owned())
                     } else {
                         bail!("Invalid cell: {}", s);
                     }
@@ -90,11 +87,11 @@ impl std::fmt::Display for Cell {
             Cell::Mul => write!(f, "*"),
             Cell::Div => write!(f, "/"),
             Cell::Rem => write!(f, "%"),
-            Cell::Warp(c) => {
-                if *c == '_' {
+            Cell::Warp(l) => {
+                if l == "_" {
                     write!(f, "@")
                 } else {
-                    write!(f, "@{}", c)
+                    write!(f, "@{}", l)
                 }
             }
             Cell::Eq => write!(f, "="),
@@ -280,17 +277,17 @@ impl State {
         let mut refs = vec![];
         for y in 0..self.board.0.len() {
             for x in 0..self.board.0[y].len() {
-                if let Cell::Label(c) = self.board.0[y][x] {
-                    labels.push((c, x, y));
+                if let Cell::Label(c) = &self.board.0[y][x] {
+                    labels.push((c.clone(), x, y));
                 } else if let Cell::InputA = self.board.0[y][x] {
-                    labels.push(('A', x, y));
+                    labels.push(("A".to_owned(), x, y));
                 } else if let Cell::InputB = self.board.0[y][x] {
-                    labels.push(('B', x, y));
-                } else if let Cell::Warp(c) = self.board.0[y][x] {
-                    if c == '_' {
+                    labels.push(("B".to_owned(), x, y));
+                } else if let Cell::Warp(c) = &self.board.0[y][x] {
+                    if c == "_" {
                         continue;
                     }
-                    refs.push((c, x, y));
+                    refs.push((c.clone(), x, y));
                 }
             }
         }
@@ -308,7 +305,7 @@ impl State {
 
         // Clear labels
         for (l, x, y) in labels.iter() {
-            if *l == 'A' || *l == 'B' {
+            if l == "A" || l == "B" {
                 continue;
             }
             self.board.0[*y][*x] = Cell::Empty;
