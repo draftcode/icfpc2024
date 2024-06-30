@@ -10,6 +10,7 @@ use crate::util::Direction;
 pub enum Rng {
     Default,
     Better,
+    V2,
 }
 
 impl Rng {
@@ -17,28 +18,27 @@ impl Rng {
         match name {
             "default" => Some(Self::Default),
             "better" => Some(Self::Better),
+            "v2" => Some(Self::V2),
             _ => None,
         }
     }
 
-    pub fn next(&self, mut state: u64) -> (Direction, u64) {
-        let dir = match state >> 62 {
-            0 => Direction::Left,
-            1 => Direction::Up,
-            2 => Direction::Down,
-            3 => Direction::Right,
-            _ => unreachable!(),
-        };
+    pub fn next(&self, state: u64) -> (Direction, u64) {
         match self {
-            Self::Default => {
-                state = ((state as u128).wrapping_mul(48271) % 18446744073709551557) as u64;
+            Self::Default => (
+                (state >> 62).into(),
+                ((state as u128).wrapping_mul(48271) % 18446744073709551557) as u64,
+            ),
+            Self::Better =>
+            // https://arxiv.org/abs/2001.05304v3
+            {
+                (
+                    (state >> 62).into(),
+                    state.wrapping_mul(0xd1342543de82ef95).wrapping_add(1),
+                )
             }
-            Self::Better => {
-                // https://arxiv.org/abs/2001.05304v3
-                state = state.wrapping_mul(0xd1342543de82ef95).wrapping_add(1);
-            }
+            Self::V2 => todo!(),
         }
-        (dir, state)
     }
 
     fn expr(&self) -> Expr {
@@ -50,6 +50,7 @@ impl Rng {
             Self::Better => icfp! {
                 (% (+ (* s 0xd1342543de82ef95) 1) 18446744073709551616)
             },
+            Self::V2 => todo!(),
         }
     }
 
@@ -60,6 +61,9 @@ impl Rng {
         stride: usize,
         moves: usize,
     ) -> Result<Expr> {
+        if self == &Self::V2 {
+            bail!("V2 is not implemented");
+        }
         let rng_expr = self.expr();
 
         let header = format!("solve lambdaman{problem_id} ");

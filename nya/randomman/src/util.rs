@@ -19,6 +19,18 @@ pub enum Direction {
     Right,
 }
 
+impl From<u64> for Direction {
+    fn from(n: u64) -> Self {
+        match n {
+            0 => Direction::Left,
+            1 => Direction::Up,
+            2 => Direction::Down,
+            3 => Direction::Right,
+            _ => panic!("unknown direction: {n}"),
+        }
+    }
+}
+
 impl From<char> for Direction {
     fn from(c: char) -> Self {
         match c {
