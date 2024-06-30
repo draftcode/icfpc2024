@@ -25,6 +25,10 @@ impl Rng {
         }
     }
 
+    pub fn skip_first_seed(&self) -> bool {
+        matches!(self, Self::DefaultRev | Self::SmallModRev)
+    }
+
     pub fn next(&self, state: u64) -> (Direction, u64) {
         match self {
             Self::Default => (
@@ -42,10 +46,19 @@ impl Rng {
                 ((state as u128).wrapping_mul(17779510845628573806) % 18446744073709551557) as u64,
             ),
             Self::SmallModRev => (
-                // pow(445271, -1, 830513) = 48271
-                (state / 207629).into(),
-                state.wrapping_mul(445271) % 830513,
+                // 830579: smallest prime less than 94 ** 3 = 830584
+                // pow(48271, -1, 830579) = 81542
+                (state / 207645).into(),
+                ((state as u128).wrapping_mul(81542) % 830579) as u64,
             ),
+        }
+    }
+
+    fn prev(&self, state: u64) -> u64 {
+        match self {
+            Self::DefaultRev => ((state as u128).wrapping_mul(48271) % 18446744073709551557) as u64,
+            Self::SmallModRev => ((state as u128).wrapping_mul(48271) % 830579) as u64,
+            _ => unreachable!(),
         }
     }
 
@@ -59,7 +72,7 @@ impl Rng {
                 (% (+ (* s 0xd1342543de82ef95) 1) 18446744073709551616)
             },
             Self::SmallModRev => icfp! {
-                (% (* s 48271) 830513)
+                (% (* s 48271) 830579)
             },
         }
     }
@@ -90,7 +103,7 @@ impl Rng {
         let last_seed = last_seed as u128;
 
         let div = if self == &Self::SmallModRev {
-            207629
+            207645
         } else {
             4611686018427387904
         };
@@ -112,15 +125,17 @@ impl Rng {
                     })
                 ) (#seed)))
             },
-            Self::DefaultRev | Self::SmallModRev => icfp! {
-                (fix (fn f s ->
-                    (if (== s (#seed)) {
-                        (#header)
-                    } else {
-                        (concat (f (#rng_expr)) (#step_expr))
-                    })
-                ) (#last_seed))
-            },
+            Self::DefaultRev | Self::SmallModRev => {
+                icfp! {
+                    (fix (fn f s ->
+                        (if (== s (#seed)) {
+                            (#header)
+                        } else {
+                            (concat (f (#rng_expr)) (#step_expr))
+                        })
+                    ) (#last_seed))
+                }
+            }
         };
         Ok(expr)
     }

@@ -237,7 +237,11 @@ pub fn search_main(
 
         (start..=end).into_par_iter().for_each(|seed| {
             let mut game = game.clone();
-            let mut state = seed;
+            let mut state = if rng.skip_first_seed() {
+                rng.next(seed).1
+            } else {
+                seed
+            };
 
             for step in 1..=steps {
                 let (dir, new_state) = rng.next(state);

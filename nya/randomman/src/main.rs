@@ -117,9 +117,9 @@ const KNOWN_SOLUTIONS: &[KnownSolution] = &[
         // 142B
         problem_id: 4,
         rng: Rng::SmallModRev,
-        seed: 1,
+        seed: 46,
         stride: 1,
-        moves: 43037,
+        moves: 22091,
     },
     // TODO: 5 can be revisited if code gets shorter
     // 6 has a shorter solution
