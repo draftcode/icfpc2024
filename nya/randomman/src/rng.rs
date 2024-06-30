@@ -54,14 +54,6 @@ impl Rng {
         }
     }
 
-    fn prev(&self, state: u64) -> u64 {
-        match self {
-            Self::DefaultRev => ((state as u128).wrapping_mul(48271) % 18446744073709551557) as u64,
-            Self::SmallModRev => ((state as u128).wrapping_mul(48271) % 830579) as u64,
-            _ => unreachable!(),
-        }
-    }
-
     fn expr(&self) -> Expr {
         // RNG expression takes `s` as an argument.
         match self {
