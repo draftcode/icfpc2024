@@ -248,6 +248,9 @@ impl State {
     pub fn new(board: &str, a: i32, b: i32) -> anyhow::Result<Self> {
         let mut s: State = Default::default();
         for l in board.lines() {
+            if l.is_empty() || l.chars().nth(0).unwrap() == '?' {
+                continue;
+            }
             let mut row = vec![];
             for c in l.split_whitespace() {
                 row.push(Cell::from_str(c)?);
@@ -279,6 +282,9 @@ impl State {
     pub fn new_with_input_port(board: &str, a: i32, b: i32) -> anyhow::Result<Self> {
         let mut s: State = Default::default();
         for l in board.lines() {
+            if l.is_empty() || l.chars().nth(0).unwrap() == '?' {
+                continue;
+            }
             let mut row = vec![];
             for c in l.split_whitespace() {
                 row.push(Cell::from_str(c)?);
