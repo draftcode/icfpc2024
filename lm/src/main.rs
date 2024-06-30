@@ -33,6 +33,7 @@ fn run(#[opt(short, long)] out_dir: Option<String>) -> Result<()> {
     let rem = map.remaining_pills();
     if rem == 0 {
         eprintln!("no remaining pills - congrats!");
+        eprintln!("");
         return Ok(());
     }
 
