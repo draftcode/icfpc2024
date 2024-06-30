@@ -227,6 +227,7 @@ fn special(pid: usize) {
         .collect::<Vec<_>>()
         .join(" ");
 
+    eprintln!("{} bytes", s.len());
     println!("{}", s);
 }
 
