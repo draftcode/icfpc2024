@@ -3,6 +3,7 @@ use rand::prelude::SliceRandom;
 use rand::rngs::ThreadRng;
 use rand::Rng;
 use std::cmp::max;
+use std::collections::LinkedList;
 use std::collections::VecDeque;
 use std::io::stdin;
 use std::path::PathBuf;
@@ -10,12 +11,12 @@ use std::path::PathBuf;
 const MIN_V: i32 = -100;
 const MAX_V: i32 = 100;
 const NUM_V: usize = (MAX_V - MIN_V + 1) as usize;
-const MIN_D: i32 = -20000;
-const MAX_D: i32 = 20000;
+const MIN_D: i32 = -10000;
+const MAX_D: i32 = 10000;
 const NUM_D: usize = (MAX_D - MIN_D + 1) as usize;
 const INF: i32 = 1e9 as i32;
 const GET_MOVES_MAX_RESULTS: usize = 10;
-const BEAM_WIDTH: usize = 100;
+const BEAM_WIDTH: usize = 200;
 
 struct Problem {
     v: Vec<(i32, i32)>,
@@ -111,72 +112,83 @@ fn solve(problem: &Problem) -> String {
     // min_steps[v0][v][pos] = minimum steps to move from 0 to pos with initial velocity v0 and terminal velocity v.
     let min_steps = precompute_min_steps();
 
-    /*
-    let ys = reconstruct_steps(-198, -50, -48, 4, &min_steps);
-    eprintln!("ys: {:?}", ys);
-    let y_moves = get_moves_with_steps(-50, -198, 4, 10, &min_steps);
-    eprintln!("y_moves: {:?}", y_moves);
-    let y_moves = get_moves_with_steps(-51, -147, 3, 10, &min_steps);
-    eprintln!("y_moves(-51, -147, 3): {:?}", y_moves);
-
-    return "".to_string();
-     */
-
     let mut checkpoints = problem.v.clone();
+
+    // TODO: Run solve_one in multi threads for trying multiple configurations.
+
     reorder_checkpoints(&mut checkpoints);
 
+    /*
+    for i in 0..checkpoints.len() {
+        println!("{} {}", checkpoints[i].0, checkpoints[i].1);
+    }
+     */
+
+    // Solve the problem on the give visiting order |checkpoints|.
+    let mut best_answer = solve_one(&checkpoints, &min_steps);
+
+    eprintln!("Best score: {}", best_answer.len());
+
+    best_answer
+}
+
+fn reorder_checkpoints(checkpoints: &mut Vec<(i32, i32)>) {
     let config = SAConfig {
-        num_iterations: 1000,
-        initial_temperature: 20.0,
+        //num_iterations: 500000000,
+        //initial_temperature: 500.0,
+        num_iterations: 500000000,
+        initial_temperature: 500.0,
         final_temperature: 1.0,
         solutions_dir: PathBuf::from("results"),
         cooling_schedule: CoolingSchedule::Quadratic,
         accept_function: AcceptFunction::Linear,
     };
 
-    // Solve the problem on the give visiting order |checkpoints|.
-    let mut best_answer = solve_one(&checkpoints, &min_steps);
+    //let mut list = LinkedList::from(checkpoints.clone());
 
-    /*
     let mut iteration = 1;
+    let mut iteration_percent = 0;
     let mut rng = rand::thread_rng();
+    let mut best_score = checkpoints_score(&checkpoints);
     loop {
         iteration += 1;
-        let temperature = current_temperature(iteration as f64 / config.num_iterations as f64, &config);
+        let temperature =
+            current_temperature(iteration as f64 / config.num_iterations as f64, &config);
 
         // swap random two checkpoints
         let c1 = rng.gen_range(0..checkpoints.len());
         let c2 = rng.gen_range(0..checkpoints.len());
-        checkpoints.swap(c1, c2);
 
-        let answer = solve_one(&checkpoints, &min_steps);
-        let score = answer.len() as f64;
-        if should_accept(-(best_answer.len() as f64), -(answer.len() as f64), temperature, &mut rng, &config) {
+        //checkpoints.swap(c1, c2);
+        let removed = checkpoints.remove(c1);
+        checkpoints.insert(c2, removed);
+        //        let insert_pos = if c2 < c1 { c2 } else { c2 - 1 };
+        //        checkpoints.insert(insert_pos, removed);
 
-            eprintln!("Update best answer: {} -> {}", best_answer.len(), score);
-            best_answer = answer;
+        let score = checkpoints_score(&checkpoints);
+        if should_accept(best_score, score, temperature, &mut rng, &config) {
+            //eprintln!("Update best score: {} -> {}", best_score, score);
+            best_score = score;
         } else {
-            checkpoints.swap(c1, c2);
+            //checkpoints.swap(c1, c2);
+            let removed2 = checkpoints.remove(c2);
+            //let insert_pos2 = if c1 < c2 { c1 } else { c1 - 1 };
+            checkpoints.insert(c1, removed2);
         }
-        if iteration % 1000 == 0 {
-            eprintln!("Iteration: {}, Temperature: {}, Best score: {}", iteration, temperature, best_answer.len());
+
+        let current_iteration_percent =
+            (iteration as f64 / config.num_iterations as f64 * 100.0) as i32;
+        if current_iteration_percent != iteration_percent {
+            eprintln!(
+                "Iteration: {} ({}%), Temperature: {}, Best score: {}",
+                iteration, current_iteration_percent, temperature, best_score
+            );
+            iteration_percent = current_iteration_percent;
         }
         if iteration >= config.num_iterations {
             break;
         }
     }
-     */
-    eprintln!("Best score: {}", best_answer.len());
-
-    best_answer
-}
-
-fn reorder_checkpoints(checkpoints: &mut Vec<(i32, i32)>) -> Vec<(i32, i32)> {
-    let mut rng = rand::thread_rng();
-    let mut checkpoints = checkpoints.clone();
-
-    checkpoints.shuffle(&mut rng);
-    checkpoints
 }
 
 fn checkpoints_score(checkpoints: &Vec<(i32, i32)>) -> f64 {
@@ -186,8 +198,21 @@ fn checkpoints_score(checkpoints: &Vec<(i32, i32)>) -> f64 {
     for i in 0..checkpoints.len() {
         let nx = checkpoints[i].0;
         let ny = checkpoints[i].1;
-        let length = (((nx - x).pow(2) + (ny - y).pow(2)) as f64).sqrt();
-        score += length;
+        let dx = (nx - x) as f64;
+        let dy = (ny - y) as f64;
+        let length = (dx * dx + dy * dy).sqrt();
+        score -= length;
+        /*
+        if i >= 1 {
+            let prev_dx = (checkpoints[i].0 - checkpoints[i - 1].0) as f64;
+            let prev_dy = (checkpoints[i].1 - checkpoints[i - 1].1) as f64;
+            let dot_product = prev_dx * dx + prev_dy * dy;
+            //score += dot_product / length / (prev_dx*prev_dx+ prev_dy*prev_dy).sqrt() * 2.0;
+        }
+         */
+
+        x = nx;
+        y = ny;
     }
     score
 }
@@ -203,6 +228,7 @@ fn solve_one(checkpoints: &Vec<(i32, i32)>, min_steps: &Vec<Vec<Vec<i32>>>) -> S
         vy: 0,
         prev_index: 0,
     });
+    let mut current_progress_percent = 0;
     for i in 0..checkpoints.len() {
         let dx = checkpoints[i].0 - x;
         let dy = checkpoints[i].1 - y;
@@ -244,6 +270,16 @@ fn solve_one(checkpoints: &Vec<(i32, i32)>, min_steps: &Vec<Vec<Vec<i32>>>) -> S
 
         x = checkpoints[i].0;
         y = checkpoints[i].1;
+
+        let progress_percent = ((i + 1) as f64 / checkpoints.len() as f64 * 100.0) as i32;
+        if progress_percent != current_progress_percent {
+            eprintln!(
+                "Progress: {}%  steps:{}",
+                progress_percent,
+                beams[i + 1][0].num_steps
+            );
+            current_progress_percent = progress_percent;
+        }
     }
 
     eprintln!("Minimum steps: {}", beams[checkpoints.len()][0].num_steps);
@@ -432,7 +468,6 @@ fn get_moves_with_steps(
         }
     }
 
-    /*
     if steps >= 3 {
         for a0 in -1..=1 {
             for a1 in -1..=1 {
@@ -492,8 +527,6 @@ fn get_moves_with_steps(
         }
     }
 
-     */
-
     results.sort_by_key(|x| (x.terminal_velocity.abs(), x.terminal_velocity));
     results.dedup();
     results.truncate(max_results);
@@ -549,7 +582,6 @@ fn can_reach(vs: i32, ve: i32, dx: i32, steps: i32, min_steps: &Vec<Vec<Vec<i32>
         }
     }
 
-    /*
     if steps >= 3 {
         for a0 in -1..=1 {
             for a1 in -1..=1 {
@@ -628,7 +660,6 @@ fn can_reach(vs: i32, ve: i32, dx: i32, steps: i32, min_steps: &Vec<Vec<Vec<i32>
             }
         }
     }
-    */
 
     false
 }
