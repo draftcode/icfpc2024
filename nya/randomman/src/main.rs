@@ -190,7 +190,13 @@ const KNOWN_SOLUTIONS: &[KnownSolution] = &[
     },
     // 19 is hard
     // 20 is hard
-    // TODO: 21 looks solvable
+    KnownSolution {
+        problem_id: 21,
+        rng: Rng::Default,
+        seed: 13229262,
+        stride: 1,
+        moves: 932995,
+    },
 ];
 
 fn submit_all_main() -> Result<()> {
