@@ -138,6 +138,12 @@ pub struct State {
     pub input_a: i32,
     pub input_b: i32,
     pub output: Option<BigInt>,
+    pub tick: i32,
+    max_tick: i32,
+    min_x: i32,
+    max_x: i32,
+    min_y: i32,
+    max_y: i32,
     written: Vec<Vec<bool>>,
 }
 
@@ -149,6 +155,12 @@ impl Default for State {
             input_a: 0,
             input_b: 0,
             output: None,
+            tick: 1,
+            max_tick: 1,
+            min_x: i32::MAX,
+            max_x: i32::MIN,
+            min_y: i32::MAX,
+            max_y: i32::MIN,
             written: vec![],
         }
     }
@@ -238,6 +250,31 @@ impl State {
         Ok(s)
     }
 
+    pub fn new_with_input_port(board: &str, a: i32, b: i32) -> anyhow::Result<Self> {
+        let mut s: State = Default::default();
+        for l in board.lines() {
+            let mut row = vec![];
+            for c in l.split_whitespace() {
+                row.push(Cell::from_str(c)?);
+            }
+            s.board.0.push(row);
+        }
+        s.input_a = a;
+        s.input_b = b;
+        Ok(s)
+    }
+
+    pub fn used_x(&self) -> i32 {
+        self.max_x - self.min_x + 1
+    }
+    pub fn used_y(&self) -> i32 {
+        self.max_y - self.min_y + 1
+    }
+
+    pub fn score(&self) -> i32 {
+        self.used_x() * self.used_y() * (self.max_tick + 1)
+    }
+
     pub fn resolve_label(&mut self) -> anyhow::Result<()> {
         let mut labels = vec![];
         let mut refs = vec![];
@@ -288,6 +325,8 @@ impl State {
             }
         }
         self.history.push(self.board.clone());
+        self.tick += 1;
+        self.max_tick = self.max_tick.max(self.tick);
 
         let mut warp_requests = vec![];
 
@@ -341,6 +380,7 @@ impl State {
             }
             let target_t = (self.history.len() as i32 - dt - 1) as usize;
             new_board = self.history[target_t].0.clone();
+            self.tick = (target_t + 1) as i32;
             self.history = self.history.split_at(target_t).0.to_vec();
             for (_, x, y, v) in &warp_requests {
                 self.write_to(
@@ -364,6 +404,7 @@ impl State {
         dx: i32,
         dy: i32,
     ) -> anyhow::Result<()> {
+        self.update_min_max((x as i32, y as i32));
         let from_x = x as i32 - dx;
         let from_y = y as i32 - dy;
         let to_x = x as i32 + dx;
@@ -420,11 +461,12 @@ impl State {
         }
         board[y][x] = v;
         self.written[y][x] = true;
+        self.update_min_max((x as i32, y as i32));
         Ok(())
     }
 
     fn raw_write(
-        &self,
+        &mut self,
         board: &mut Vec<Vec<Cell>>,
         pos: (i32, i32),
         v: Cell,
@@ -433,6 +475,7 @@ impl State {
             bail!("Invalid write to {:?}", pos);
         }
         board[pos.1 as usize][pos.0 as usize] = v;
+        self.update_min_max(pos);
         Ok(())
     }
 
@@ -450,6 +493,8 @@ impl State {
             // Args are not ready yet.
             return Ok(());
         }
+
+        self.update_min_max((x as i32, y as i32));
         let op1 = if let Some(v) = self.get_number(arg1) {
             v
         } else {
@@ -607,4 +652,14 @@ impl State {
 
         Ok(())
     }
+
+    fn update_min_max(&mut self, pos: (i32, i32)) {
+        self.min_x = self.min_x.min(pos.0);
+        self.max_x = self.max_x.max(pos.0);
+        self.min_y = self.min_y.min(pos.1);
+        self.max_y = self.max_y.max(pos.1);
+    }
 }
+
+#[cfg(test)]
+mod tests {}

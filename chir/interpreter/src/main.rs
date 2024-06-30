@@ -10,7 +10,7 @@ use common::planar::State;
 #[argopt::subcmd]
 fn resolve_label() -> Result<()> {
     let s = io::read_to_string(io::stdin())?;
-    let mut state = State::new(s.as_str(), 0, 0)?;
+    let mut state = State::new_with_input_port(s.as_str(), 0, 0)?;
     state.resolve_label()?;
     println!("{}", common::planar::print_for_submit(&state));
     Ok(())
@@ -44,11 +44,18 @@ fn run(
     let mut turn = 0;
     while state.output.is_none() && turn < max_turn {
         state.onestep()?;
+        println!(
+            "[t={},x={},y={}]",
+            state.tick,
+            state.used_x(),
+            state.used_y()
+        );
         println!("{}", state.board);
         turn += 1;
     }
 
-    println!("finished {}", state.output.unwrap());
+    let score = state.score();
+    println!("finished {}, score = {}", state.output.unwrap(), score);
     Ok(())
 }
 
