@@ -37,7 +37,11 @@ function parseStateStringSpreadsheet(
     for (let x = 0; x < vs.length; x++) {
       const value = vs[x];
       if (value !== "") {
-        state.set(`${x},${y}`, { coord: [x, y], value });
+        if (value.startsWith("'")) {
+          state.set(`${x},${y}`, { coord: [x, y], value: value.slice(1) });
+        } else {
+          state.set(`${x},${y}`, { coord: [x, y], value });
+        }
       }
     }
   }
