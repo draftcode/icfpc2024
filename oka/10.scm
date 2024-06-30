@@ -3,21 +3,36 @@
 
 (define (repeat f v) (f (f (f (f v)))))
 
-(define (urrrd) "URRRD")
+(define (drru) "DRRU")
 
 (define (r10) "RRRRRRRRRR")
 (define (l10) "LLLLLLLLLL")
 
-(define (ullld) "ULLLD")
+(define (ulld) "ULLD")
 
-(define (x4 x) (string-append x x x x)
+(define (x4 x) (string-append x x x x))
 
-(define (path) )
+(define (x16 x) (x4 (x4 x)))
+
+(define (path1) (string-append (x16 (string-append 
+    (r10) (drru) 
+    (r10) (drru) 
+    (r10) (drru) 
+    (r10) (drru) 
+    (r10)
+    "D"
+    (l10) (ulld)
+    (l10) (ulld)
+    (l10) (ulld)
+    (l10) (ulld)
+    (l10) (ulld)
+    (l10)
+)) "RDD"))
 
 (define (res) (
     string-append
     "solve lambdaman10 "
-    (x64 (string-append (string-append (string-append (x64 "D") (x64 "L")) (x64 "U")) (x64 "R")))
+    (x16 (path1))
 ))
 
 (define (main args) (print (res)))

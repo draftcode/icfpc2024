@@ -15,6 +15,8 @@ oka/8.scm みたいな Scheme プログラムを書いて、
 top level の expression はすべて `(define ...)` 形式である必要がある。
 また、`(define (res) ...)` が存在する必要があり、res の値に評価されるような ICFP を出力する。
 
+`(define (res) ...)` 以降の行は無視される。
+
 `string-take` と `string-drop` の実装は書いても書かなくてもよい（無視される）。
 
 ## 組み込み関数
