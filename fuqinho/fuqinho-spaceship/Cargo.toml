@@ -1,0 +1,10 @@
+[package]
+name = "fuqinho-spaceship"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+proconio = "*"
+anyhow = "1.0"
+rand = "*"
+clap = { version = "4.5.8", features = ["derive"]}
