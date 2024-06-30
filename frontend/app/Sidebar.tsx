@@ -233,6 +233,16 @@ export default function Sidebar({ current }: { current?: string }) {
           <ul
             className={clsx("menu-dropdown", !hide3d && "menu-dropdown-show")}
           >
+            <li>
+              <Link
+                className={clsx(
+                  "/3d/editor" === current ? "active" : null,
+                )}
+                href="/3d/editor"
+              >
+                エディタ
+              </Link>
+            </li>
             {data.threed.problems.map(({ id, rank, our_score, best_score }) => {
               return (
                 <li className={clsx(hideTop && rank === 1 && "hidden")}>
