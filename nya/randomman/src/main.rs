@@ -1,10 +1,6 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
-use common::expr::{BinOp, Expr};
-use std::rc::Rc;
 use util::{do_submit, search_main, Rng, MAX_MOVES};
-
-use crate::assembler::ToExpr;
 
 #[macro_use]
 mod assembler;
