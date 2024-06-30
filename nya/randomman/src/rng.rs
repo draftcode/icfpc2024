@@ -10,7 +10,7 @@ use crate::util::Direction;
 pub enum Rng {
     Default,
     Better,
-    V2,
+    DefaultRev,
 }
 
 impl Rng {
@@ -18,7 +18,7 @@ impl Rng {
         match name {
             "default" => Some(Self::Default),
             "better" => Some(Self::Better),
-            "v2" => Some(Self::V2),
+            "default-rev" => Some(Self::DefaultRev),
             _ => None,
         }
     }
@@ -34,20 +34,23 @@ impl Rng {
                 (state >> 62).into(),
                 state.wrapping_mul(0xd1342543de82ef95).wrapping_add(1),
             ),
-            Self::V2 => todo!(),
+            Self::DefaultRev => (
+                (state >> 62).into(),
+                // pow(48271, -1, 18446744073709551557) = 17779510845628573806
+                ((state as u128).wrapping_mul(17779510845628573806) % 18446744073709551557) as u64,
+            ),
         }
     }
 
     fn expr(&self) -> Expr {
         // RNG expression takes `s` as an argument.
         match self {
-            Self::Default => icfp! {
+            Self::Default | Self::DefaultRev => icfp! {
                 (% (* s 48271) 18446744073709551557)
             },
             Self::Better => icfp! {
                 (% (+ (* s 0xd1342543de82ef95) 1) 18446744073709551616)
             },
-            Self::V2 => todo!(),
         }
     }
 
@@ -58,9 +61,6 @@ impl Rng {
         stride: usize,
         moves: usize,
     ) -> Result<Expr> {
-        if self == &Self::V2 {
-            bail!("V2 is not implemented");
-        }
         let rng_expr = self.expr();
 
         let header = format!("solve lambdaman{problem_id} ");
@@ -85,16 +85,39 @@ impl Rng {
             _ => bail!("unsupported stride: {stride}"),
         };
 
-        // ***HELP ME***: Optimize this code.
-        let expr = icfp! {
-            (concat (#header) (fix (fn f s ->
-                (if (== s (#last_seed)) {
-                    ""
-                } else {
-                    (concat (#step_expr) (f (#rng_expr)))
-                })
-            ) (#seed)))
+        let expr = match self {
+            // ***HELP ME***: Optimize this code.
+            Self::Default | Self::Better => icfp! {
+                (concat (#header) (fix (fn f s ->
+                    (if (== s (#last_seed)) {
+                        ""
+                    } else {
+                        (concat (#step_expr) (f (#rng_expr)))
+                    })
+                ) (#seed)))
+            },
+            Self::DefaultRev => icfp! {
+                (fix (fn f s ->
+                    (if (== s (#seed)) {
+                        (#header)
+                    } else {
+                        (concat (f (#rng_expr)) (#step_expr))
+                    })
+                ) (#last_seed))
+            },
         };
         Ok(expr)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_rng_prev() {
+        let (_, state) = Rng::DefaultRev.next(1);
+        let (_, state) = Rng::Default.next(state);
+        assert_eq!(state, 1);
     }
 }

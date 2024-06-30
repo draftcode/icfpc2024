@@ -98,11 +98,20 @@ struct KnownSolution {
 const KNOWN_SOLUTIONS: &[KnownSolution] = &[
     // 1-3 have shorter solutions
     KnownSolution {
+        // 167B
         problem_id: 4,
         rng: Rng::Default,
         seed: 29,
         stride: 1,
         moves: 17042,
+    },
+    KnownSolution {
+        // 163B
+        problem_id: 4,
+        rng: Rng::DefaultRev,
+        seed: 2,
+        stride: 1,
+        moves: 54181,
     },
     // TODO: 5 can be revisited if code gets shorter
     // 6 has a shorter solution
