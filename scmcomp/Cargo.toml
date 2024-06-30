@@ -7,6 +7,7 @@ edition = "2021"
 anyhow = "1.0.86"
 argopt = "0.3.0"
 common = { path = "../common" }
+regex = "1.10.5"
 reqwest = { version = "0.12", default-features = false, features = [
     "blocking",
     "rustls-tls",

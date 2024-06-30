@@ -1,8 +1,9 @@
-use anyhow::ensure;
+use anyhow::{bail, ensure};
 use common::{
     compiler::{compile::compile_to_lambda, parser::parse},
     eval::eval,
     expr::Expr,
+    lambdaman::map::LMap,
     optimize::optimize,
 };
 use std::io::Read;
@@ -38,22 +39,23 @@ fn compile() -> anyhow::Result<()> {
 
     let icfp = expr.icfp();
 
-    let icfp_prog = icfp.join(" ");
-
     println!("{}", icfp.join(" "));
 
     Ok(())
 }
 
 #[argopt::subcmd]
-fn submit(#[opt(long, default_value = "")] mut api_token: String) -> anyhow::Result<()> {
+fn submit(
+    #[opt(long, default_value = "")] mut api_token: String,
+    #[opt(long)] nolambdaman: bool,
+) -> anyhow::Result<()> {
     if api_token.is_empty() {
         api_token = get_api_token_from_env();
     }
-
     eprint!("> ");
 
     let mut input = "".to_string();
+
     std::io::stdin().read_to_string(&mut input)?;
 
     let expr = compile_to_lambda(input)?;
@@ -62,12 +64,6 @@ fn submit(#[opt(long, default_value = "")] mut api_token: String) -> anyhow::Res
 
     let icfp_prog = icfp.join(" ");
     eprintln!("compiled ({} bytes): {}", icfp_prog.len(), icfp_prog);
-
-    let expr = icfp_prog.parse::<Expr>()?;
-    let expr = optimize(expr);
-
-    let icfp_prog = expr.encoded().to_string();
-    eprintln!("optimized ({} bytes): {}", icfp_prog.len(), icfp_prog);
 
     let client = reqwest::blocking::Client::new();
 
