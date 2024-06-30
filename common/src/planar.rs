@@ -22,21 +22,27 @@ pub enum Cell {
     Eq,
     Neq,
     Submit,
-    Label(String, Option<i32>),
+    Label(String, Option<Box<Cell>>),
 }
 
-fn parse_label(s: &str) -> anyhow::Result<(String, Option<i32>)> {
+fn parse_label(s: &str) -> anyhow::Result<(String, Option<Cell>)> {
     if !s.contains("[") {
         return Ok((s.to_owned(), None));
     }
     let v = s.split("[").collect::<Vec<&str>>();
     let name = v[0].to_owned();
     let v = v[1].split("]").collect::<Vec<&str>>();
-    let v = v[0].parse::<i32>();
-    if v.is_err() {
+    if v[0] == "A" {
+        return Ok((name, Some(Cell::InputA)));
+    }
+    if v[0] == "B" {
+        return Ok((name, Some(Cell::InputB)));
+    }
+    let val = v[0].parse::<i32>();
+    if val.is_err() {
         bail!("Failed to parse the label value");
     }
-    Ok((name, Some(v.unwrap())))
+    Ok((name, Some(Cell::Number(val?.into()))))
 }
 
 impl FromStr for Cell {
@@ -70,7 +76,11 @@ impl FromStr for Cell {
                 _ => {
                     if s.len() >= 1 && s.chars().nth(0).unwrap() != '@' {
                         let (name, v) = parse_label(s)?;
-                        Cell::Label(name, v)
+                        if v.is_some() {
+                            Cell::Label(name, Some(Box::new(v.unwrap())))
+                        } else {
+                            Cell::Label(name, None)
+                        }
                     } else if s.len() >= 2 && s.chars().next().unwrap() == '@' {
                         let label = &s[1..];
                         Cell::Warp(label.to_owned())
@@ -112,7 +122,7 @@ impl std::fmt::Display for Cell {
             Cell::Number(i) => write!(f, "{}", i.to_string()),
             Cell::Label(c, init) => {
                 if init.is_some() {
-                    write!(f, "{}[{}]", c, init.unwrap())
+                    write!(f, "{}[{}]", c, init.clone().unwrap())
                 } else {
                     write!(f, "{}", c)
                 }
@@ -297,7 +307,7 @@ impl State {
         for y in 0..self.board.0.len() {
             for x in 0..self.board.0[y].len() {
                 if let Cell::Label(c, init) = &self.board.0[y][x] {
-                    labels.push((c.clone(), x, y, *init));
+                    labels.push((c.clone(), x, y, init.clone()));
                 } else if let Cell::InputA = self.board.0[y][x] {
                     labels.push(("A".to_owned(), x, y, None));
                 } else if let Cell::InputB = self.board.0[y][x] {
@@ -330,7 +340,7 @@ impl State {
             if init.is_none() {
                 self.board.0[*y][*x] = Cell::Empty;
             } else {
-                self.board.0[*y][*x] = Cell::Number(init.unwrap().into());
+                self.board.0[*y][*x] = *init.clone().unwrap();
             }
         }
         Ok(())
