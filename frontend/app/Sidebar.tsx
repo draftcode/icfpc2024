@@ -5,15 +5,43 @@ import { useState } from "react";
 import { useCookies } from "react-cookie";
 
 export default function Sidebar({ current }: { current?: string }) {
-  const [cookies, setCookie] = useCookies(["hideTop", "badgeType"]);
-  const [hideTop, setHideTop] = useState(
-    typeof cookies.hideTop === "undefined" || cookies.hideTop === "true",
+  const [cookies, setCookie] = useCookies([
+    "hideTop",
+    "badgeType",
+    "hideLambdaman",
+    "hideSpaceship",
+    "hide3d",
+    "hideEfficiency",
+  ]);
+  const [hideTop, setHideTop] = useState(cookies.hideTop);
+  const [hideLambdaman, setHideLambdamanRaw] = useState(cookies.hideLambdaman);
+  const [hideSpaceship, setHideSpaceshipRaw] = useState(cookies.hideSpaceship);
+  const [hide3d, setHide3dRaw] = useState(cookies.hide3d);
+  const [hideEfficiency, setHideEfficiencyRaw] = useState(
+    cookies.hideEfficiency,
   );
   const [badgeType, setBadgeTypeRaw] = useState(cookies.badgeType ?? "rank");
   const { data, error } = useTeamRank();
+
+  const setHideLambdaman = (b: boolean) => {
+    setHideLambdamanRaw(b);
+    setCookie("hideLambdaman", JSON.stringify(b), { path: "/" });
+  };
+  const setHideSpaceship = (b: boolean) => {
+    setHideSpaceshipRaw(b);
+    setCookie("hideSpaceship", JSON.stringify(b), { path: "/" });
+  };
+  const setHide3d = (b: boolean) => {
+    setHide3dRaw(b);
+    setCookie("hide3d", JSON.stringify(b), { path: "/" });
+  };
+  const setHideEfficiency = (b: boolean) => {
+    setHideEfficiencyRaw(b);
+    setCookie("hideEfficiency", JSON.stringify(b), { path: "/" });
+  };
   const setBadgeType = (badgeType: string) => {
     setBadgeTypeRaw(badgeType);
-    setCookie("badgeType", badgeType);
+    setCookie("badgeType", badgeType, { path: "/" });
   };
   if (error) {
     throw error;
@@ -29,7 +57,9 @@ export default function Sidebar({ current }: { current?: string }) {
           checked={hideTop}
           onChange={(e) => {
             setHideTop(e.target.checked);
-            setCookie("hideTop", JSON.stringify(e.target.checked));
+            setCookie("hideTop", JSON.stringify(e.target.checked), {
+              path: "/",
+            });
           }}
           className="checkbox checkbox-xs"
         />
@@ -89,10 +119,21 @@ export default function Sidebar({ current }: { current?: string }) {
       <hr />
       <ul className="menu menu-xs w-56 shrink-0">
         <li>
-          <h2 className="menu-title">
+          <h2
+            onClick={() => setHideLambdaman(!hideLambdaman)}
+            className={clsx(
+              "menu-dropdown-toggle",
+              !hideLambdaman && "menu-dropdown-show",
+            )}
+          >
             Lambdaman <CategoryBadge rank={data.lambdaman.rank} />
           </h2>
-          <ul>
+          <ul
+            className={clsx(
+              "menu-dropdown",
+              !hideLambdaman && "menu-dropdown-show",
+            )}
+          >
             <li>
               <Link
                 className={clsx("/lambdaman" === current ? "active" : null)}
@@ -127,11 +168,22 @@ export default function Sidebar({ current }: { current?: string }) {
         </li>
 
         <li>
-          <h2 className="menu-title">
+          <h2
+            onClick={() => setHideSpaceship(!hideSpaceship)}
+            className={clsx(
+              "menu-dropdown-toggle",
+              !hideSpaceship && "menu-dropdown-show",
+            )}
+          >
             Spaceship
             <CategoryBadge rank={data.spaceship.rank} />
           </h2>
-          <ul>
+          <ul
+            className={clsx(
+              "menu-dropdown",
+              !hideSpaceship && "menu-dropdown-show",
+            )}
+          >
             <li>
               <Link
                 className={clsx(
@@ -168,11 +220,19 @@ export default function Sidebar({ current }: { current?: string }) {
         </li>
 
         <li>
-          <h2 className="menu-title">
+          <h2
+            onClick={() => setHide3d(!hide3d)}
+            className={clsx(
+              "menu-dropdown-toggle",
+              !hide3d && "menu-dropdown-show",
+            )}
+          >
             3D
             <CategoryBadge rank={data.threed.rank} />
           </h2>
-          <ul>
+          <ul
+            className={clsx("menu-dropdown", !hide3d && "menu-dropdown-show")}
+          >
             {data.threed.problems.map(({ id, rank, our_score, best_score }) => {
               return (
                 <li className={clsx(hideTop && rank === 1 && "hidden")}>
@@ -195,11 +255,22 @@ export default function Sidebar({ current }: { current?: string }) {
         </li>
 
         <li>
-          <h2 className="menu-title">
+          <h2
+            onClick={() => setHideEfficiency(!hideEfficiency)}
+            className={clsx(
+              "menu-dropdown-toggle",
+              !hideEfficiency && "menu-dropdown-show",
+            )}
+          >
             Efficiency
             <CategoryBadge rank={data.efficiency.rank} />
           </h2>
-          <ul>
+          <ul
+            className={clsx(
+              "menu-dropdown",
+              !hideEfficiency && "menu-dropdown-show",
+            )}
+          >
             {data.efficiency.problems.map(
               ({ id, rank, our_score, best_score }) => {
                 return (
