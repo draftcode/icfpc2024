@@ -33,22 +33,13 @@ fn evaluate_message(input: String) -> PyResult<String> {
 
 #[pyfunction]
 fn onestep_3d(program: String, a: i32, b: i32, turn: usize) -> PyResult<(String, Option<i32>)> {
-    let mut state: planar::State = Default::default();
-
-    for l in program.lines() {
-        let mut row = vec![];
-        for c in l.split_whitespace() {
-            if let Ok(cell) = c.parse::<planar::Cell>() {
-                row.push(cell);
-            } else {
-                return Err(PyErr::new::<PyValueError, _>(format!(
-                    "Invalid cell: {}",
-                    c
-                )));
-            }
-        }
-        state.board.0.push(row);
+    let state = planar::State::new(&program, a, b);
+    if state.is_err() {
+        return Err(PyErr::new::<PyValueError, _>(format!(
+            "failed to load program"
+        )));
     }
+    let mut state = state.unwrap();
 
     for t in 0..turn {
         if state.onestep().is_err() {
