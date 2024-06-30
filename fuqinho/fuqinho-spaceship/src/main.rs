@@ -1,17 +1,21 @@
 use anyhow::Result;
+use rand::prelude::SliceRandom;
+use rand::rngs::ThreadRng;
+use rand::Rng;
 use std::cmp::max;
 use std::collections::VecDeque;
 use std::io::stdin;
-//use rand::prelude::SliceRandom;
+use std::path::PathBuf;
 
-const MIN_V: i32 = -50;
-const MAX_V: i32 = 50;
+const MIN_V: i32 = -100;
+const MAX_V: i32 = 100;
 const NUM_V: usize = (MAX_V - MIN_V + 1) as usize;
-const MIN_D: i32 = -10000;
-const MAX_D: i32 = 10000;
+const MIN_D: i32 = -20000;
+const MAX_D: i32 = 20000;
 const NUM_D: usize = (MAX_D - MIN_D + 1) as usize;
 const INF: i32 = 1e9 as i32;
-const BEAM_WIDTH: usize = 200;
+const GET_MOVES_MAX_RESULTS: usize = 10;
+const BEAM_WIDTH: usize = 100;
 
 struct Problem {
     v: Vec<(i32, i32)>,
@@ -28,6 +32,43 @@ enum CoolingSchedule {
 enum AcceptFunction {
     Linear,
     Exponential,
+}
+
+pub struct SAConfig {
+    pub num_iterations: usize,
+    pub initial_temperature: f64,
+    pub final_temperature: f64,
+    pub solutions_dir: PathBuf,
+    pub cooling_schedule: CoolingSchedule,
+    pub accept_function: AcceptFunction,
+}
+
+fn current_temperature(progress: f64, config: &SAConfig) -> f64 {
+    match config.cooling_schedule {
+        CoolingSchedule::Linear => (1. - progress) * config.initial_temperature,
+        CoolingSchedule::Quadratic => (1. - progress).powi(2) * config.initial_temperature,
+        CoolingSchedule::Exponential => {
+            config.initial_temperature.powf(1. - progress) * config.final_temperature.powf(progress)
+        }
+    }
+}
+
+fn should_accept(
+    cur_score: f64,
+    next_score: f64,
+    temperature: f64,
+    rng: &mut ThreadRng,
+    config: &SAConfig,
+) -> bool {
+    if next_score >= cur_score {
+        return true;
+    }
+    match config.accept_function {
+        AcceptFunction::Linear => rng.gen_range(0.0..1.0) * temperature > -(next_score - cur_score),
+        AcceptFunction::Exponential => {
+            rng.gen_bool(f64::exp((next_score - cur_score) / (temperature + 1e-9)))
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -70,24 +111,85 @@ fn solve(problem: &Problem) -> String {
     // min_steps[v0][v][pos] = minimum steps to move from 0 to pos with initial velocity v0 and terminal velocity v.
     let min_steps = precompute_min_steps();
 
-    let checkpoints = problem.v.clone();
+    /*
+    let ys = reconstruct_steps(-198, -50, -48, 4, &min_steps);
+    eprintln!("ys: {:?}", ys);
+    let y_moves = get_moves_with_steps(-50, -198, 4, 10, &min_steps);
+    eprintln!("y_moves: {:?}", y_moves);
+    let y_moves = get_moves_with_steps(-51, -147, 3, 10, &min_steps);
+    eprintln!("y_moves(-51, -147, 3): {:?}", y_moves);
+
+    return "".to_string();
+     */
+
+    let mut checkpoints = problem.v.clone();
+    reorder_checkpoints(&mut checkpoints);
+
+    let config = SAConfig {
+        num_iterations: 1000,
+        initial_temperature: 20.0,
+        final_temperature: 1.0,
+        solutions_dir: PathBuf::from("results"),
+        cooling_schedule: CoolingSchedule::Quadratic,
+        accept_function: AcceptFunction::Linear,
+    };
 
     // Solve the problem on the give visiting order |checkpoints|.
-    let best_answer = solve_one(&checkpoints, &min_steps);
+    let mut best_answer = solve_one(&checkpoints, &min_steps);
 
     /*
+    let mut iteration = 1;
     let mut rng = rand::thread_rng();
-    for t in 0..100 {
-        checkpoints.shuffle(&mut rng);
+    loop {
+        iteration += 1;
+        let temperature = current_temperature(iteration as f64 / config.num_iterations as f64, &config);
+
+        // swap random two checkpoints
+        let c1 = rng.gen_range(0..checkpoints.len());
+        let c2 = rng.gen_range(0..checkpoints.len());
+        checkpoints.swap(c1, c2);
+
         let answer = solve_one(&checkpoints, &min_steps);
-        if answer.len() < best_answer.len() {
-            eprintln!("Update best answer: {} -> {}", best_answer.len(), answer.len());
+        let score = answer.len() as f64;
+        if should_accept(-(best_answer.len() as f64), -(answer.len() as f64), temperature, &mut rng, &config) {
+
+            eprintln!("Update best answer: {} -> {}", best_answer.len(), score);
             best_answer = answer;
+        } else {
+            checkpoints.swap(c1, c2);
+        }
+        if iteration % 1000 == 0 {
+            eprintln!("Iteration: {}, Temperature: {}, Best score: {}", iteration, temperature, best_answer.len());
+        }
+        if iteration >= config.num_iterations {
+            break;
         }
     }
      */
+    eprintln!("Best score: {}", best_answer.len());
 
     best_answer
+}
+
+fn reorder_checkpoints(checkpoints: &mut Vec<(i32, i32)>) -> Vec<(i32, i32)> {
+    let mut rng = rand::thread_rng();
+    let mut checkpoints = checkpoints.clone();
+
+    checkpoints.shuffle(&mut rng);
+    checkpoints
+}
+
+fn checkpoints_score(checkpoints: &Vec<(i32, i32)>) -> f64 {
+    let mut score = 0.0;
+    let mut x = 0;
+    let mut y = 0;
+    for i in 0..checkpoints.len() {
+        let nx = checkpoints[i].0;
+        let ny = checkpoints[i].1;
+        let length = (((nx - x).pow(2) + (ny - y).pow(2)) as f64).sqrt();
+        score += length;
+    }
+    score
 }
 
 fn solve_one(checkpoints: &Vec<(i32, i32)>, min_steps: &Vec<Vec<Vec<i32>>>) -> String {
@@ -111,16 +213,16 @@ fn solve_one(checkpoints: &Vec<(i32, i32)>, min_steps: &Vec<Vec<Vec<i32>>>) -> S
                 vy,
                 prev_index: _prev_index,
             } = beams[i][j];
-            let moves_x = get_moves(vx, dx, 10, &min_steps);
-            let moves_y = get_moves(vy, dy, 10, &min_steps);
+            let moves_x = get_moves(vx, dx, GET_MOVES_MAX_RESULTS, &min_steps);
+            let moves_y = get_moves(vy, dy, GET_MOVES_MAX_RESULTS, &min_steps);
             if moves_x.is_empty() || moves_y.is_empty() {
                 continue;
             }
 
             let lb_steps = max(moves_x[0].steps, moves_y[0].steps);
             for s in lb_steps..=(lb_steps + 10) {
-                let moves_x = get_moves_with_steps(vx, dx, s, 10, &min_steps);
-                let moves_y = get_moves_with_steps(vy, dy, s, 10, &min_steps);
+                let moves_x = get_moves_with_steps(vx, dx, s, GET_MOVES_MAX_RESULTS, &min_steps);
+                let moves_y = get_moves_with_steps(vy, dy, s, GET_MOVES_MAX_RESULTS, &min_steps);
                 if moves_x.is_empty() || moves_y.is_empty() {
                     continue;
                 }
@@ -180,7 +282,9 @@ fn solve_one(checkpoints: &Vec<(i32, i32)>, min_steps: &Vec<Vec<Vec<i32>>>) -> S
         let nvx = vxs[i + 1];
         let nvy = vys[i + 1];
         let steps_x = reconstruct_steps(nx - cx, cvx, nvx, steps_history[i], &min_steps);
+        //eprintln!("[{}] reconstruct_steps_x({}, {}, {}, {}) steps_x.len: {}", i, nx-cx, cvx, nvx, steps_history[i], steps_x.len());
         let steps_y = reconstruct_steps(ny - cy, cvy, nvy, steps_history[i], &min_steps);
+        //eprintln!("[{}] reconstruct_steps_y({}, {}, {}, {}) steps_x.len: {}", i, ny-cy, cvy, nvy, steps_history[i], steps_y.len());
         for j in 0..steps_x.len() {
             if steps_x[j] == -1 && steps_y[j] == -1 {
                 ans.push_str("1");
@@ -248,6 +352,9 @@ fn precompute_min_steps() -> Vec<Vec<Vec<i32>>> {
 
 fn get_moves(v: i32, dx: i32, max_results: usize, min_steps: &Vec<Vec<Vec<i32>>>) -> Vec<MoveInfo> {
     let mut results = vec![];
+    if (dx < MIN_D || dx > MAX_D) {
+        return results;
+    }
     for ve in MIN_V..=MAX_V {
         let steps = min_steps[(v - MIN_V) as usize][(ve - MIN_V) as usize][(dx - MIN_D) as usize];
         if steps == INF {
@@ -281,6 +388,7 @@ fn get_moves_with_steps(
             terminal_velocity: ve,
         });
     }
+
     if steps >= 1 {
         for a in -1..=1 {
             let nv = v + a;
@@ -324,6 +432,7 @@ fn get_moves_with_steps(
         }
     }
 
+    /*
     if steps >= 3 {
         for a0 in -1..=1 {
             for a1 in -1..=1 {
@@ -383,6 +492,8 @@ fn get_moves_with_steps(
         }
     }
 
+     */
+
     results.sort_by_key(|x| (x.terminal_velocity.abs(), x.terminal_velocity));
     results.dedup();
     results.truncate(max_results);
@@ -390,9 +501,20 @@ fn get_moves_with_steps(
 }
 
 fn can_reach(vs: i32, ve: i32, dx: i32, steps: i32, min_steps: &Vec<Vec<Vec<i32>>>) -> bool {
+    /*
+        let moves = get_moves_with_steps(vs, dx, steps, GET_MOVES_MAX_RESULTS, min_steps);
+        for m in moves {
+            if m.terminal_velocity == ve {
+                return true;
+            }
+        }
+        return false;
+    */
+
     if min_steps[(vs - MIN_V) as usize][(ve - MIN_V) as usize][(dx - MIN_D) as usize] == steps {
         return true;
     }
+
     if steps >= 1 {
         for a in -1..=1 {
             let nv = vs + a;
@@ -407,6 +529,7 @@ fn can_reach(vs: i32, ve: i32, dx: i32, steps: i32, min_steps: &Vec<Vec<Vec<i32>
             }
         }
     }
+
     if steps >= 2 {
         for a0 in -1..=1 {
             for a1 in -1..=1 {
@@ -414,15 +537,7 @@ fn can_reach(vs: i32, ve: i32, dx: i32, steps: i32, min_steps: &Vec<Vec<Vec<i32>
                 let ndx0 = dx - nv0;
                 let nv1 = nv0 + a1;
                 let ndx1 = ndx0 - nv1;
-                if nv0 < MIN_V
-                    || nv0 > MAX_V
-                    || nv1 < MIN_V
-                    || nv1 > MAX_V
-                    || ndx0 < MIN_D
-                    || ndx0 > MAX_D
-                    || ndx1 < MIN_D
-                    || ndx1 > MAX_D
-                {
+                if nv1 < MIN_V || nv1 > MAX_V || ndx1 < MIN_D || ndx1 > MAX_D {
                     continue;
                 }
                 if min_steps[(nv1 - MIN_V) as usize][(ve - MIN_V) as usize][(ndx1 - MIN_D) as usize]
@@ -434,6 +549,7 @@ fn can_reach(vs: i32, ve: i32, dx: i32, steps: i32, min_steps: &Vec<Vec<Vec<i32>
         }
     }
 
+    /*
     if steps >= 3 {
         for a0 in -1..=1 {
             for a1 in -1..=1 {
@@ -512,6 +628,7 @@ fn can_reach(vs: i32, ve: i32, dx: i32, steps: i32, min_steps: &Vec<Vec<Vec<i32>
             }
         }
     }
+    */
 
     false
 }
