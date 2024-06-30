@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{fmt::Display, str::FromStr};
 
 use anyhow::bail;
 
@@ -7,6 +7,27 @@ pub struct LMap {
     pub width: usize,
     pub height: usize,
     pub data: Vec<Vec<LCell>>,
+}
+
+impl Display for LMap {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for row in &self.data {
+            for cell in row {
+                write!(
+                    f,
+                    "{}",
+                    match cell {
+                        LCell::Wall => "#",
+                        LCell::Empty => " ",
+                        LCell::Pill => ".",
+                        LCell::Lambdaman => "L",
+                    }
+                )?;
+            }
+            writeln!(f)?;
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

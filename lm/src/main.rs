@@ -1,4 +1,4 @@
-use std::io::Read;
+use std::{io::Read, path::Path};
 
 use anyhow::{bail, Result};
 use common::lambdaman::map::LMap;
@@ -8,10 +8,11 @@ fn main() -> anyhow::Result<()> {}
 
 #[argopt::subcmd]
 fn run(#[opt(short, long)] out_dir: Option<String>) -> Result<()> {
-    // let out_dir = out_dir.unwrap_or_else(|| {
-    //     eprintln!("Using /tmp/lm as the default output directory. (can change with -o)");
-    //     "/tmp/lm".to_string()
-    // });
+    let out_dir = out_dir.unwrap_or_else(|| {
+        eprintln!("Using /tmp/lm as the default output directory. (can change with -o)");
+        "/tmp/lm".to_string()
+    });
+    std::fs::create_dir_all(&out_dir)?;
 
     let mut input = "".to_string();
     std::io::stdin().read_to_string(&mut input)?;
@@ -34,5 +35,14 @@ fn run(#[opt(short, long)] out_dir: Option<String>) -> Result<()> {
         eprintln!("no remaining pills - congrats!");
         return Ok(());
     }
+
+    eprintln!("{} pills remaining", rem);
+
+    let out_file = Path::new(&out_dir).join(format!("{id}.txt"));
+
+    eprintln!("writing end state to {}", out_file.display());
+
+    std::fs::write(out_file, map.to_string())?;
+
     bail!("{} pills remaining", rem);
 }
