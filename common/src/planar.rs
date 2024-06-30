@@ -439,9 +439,11 @@ impl State {
                     if let Cell::Number(w) = &new_board[*y as usize][*x as usize] {
                         if v != w {
                             bail!(
-                                "The different value is goint to be written by warp ({},{})",
+                                "The different value is goint to be written by warp ({},{}) {} vs {}",
                                 x,
-                                y
+                                y,
+                                v,
+                                w
                             );
                         }
                     }
