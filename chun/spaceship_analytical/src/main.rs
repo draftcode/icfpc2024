@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
-use std::iter::zip;
+use std::hash::Hash;
+use std::io::BufWriter;
 use std::{cmp, io};
 
 type Point = (i32, i32);
@@ -484,7 +485,7 @@ fn actualize_visit_plan(
 ) -> Vec<Acceleration> {
     let xaccl = generate_accelerate_seqs(targetp.0 - curp.0, curv.0, targetv.0, t);
     let yaccl = generate_accelerate_seqs(targetp.1 - curp.1, curv.1, targetv.1, t);
-    return zip(xaccl, yaccl).collect();
+    return std::iter::zip(xaccl, yaccl).collect();
 }
 
 mod generate_plan_test {
@@ -640,21 +641,15 @@ fn solve_la2(v: Vec<(i32, i32)>, nplan: usize) {
     eprintln!("Solution length = {}", buffer.len());
 }
 
-fn main() {
-    let args: Vec<String> = std::env::args().collect();
-    let cmd = &args[0];
-    let mut buffer = String::new();
-    let stdin = io::stdin();
-
+fn load_problem(fname: String) -> Vec<(i32, i32)> {
+    use std::io::BufRead;
+    let file = std::fs::File::open(fname.as_str()).unwrap();
+    let reader = std::io::BufReader::new(file);
     let mut v: Vec<(i32, i32)> = Vec::new();
-
-    loop {
-        match stdin.read_line(&mut buffer) {
-            Ok(k) => {
-                if k == 0 {
-                    break;
-                }
-                let mut values = buffer.split_whitespace();
+    for line in reader.lines() {
+        match line {
+            Ok(line) => {
+                let mut values = line.split_whitespace();
                 let a = values.next();
                 let b = values.next();
                 let (a, b) = match a {
@@ -665,30 +660,127 @@ fn main() {
                 let bi: i32 = b.parse().unwrap();
 
                 v.push((ai, bi));
-                buffer.clear();
             }
             Err(_) => {
                 break;
             }
         }
     }
+    return v;
+}
+
+fn load_keypads(fname: String) -> String {
+    use std::io::BufRead;
+    let file = std::fs::File::open(fname.as_str()).unwrap();
+    let reader = std::io::BufReader::new(file);
+    let mut ret = String::new();
+    for line in reader.lines() {
+        match line {
+            Ok(line) => {
+                for c in line.chars() {
+                    if c.is_numeric() {
+                        ret.push(c);
+                    }
+                }
+            }
+            Err(_) => {
+                break;
+            }
+        }
+    }
+    return ret;
+}
+
+fn save_plan(plan_fname: String, plan: Vec<(Point, Velocity, usize, usize)>) {
+    use std::io::Write;
+    let f = std::fs::File::create(plan_fname.as_str()).unwrap();
+    let mut f = BufWriter::new(f);
+    for (p, v, keylen, alllen) in plan {
+        writeln!(
+            &mut f,
+            "{} {} {} {} {} {}",
+            p.0, p.1, v.0, v.1, keylen, alllen
+        )
+        .expect("write failed");
+    }
+}
+
+fn make_plan(v: Vec<(i32, i32)>, seq: String, plan_fname: String) {
+    let accl = decode_thrust_from_keypad(seq.as_str());
+    let traj = simulate((0, 0), (0, 0), &accl);
+    let mut visited: Vec<bool> = std::iter::repeat(false).take(v.len()).collect();
+    let mut pt2idx: HashMap<(i32, i32), usize> = HashMap::new();
+    let mut plan = Vec::new();
+    for i in 0..v.len() {
+        pt2idx.insert(v[i], i);
+    }
+    let mut prevptidx = 0;
+    for (i, (p, v)) in traj.into_iter().enumerate() {
+        if pt2idx.contains_key(&p) {
+            let idx = pt2idx.get(&p).unwrap();
+            if !visited[*idx] {
+                let keylen = i - prevptidx;
+                plan.push((p, v, keylen, i));
+                prevptidx = i;
+                visited[*idx] = true;
+            }
+        }
+    }
+    save_plan(plan_fname, plan);
+}
+
+fn optimize_plan(planfile: String) {}
+
+fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    let cmd = &args[0];
+    if args.len() < 3 {
+        eprintln!(
+            "Usage:
+{0} la1 problemfile.txt [look-ahead-size]
+{0} la2 problemfile.txt [look-ahead-size]
+{0} make_plan problemfile.txt output_seq.txt plan.txt
+{0} optimize_plan planfile.txt [niter]
+",
+            cmd
+        );
+        return;
+    }
 
     if args[1] == "greedy" {
+        if args.len() < 2 {
+            panic!("too few args");
+        }
+        let v = load_problem(args[2].clone());
         solve_greedy(v);
     } else if args[1] == "la1" {
-        let mut nplan = 1000;
-        if args.len() >= 3 {
-            nplan = args[2].parse::<usize>().unwrap();
+        if args.len() < 3 {
+            panic!("too few args");
         }
+        let v = load_problem(args[2].clone());
+        let mut nplan = 1000;
+        if args.len() >= 4 {
+            nplan = args[3].parse::<usize>().unwrap();
+        }
+
         solve_la1(v, nplan);
     } else if args[1] == "la2" {
+        if args.len() < 3 {
+            panic!("too few args");
+        }
+        let v = load_problem(args[2].clone());
         let mut nplan = 100;
         if args.len() >= 3 {
             nplan = args[2].parse::<usize>().unwrap();
         }
         solve_la2(v, nplan);
-    } else {
-        eprintln!("Usage: (cargo run) greedy < foo.txt");
+    } else if args[1] == "make_plan" {
+        let v = load_problem(args[2].clone());
+        let seq = load_keypads(args[3].clone());
+        let plan_fname = args[4].clone();
+        make_plan(v, seq, plan_fname);
+    } else if args[1] == "optimize_plan" {
+        optimize_plan(args[2].clone());
     }
 
     //println!("start reorder");
