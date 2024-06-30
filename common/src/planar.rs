@@ -281,8 +281,12 @@ impl State {
             }
         }
 
+        if self.output.is_some() {
+            // Do not process warp requests if 'S' is already written
+            return Ok(());
+        }
+
         if !warp_requests.is_empty() {
-            // eprintln!("warp reuqest is coming");
             let dt = warp_requests[0].0;
             for (ddt, _, _, _) in &warp_requests {
                 if dt != *ddt {
