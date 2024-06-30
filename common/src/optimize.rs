@@ -1,9 +1,4 @@
-use std::rc::Rc;
-
-use crate::{
-    eval::eval,
-    expr::{Expr, UnOp},
-};
+use crate::expr::Expr;
 
 // TODO: impl
 pub fn optimize(expr: Expr) -> Expr {

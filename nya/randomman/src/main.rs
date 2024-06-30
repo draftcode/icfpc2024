@@ -1,9 +1,11 @@
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
-use util::{do_submit, search_main, Rng, MAX_MOVES};
+use rng::Rng;
+use util::{do_submit, search_main, MAX_MOVES};
 
 #[macro_use]
 mod assembler;
+pub mod rng;
 pub mod util;
 
 #[derive(Parser, Debug)]
