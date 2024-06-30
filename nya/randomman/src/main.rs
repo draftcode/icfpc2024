@@ -236,6 +236,9 @@ enum Command {
         #[arg(long, default_value = "default")]
         rng: String,
 
+        #[arg(long, default_value_t = 1)]
+        start_seed: u64,
+
         problem_id: usize,
     },
     Compile {
@@ -263,7 +266,7 @@ enum Command {
     SubmitAll,
 }
 
-fn search_main(problem_id: usize, stride: usize, rng_name: &str) -> Result<()> {
+fn search_main(problem_id: usize, stride: usize, rng_name: &str, start_seed: u64) -> Result<()> {
     println!("Searching seed for problem {problem_id} with stride {stride}...");
 
     let game = load_game(problem_id)?;
@@ -275,7 +278,7 @@ fn search_main(problem_id: usize, stride: usize, rng_name: &str) -> Result<()> {
     const SEED_MAX: u64 = 1000000000;
     let steps = 1000000 / stride;
 
-    for start in (1..SEED_MAX).step_by(CHUNK_SIZE) {
+    for start in (start_seed..SEED_MAX).step_by(CHUNK_SIZE) {
         let end = start + CHUNK_SIZE as u64 - 1;
         eprint!("{}...\r", end);
 
@@ -312,6 +315,7 @@ fn compile_expr(problem_id: usize, seed: u64, stride: usize, rng: &Rng) -> Resul
     let header = format!("solve lambdaman{problem_id} ");
     let seed = seed as u128;
 
+    let steps = (1000000 / stride) as u128;
     let step_expr = match stride {
         1 => icfp! { (take 1 (drop (/ s 4611686018427387904) "LUDR")) },
         2 => icfp! { (take 2 (drop (* (/ s 4611686018427387904) 2) "LLUUDDRR")) },
@@ -326,7 +330,7 @@ fn compile_expr(problem_id: usize, seed: u64, stride: usize, rng: &Rng) -> Resul
             } else {
                 (concat (#step_expr) (f (- c 1) (#rng_expr)))
             })
-        ) 500000 (#seed)))
+        ) (#steps) (#seed)))
     };
     Ok(expr)
 }
@@ -415,6 +419,12 @@ const KNOWN_SOLUTIONS: &[KnownSolution] = &[
         seed: 1663183,
         stride: 2,
     },
+    KnownSolution {
+        problem_id: 18,
+        rng: Rng::Default,
+        seed: 288180,
+        stride: 1,
+    },
 ];
 
 fn submit_all_main() -> Result<()> {
@@ -432,8 +442,9 @@ fn main() -> Result<()> {
         Command::Search {
             rng,
             stride,
+            start_seed,
             problem_id,
-        } => search_main(problem_id, stride, &rng),
+        } => search_main(problem_id, stride, &rng, start_seed),
         Command::Compile {
             rng,
             stride,
