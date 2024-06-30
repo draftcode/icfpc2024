@@ -19,5 +19,5 @@ members = [
   "chun/spaceship_trivialsolver",
   "fuqinho/fuqinho-spaceship",
   "nya/lambdaman",
-  "lm",
+  "lm", "chun/spaceship_analytical",
 ]
