@@ -337,6 +337,18 @@ fn compile_expr(
     let seed = seed as u128;
 
     let steps = (moves / stride) as u128;
+
+    let mut seeds = vec![seed as u64];
+    for _ in 1..=steps {
+        let (_, new_seed) = rng.next(*seeds.last().unwrap());
+        seeds.push(new_seed);
+    }
+    let last_seed = seeds.pop().unwrap();
+    if seeds.contains(&last_seed) {
+        bail!("seed cycle detected");
+    }
+    let last_seed = last_seed as u128;
+
     let step_expr = match stride {
         1 => icfp! { (take 1 (drop (/ s 4611686018427387904) "LUDR")) },
         2 => icfp! { (take 2 (drop (* (/ s 4611686018427387904) 2) "LLUUDDRR")) },
@@ -345,13 +357,13 @@ fn compile_expr(
 
     // ***HELP ME***: Optimize this code.
     let expr = icfp! {
-        (concat (#header) (fix (fn f c s ->
-            (if (== c 0) {
+        (concat (#header) (fix (fn f s ->
+            (if (== s (#last_seed)) {
                 ""
             } else {
-                (concat (#step_expr) (f (- c 1) (#rng_expr)))
+                (concat (#step_expr) (f (#rng_expr)))
             })
-        ) (#steps) (#seed)))
+        ) (#seed)))
     };
     Ok(expr)
 }
