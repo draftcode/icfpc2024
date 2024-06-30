@@ -4,6 +4,7 @@ import {
   CellValue,
   parseStateString,
   serializeState,
+  serializeToTSV,
 } from "@/components/threededit/state";
 import { useState } from "react";
 
@@ -15,6 +16,7 @@ export default function Page() {
   const [minY, setMinY] = useState(size.minY);
   const [maxX, setMaxX] = useState(size.maxX);
   const [maxY, setMaxY] = useState(size.maxY);
+  const [copied, setCopied] = useState(false);
 
   const setCell = (cell: CellValue) => {
     const newState = new Map(state);
@@ -34,8 +36,14 @@ export default function Page() {
         placeholder="ここに盤面だけはります"
         value={input}
         onChange={(e) => {
-          setInput(e.target.value);
-          setState(parseStateString(e.target.value));
+          const state = parseStateString(e.target.value);
+          const size = getSize(state);
+          setMinX(Math.min(minX, size.minX));
+          setMinY(Math.min(minY, size.minY));
+          setMaxX(Math.max(maxX, size.maxX));
+          setMaxY(Math.max(maxY, size.maxY));
+          setState(state);
+          setInput(serializeState(state));
         }}
       ></textarea>
       <div className="space-y-2">
@@ -71,6 +79,18 @@ export default function Page() {
             }}
           >
             {"v"}
+          </button>
+          <button
+            className="btn btn-sm"
+            onClick={() => {
+              navigator.clipboard.writeText(serializeToTSV(state));
+              setCopied(true);
+              setTimeout(() => {
+                setCopied(false);
+              }, 2000);
+            }}
+          >
+            {copied ? "コピーしました" : "エクセル用にコピー"}
           </button>
         </div>
         <EditableState
@@ -115,9 +135,13 @@ function PlainState({ state }: { state: Map<string, CellValue> }) {
   for (let y = minY; y <= maxY; y++) {
     const row = [];
     for (let x = minX; x <= maxX; x++) {
-      row.push(<PlainCell cell={state.get(`${x},${y}`)} />);
+      row.push(<PlainCell key={`${x},${y}`} cell={state.get(`${x},${y}`)} />);
     }
-    rows.push(<div className="flex">{row}</div>);
+    rows.push(
+      <div key={`row-${y}`} className="flex">
+        {row}
+      </div>,
+    );
   }
   return <div className="font-mono">{rows}</div>;
 }
@@ -157,6 +181,7 @@ function EditableState({
     for (let x = minX; x <= maxX; x++) {
       row.push(
         <EditableCell
+          key={`${x},${y}`}
           cell={state.get(`${x},${y}`)}
           x={x}
           y={y}
@@ -164,7 +189,11 @@ function EditableState({
         />,
       );
     }
-    rows.push(<div className="flex">{row}</div>);
+    rows.push(
+      <div key={`row-${y}`} className="flex">
+        {row}
+      </div>,
+    );
   }
   return <div className="font-mono">{rows}</div>;
 }
