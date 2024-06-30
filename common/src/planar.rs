@@ -247,17 +247,29 @@ pub fn print_for_submit(state: &State) -> String {
 impl State {
     pub fn new(board: &str, a: i32, b: i32) -> anyhow::Result<Self> {
         let mut s: State = Default::default();
+
+        let mut col_max = 0;
+        for l in board.lines() {
+            let mut col_len = 0;
+            let _ = l.split_whitespace().for_each(|_| col_len += 1);
+            col_max = col_max.max(col_len);
+        }
+
+        s.board.0.push(vec![Cell::Empty; col_max + 2]);
         for l in board.lines() {
             if l.is_empty() || l.chars().nth(0).unwrap() == '?' {
                 continue;
             }
-            let mut row = vec![];
+            let mut row = vec![Cell::Empty];
             for c in l.split_whitespace() {
                 row.push(Cell::from_str(c)?);
             }
-            row.push(Cell::Empty);
+            while row.len() < col_max + 2 {
+                row.push(Cell::Empty);
+            }
             s.board.0.push(row);
         }
+        s.board.0.push(vec![Cell::Empty; col_max + 2]);
         s.input_a = a;
         s.input_b = b;
 
@@ -289,6 +301,7 @@ impl State {
             for c in l.split_whitespace() {
                 row.push(Cell::from_str(c)?);
             }
+            row.push(Cell::Empty);
             s.board.0.push(row);
         }
         s.input_a = a;
@@ -419,12 +432,7 @@ impl State {
             self.tick = (target_t + 1) as i32;
             self.history = self.history.split_at(target_t).0.to_vec();
             for (_, x, y, v) in &warp_requests {
-                self.write_to(
-                    &mut new_board,
-                    *x as usize,
-                    *y as usize,
-                    Cell::Number(v.clone()),
-                )?;
+                self.write_to(&mut new_board, *x, *y, Cell::Number(v.clone()))?;
             }
         }
 
@@ -465,8 +473,6 @@ impl State {
         if !self.writable(board, (to_x, to_y)) {
             bail!("Trying to write the cell twice {},{}", to_x, to_y);
         }
-        let to_x = to_x as usize;
-        let to_y = to_y as usize;
         if let Some(i) = self.get_number((from_x, from_y)) {
             self.write_to(board, to_x, to_y, Cell::Number(i))?;
             // Not updating written
@@ -483,13 +489,15 @@ impl State {
     fn write_to(
         &mut self,
         board: &mut Vec<Vec<Cell>>,
-        x: usize,
-        y: usize,
+        x: i32,
+        y: i32,
         v: Cell,
     ) -> anyhow::Result<()> {
-        if !inside(&board, (x as i32, y as i32)) {
+        if !inside(&board, (x, y)) {
             bail!("Invalid write to {},{}", x, y);
         }
+        let x = x as usize;
+        let y = y as usize;
         if let Cell::Submit = board[y][x] {
             if let Cell::Number(i) = v.clone() {
                 self.output = Some(i);
@@ -555,23 +563,13 @@ impl State {
             if !self.writable(board, to1) {
                 bail!("Writing to the same cell twice: {:?}", to1);
             }
-            self.write_to(
-                board,
-                to1.0 as usize,
-                to1.1 as usize,
-                Cell::Number(result.clone()),
-            )?;
+            self.write_to(board, to1.0, to1.1, Cell::Number(result.clone()))?;
         }
         if inside(&board, to2) {
             if !self.writable(board, to2) {
                 bail!("Writing to the same cell twice: {:?}", to2);
             }
-            self.write_to(
-                board,
-                to2.0 as usize,
-                to2.1 as usize,
-                Cell::Number(result.clone()),
-            )?;
+            self.write_to(board, to2.0, to2.1, Cell::Number(result.clone()))?;
         }
 
         // Make the argument cells empty only when no other ops wrote there.
@@ -621,13 +619,13 @@ impl State {
                 if !self.writable(board, to1) {
                     bail!("Trying to write to the same cell twice: {:?}", to1);
                 }
-                self.write_to(board, to1.0 as usize, to1.1 as usize, Cell::Number(op2))?;
+                self.write_to(board, to1.0, to1.1, Cell::Number(op2))?;
             }
             if inside(board, to2) {
                 if !self.writable(&board, to2) {
                     bail!("Trying to write to the same cell twice: {:?}", to2);
                 }
-                self.write_to(board, to2.0 as usize, to2.1 as usize, Cell::Number(op1))?;
+                self.write_to(board, to2.0, to2.1, Cell::Number(op1))?;
             }
             if self.writable(board, arg1) {
                 self.raw_write(board, arg1, Cell::Empty)?;
