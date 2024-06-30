@@ -11,6 +11,7 @@ pub enum Rng {
     Default,
     Better,
     DefaultRev,
+    SmallModRev,
 }
 
 impl Rng {
@@ -19,6 +20,7 @@ impl Rng {
             "default" => Some(Self::Default),
             "better" => Some(Self::Better),
             "default-rev" => Some(Self::DefaultRev),
+            "small-mod-rev" => Some(Self::SmallModRev),
             _ => None,
         }
     }
@@ -39,6 +41,11 @@ impl Rng {
                 // pow(48271, -1, 18446744073709551557) = 17779510845628573806
                 ((state as u128).wrapping_mul(17779510845628573806) % 18446744073709551557) as u64,
             ),
+            Self::SmallModRev => (
+                // pow(445271, -1, 830513) = 48271
+                (state / 207629).into(),
+                state.wrapping_mul(445271) % 830513,
+            ),
         }
     }
 
@@ -50,6 +57,9 @@ impl Rng {
             },
             Self::Better => icfp! {
                 (% (+ (* s 0xd1342543de82ef95) 1) 18446744073709551616)
+            },
+            Self::SmallModRev => icfp! {
+                (% (* s 48271) 830513)
             },
         }
     }
@@ -79,9 +89,15 @@ impl Rng {
         }
         let last_seed = last_seed as u128;
 
+        let div = if self == &Self::SmallModRev {
+            207629
+        } else {
+            4611686018427387904
+        };
+
         let step_expr = match stride {
-            1 => icfp! { (take 1 (drop (/ s 4611686018427387904) "LUDR")) },
-            2 => icfp! { (take 2 (drop (* (/ s 4611686018427387904) 2) "LLUUDDRR")) },
+            1 => icfp! { (take 1 (drop (/ s (#div)) "LUDR")) },
+            2 => icfp! { (take 2 (drop (* (/ s (#div)) 2) "LLUUDDRR")) },
             _ => bail!("unsupported stride: {stride}"),
         };
 
@@ -96,7 +112,7 @@ impl Rng {
                     })
                 ) (#seed)))
             },
-            Self::DefaultRev => icfp! {
+            Self::DefaultRev | Self::SmallModRev => icfp! {
                 (fix (fn f s ->
                     (if (== s (#seed)) {
                         (#header)
