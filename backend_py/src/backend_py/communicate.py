@@ -9,7 +9,9 @@ from .config import settings
 from .deps import SessionDep
 from .models import CommunicationLog
 
-http_client = httpx.Client(headers={"Authorization": f"Bearer {settings.API_TOKEN}"})
+http_client = httpx.Client(
+    headers={"Authorization": f"Bearer {settings.API_TOKEN}"}, timeout=60.0
+)
 
 
 def send_encoded_req(session: SessionDep, encoded_req: str) -> CommunicationLog:
