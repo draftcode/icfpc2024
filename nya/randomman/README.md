@@ -5,11 +5,11 @@
 Searching seeds:
 
 ```
-$ cargo run --release -p randomman -- search [--rng=<name>] <problemID>
+$ cargo run --release -p randomman -- search [--rng=<name>] [--stride=<N>] <problemID>
 ```
 
 Compiling code with a seed:
 
 ```
-$ cargo run --release -p randomman -- compile <problemID> <seed>
+$ cargo run --release -p randomman -- compile [--rng=<name>] [--stride=<N>] <problemID> <seed>
 ```
