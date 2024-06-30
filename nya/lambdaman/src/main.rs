@@ -210,11 +210,12 @@ fn problem6() -> Expr {
 fn problem19() -> Expr {
     let header = "solve lambdaman19 ";
     icfp! {
+        let y = (fn f -> ((fn x -> (f (x x))) (fn x -> (f (x x))))) in
         (concat (#header)
             (
                 (fn r ->
                     (
-                        fix (fn f n ->
+                        y (fn f n ->
                             (if (< n 0) {
                                 ""
                             } else {
@@ -234,7 +235,7 @@ fn problem19() -> Expr {
                         6
                     )
                 )
-                (fix (fn f s n -> (if (== n 0) { s } else { (concat (f s (- n 1)) (f s (- n 1))) })))
+                (y (fn f s n -> (if (== n 0) { s } else { (concat (f s (- n 1)) (f s (- n 1))) })))
             )
         )
     }
@@ -284,11 +285,12 @@ fn problem20() -> Expr {
 }
 
 fn main() {
-    let expr = problem6();
+    let expr = problem19();
     println!("{}", expr.encoded());
     eprintln!("{}", expr);
+    eprintln!("{} bytes", expr.encoded().to_string().len());
     let Expr::String(s) = eval(&expr).unwrap() else {
         panic!("not a string")
     };
-    eprintln!("{}", s);
+    //eprintln!("{}", s);
 }
