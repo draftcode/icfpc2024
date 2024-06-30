@@ -299,32 +299,17 @@ fn problem20() -> Expr {
     }
 }
 
-fn problem11() -> Expr {
-    let lmap0 = LMap::from_id(11).unwrap();
+fn problem1x() -> Expr {
+    let lmap0 = LMap::from_id(15).unwrap();
 
-    // {
-    //     let mut rng = 4610551u128;
-    //     let mut route = String::new();
-    //     for step in 1..=500000 {
-    //         let d = match rng >> 62 {
-    //             0 => "LL",
-    //             1 => "UU",
-    //             2 => "DD",
-    //             3 => "RR",
-    //             _ => unreachable!(),
-    //         };
-    //         route.push_str(d);
-    //         rng = (rng * 48271) % (2u128.pow(64) - 59);
-    //     }
-    //     let mut lmap = lmap0.clone();
-    //     lmap.do_move(&route);
-    //     assert_eq!(lmap.remaining_pills(), 0);
-    //     println!("{}", route);
-    //     todo!();
-    // }
+    // lambdaman11: seed=4610551, a=48271, m=2^64-59, high bits
+    // lambdaman12: seed=663880, a=48271, m=2^64-59, high bits
+    // lambdaman13: seed=217404, a=48271, m=2^64-59, high bits
+    // lambdaman14: seed=35975, a=48271, m=2^64-59, high bits
+    // lambdaman15: seed=1663183, a=48271, m=2^64-59, high bits
 
     // let mut best = AtomicUsize::new(1000000);
-    // (0..=1000000u128).into_par_iter().for_each(|rng0| {
+    // (1000000..=10000000u128).into_par_iter().for_each(|rng0| {
     //     if rng0 % 100 == 0 {
     //         eprint!("{}\r", rng0);
     //     }
@@ -354,21 +339,25 @@ fn problem11() -> Expr {
     //     }
     // });
 
+    // 11: B~ L2 B~ LD B. S3/,6%},!-"$!-!.VV} B~ B~ B~ B~ LF B~ LX B~ vF B~ vX vX LX B~ vF B~ vX vX LF LC LS LR ? B= vC I! vR B~ B~ B~ vF B- vC I" B~ v2 vS B. vR B. B~ vD vS B~ vD vS IYX/ I&TkH S LS BT I" BD B/ vS I)%TWQ;bL\3 SFO>L LS B% B* vS I&LR IA33?&-jqQ.
+    // 12: B~ L2 B~ LD B. S3/,6%},!-"$!-!.VW} B~ B~ B~ B~ LF B~ LX B~ vF B~ vX vX LX B~ vF B~ vX vX LF LC LS LR ? B= vC I! vR B~ B~ B~ vF B- vC I" B~ v2 vS B. vR B. B~ vD vS B~ vD vS IYX/ Il-U S LS BT I" BD B/ vS I)%TWQ;bL\3 SFO>L LS B% B* vS I&LR IA33?&-jqQ.
+    // 13: B~ L2 B~ LD B. S3/,6%},!-"$!-!.VX} B~ B~ B~ B~ LF B~ LX B~ vF B~ vX vX LX B~ vF B~ vX vX LF LC LS LR ? B= vC I! vR B~ B~ B~ vF B- vC I" B~ v2 vS B. vR B. B~ vD vS B~ vD vS IYX/ I9Ym S LS BT I" BD B/ vS I)%TWQ;bL\3 SFO>L LS B% B* vS I&LR IA33?&-jqQ.
+    // 14: B~ L2 B~ LD B. S3/,6%},!-"$!-!.VY} B~ B~ B~ B~ LF B~ LX B~ vF B~ vX vX LX B~ vF B~ vX vX LF LC LS LR ? B= vC I! vR B~ B~ B~ vF B- vC I" B~ v2 vS B. vR B. B~ vD vS B~ vD vS IYX/ I%'d S LS BT I" BD B/ vS I)%TWQ;bL\3 SFO>L LS B% B* vS I&LR IA33?&-jqQ.
     icfp! {
         let R = (fn s -> (% (* s 48271) 18446744073709551557)) in
         let d = (fn s -> (take 1 (drop (/ s 4611686018427387904) "LUDR"))) in
-        (concat "solve lambdaman11 " (fix (fn f c s r ->
+        (concat "solve lambdaman15 " (fix (fn f c s r ->
             (if (== c 0) {
                 r
             } else {
                 (f (- c 1) (R s) (concat r (concat (d s) (d s))))
             })
-        ) 500000 4610551 ""))
+        ) 500000 1663183 ""))
     }
 }
 
 fn main() {
-    let expr = problem11();
+    let expr = problem1x();
     println!("{}", expr.encoded());
     eprintln!("{}", expr);
     eprintln!("{} bytes", expr.encoded().to_string().len());
