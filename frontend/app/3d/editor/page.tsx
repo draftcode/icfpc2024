@@ -239,9 +239,6 @@ function Debugger({ input }: { input: string }) {
   const [step, setStep] = useState(0);
   const [state, setState] = useState(parseStateString(input));
   const { data, error, trigger } = use3DSimulation();
-  if (error) {
-    throw error;
-  }
   useEffect(() => {
     if (data?.board) {
       setState(parseStateString(data.board));
@@ -277,7 +274,22 @@ function Debugger({ input }: { input: string }) {
           </label>
         </div>
         <div className="grid grid-cols-2 gap-x-2">
-          <PlainState state={state} />
+          {error ? (
+            <div className="pt-4 space-y-4">
+              <h2 className="font-bold">エラーが発生しました</h2>
+              <div>{error.message}</div>
+              <button
+                className="btn btn-sm"
+                onClick={() => {
+                  trigger({ board: input, valA, valB, turns: step });
+                }}
+              >
+                もう一回実行
+              </button>
+            </div>
+          ) : (
+            <PlainState state={state} />
+          )}
           <div>
             <div>ステップ: {step}</div>
             <div className="flex gap-x-2">
