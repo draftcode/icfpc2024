@@ -22,7 +22,21 @@ pub enum Cell {
     Eq,
     Neq,
     Submit,
-    Label(String),
+    Label(String, Option<i32>),
+}
+
+fn parse_label(s: &str) -> anyhow::Result<(String, Option<i32>)> {
+    if !s.contains("[") {
+        return Ok((s.to_owned(), None));
+    }
+    let v = s.split("[").collect::<Vec<&str>>();
+    let name = v[0].to_owned();
+    let v = v[1].split("]").collect::<Vec<&str>>();
+    let v = v[0].parse::<i32>();
+    if v.is_err() {
+        bail!("Failed to parse the label value");
+    }
+    Ok((name, Some(v.unwrap())))
 }
 
 impl FromStr for Cell {
@@ -55,7 +69,8 @@ impl FromStr for Cell {
                 }
                 _ => {
                     if s.len() >= 1 && s.chars().nth(0).unwrap() != '@' {
-                        Cell::Label(s.to_owned())
+                        let (name, v) = parse_label(s)?;
+                        Cell::Label(name, v)
                     } else if s.len() >= 2 && s.chars().next().unwrap() == '@' {
                         let label = &s[1..];
                         Cell::Warp(label.to_owned())
@@ -95,7 +110,13 @@ impl std::fmt::Display for Cell {
             Cell::Neq => write!(f, "#"),
             Cell::Submit => write!(f, "S"),
             Cell::Number(i) => write!(f, "{}", i.to_string()),
-            Cell::Label(c) => write!(f, "{}", c),
+            Cell::Label(c, init) => {
+                if init.is_some() {
+                    write!(f, "{}[{}]", c, init.unwrap())
+                } else {
+                    write!(f, "{}", c)
+                }
+            }
         }
     }
 }
@@ -275,12 +296,12 @@ impl State {
         let mut refs = vec![];
         for y in 0..self.board.0.len() {
             for x in 0..self.board.0[y].len() {
-                if let Cell::Label(c) = &self.board.0[y][x] {
-                    labels.push((c.clone(), x, y));
+                if let Cell::Label(c, init) = &self.board.0[y][x] {
+                    labels.push((c.clone(), x, y, *init));
                 } else if let Cell::InputA = self.board.0[y][x] {
-                    labels.push(("A".to_owned(), x, y));
+                    labels.push(("A".to_owned(), x, y, None));
                 } else if let Cell::InputB = self.board.0[y][x] {
-                    labels.push(("B".to_owned(), x, y));
+                    labels.push(("B".to_owned(), x, y, None));
                 } else if let Cell::Warp(c) = &self.board.0[y][x] {
                     if c == "_" {
                         continue;
@@ -291,7 +312,7 @@ impl State {
         }
 
         for (c, x, y) in refs {
-            for (l, tx, ty) in labels.iter() {
+            for (l, tx, ty, init) in labels.iter() {
                 if c == *l {
                     let dx = x as i32 - *tx as i32;
                     let dy = y as i32 - *ty as i32;
@@ -302,11 +323,15 @@ impl State {
         }
 
         // Clear labels
-        for (l, x, y) in labels.iter() {
+        for (l, x, y, init) in labels.iter() {
             if l == "A" || l == "B" {
                 continue;
             }
-            self.board.0[*y][*x] = Cell::Empty;
+            if init.is_none() {
+                self.board.0[*y][*x] = Cell::Empty;
+            } else {
+                self.board.0[*y][*x] = Cell::Number(init.unwrap().into());
+            }
         }
         Ok(())
     }
@@ -314,7 +339,7 @@ impl State {
     pub fn onestep(&mut self) -> anyhow::Result<()> {
         for y in 0..self.board.0.len() {
             for x in 0..self.board.0[y].len() {
-                if let Cell::Label(_) = self.board.0[y][x] {
+                if let Cell::Label(_, _) = self.board.0[y][x] {
                     bail!("Please call resolve_label() before one_step()");
                 }
             }
