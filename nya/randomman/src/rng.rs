@@ -29,14 +29,11 @@ impl Rng {
                 (state >> 62).into(),
                 ((state as u128).wrapping_mul(48271) % 18446744073709551557) as u64,
             ),
-            Self::Better =>
             // https://arxiv.org/abs/2001.05304v3
-            {
-                (
-                    (state >> 62).into(),
-                    state.wrapping_mul(0xd1342543de82ef95).wrapping_add(1),
-                )
-            }
+            Self::Better => (
+                (state >> 62).into(),
+                state.wrapping_mul(0xd1342543de82ef95).wrapping_add(1),
+            ),
             Self::V2 => todo!(),
         }
     }
