@@ -1,12 +1,13 @@
 "use client";
 
+import { use3DSimulation } from "@/components/api";
 import {
   CellValue,
   parseStateString,
   serializeState,
   serializeToTSV,
 } from "@/components/threededit/state";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function Page() {
   const [input, setInput] = useState("");
@@ -17,6 +18,7 @@ export default function Page() {
   const [maxX, setMaxX] = useState(size.maxX);
   const [maxY, setMaxY] = useState(size.maxY);
   const [copied, setCopied] = useState(false);
+  const [debugInput, setDebugInput] = useState("");
 
   const setCell = (cell: CellValue) => {
     const newState = new Map(state);
@@ -30,78 +32,89 @@ export default function Page() {
   };
 
   return (
-    <div className="grid grid-cols-2 gap-x-2">
-      <textarea
-        className="textarea textarea-bordered font-mono"
-        placeholder="ここに盤面だけはります"
-        value={input}
-        onChange={(e) => {
-          const state = parseStateString(e.target.value);
-          const size = getSize(state);
-          setMinX(Math.min(minX, size.minX));
-          setMinY(Math.min(minY, size.minY));
-          setMaxX(Math.max(maxX, size.maxX));
-          setMaxY(Math.max(maxY, size.maxY));
-          setState(state);
-          setInput(serializeState(state));
-        }}
-      ></textarea>
-      <div className="space-y-2">
-        <div className="space-x-2">
-          <button
-            className="btn btn-sm"
-            onClick={() => {
-              setMinX(minX - 1);
-            }}
-          >
-            {"<"}
-          </button>
-          <button
-            className="btn btn-sm"
-            onClick={() => {
-              setMinY(minY - 1);
-            }}
-          >
-            {"^"}
-          </button>
-          <button
-            className="btn btn-sm"
-            onClick={() => {
-              setMaxX(maxX + 1);
-            }}
-          >
-            {">"}
-          </button>
-          <button
-            className="btn btn-sm"
-            onClick={() => {
-              setMaxY(maxY + 1);
-            }}
-          >
-            {"v"}
-          </button>
-          <button
-            className="btn btn-sm"
-            onClick={() => {
-              navigator.clipboard.writeText(serializeToTSV(state));
-              setCopied(true);
-              setTimeout(() => {
-                setCopied(false);
-              }, 2000);
-            }}
-          >
-            {copied ? "コピーしました" : "エクセル用にコピー"}
-          </button>
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-x-2">
+        <textarea
+          className="textarea textarea-bordered font-mono"
+          placeholder="ここに盤面だけはります"
+          value={input}
+          onChange={(e) => {
+            const state = parseStateString(e.target.value);
+            const size = getSize(state);
+            setMinX(Math.min(minX, size.minX));
+            setMinY(Math.min(minY, size.minY));
+            setMaxX(Math.max(maxX, size.maxX));
+            setMaxY(Math.max(maxY, size.maxY));
+            setState(state);
+            setInput(serializeState(state));
+          }}
+        ></textarea>
+        <div className="space-y-2">
+          <div className="space-x-2">
+            <button
+              className="btn btn-sm"
+              onClick={() => {
+                setMinX(minX - 1);
+              }}
+            >
+              {"<"}
+            </button>
+            <button
+              className="btn btn-sm"
+              onClick={() => {
+                setMinY(minY - 1);
+              }}
+            >
+              {"^"}
+            </button>
+            <button
+              className="btn btn-sm"
+              onClick={() => {
+                setMaxX(maxX + 1);
+              }}
+            >
+              {">"}
+            </button>
+            <button
+              className="btn btn-sm"
+              onClick={() => {
+                setMaxY(maxY + 1);
+              }}
+            >
+              {"v"}
+            </button>
+            <button
+              className="btn btn-sm"
+              onClick={() => {
+                navigator.clipboard.writeText(serializeToTSV(state));
+                setCopied(true);
+                setTimeout(() => {
+                  setCopied(false);
+                }, 2000);
+              }}
+            >
+              {copied ? "コピーしました" : "エクセル用にコピー"}
+            </button>
+            <button
+              className="btn btn-sm"
+              onClick={() => {
+                setDebugInput(input);
+              }}
+            >
+              実行開始
+            </button>
+          </div>
+          <EditableState
+            state={state}
+            minX={minX}
+            minY={minY}
+            maxX={maxX}
+            maxY={maxY}
+            setCell={setCell}
+          />
         </div>
-        <EditableState
-          state={state}
-          minX={minX}
-          minY={minY}
-          maxX={maxX}
-          maxY={maxY}
-          setCell={setCell}
-        />
       </div>
+      {debugInput && <Debugger input={debugInput} key={debugInput} />}
     </div>
   );
 }
@@ -217,5 +230,73 @@ function EditableCell({
         setCell({ coord: [x, y], value: e.target.value });
       }}
     />
+  );
+}
+
+function Debugger({ input }: { input: string }) {
+  const [valA, setValA] = useState(0);
+  const [valB, setValB] = useState(0);
+  const [step, setStep] = useState(0);
+  const [state, setState] = useState(parseStateString(input));
+  const { data, error, trigger } = use3DSimulation();
+  if (error) {
+    throw error;
+  }
+  useEffect(() => {
+    if (data?.board) {
+      setState(parseStateString(data.board));
+    }
+  }, [data?.board]);
+
+  const updateStep = (dstep: number) => {
+    setStep((s) => Math.max(0, s + dstep));
+    trigger({ board: input, valA, valB, turns: Math.max(step + dstep) });
+  };
+
+  return (
+    <div>
+      <hr />
+      <div className="pt-4 space-y-4">
+        <h2 className="font-bold">実行結果</h2>
+        <div className="flex gap-x-2">
+          <label className="input input-sm input-bordered flex items-center gap-2">
+            Value A
+            <input
+              type="number"
+              value={valA}
+              onChange={(e) => setValA(parseInt(e.target.value))}
+            />
+          </label>
+          <label className="input input-sm input-bordered flex items-center gap-2">
+            Value B
+            <input
+              type="number"
+              value={valB}
+              onChange={(e) => setValB(parseInt(e.target.value))}
+            />
+          </label>
+        </div>
+        <div className="grid grid-cols-2 gap-x-2">
+          <PlainState state={state} />
+          <div>
+            <div>ステップ: {step}</div>
+            <div className="flex gap-x-2">
+              <button className="btn btn-xs" onClick={() => updateStep(-10)}>
+                10戻る
+              </button>
+              <button className="btn btn-xs" onClick={() => updateStep(-1)}>
+                1戻る
+              </button>
+              <button className="btn btn-xs" onClick={() => updateStep(1)}>
+                1進む
+              </button>
+              <button className="btn btn-xs" onClick={() => updateStep(10)}>
+                10進む
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
