@@ -279,10 +279,10 @@ pub enum Expr {
     Int(Rc<BigInt>),
     String(Rc<String>),
     Var(usize),
-    Un(UnOp, Box<Expr>),
-    Bin(BinOp, Box<Expr>, Box<Expr>),
-    If(Box<Expr>, Box<Expr>, Box<Expr>),
-    Lambda(usize, Box<Expr>),
+    Un(UnOp, Rc<Expr>),
+    Bin(BinOp, Rc<Expr>, Rc<Expr>),
+    If(Rc<Expr>, Rc<Expr>, Rc<Expr>),
+    Lambda(usize, Rc<Expr>),
 }
 
 impl std::fmt::Display for Expr {
@@ -333,22 +333,22 @@ impl Expr {
             Some(Token::String(s)) => Expr::String(s.clone().into()),
             Some(Token::Var(v)) => Expr::Var(*v),
             Some(Token::Un(op)) => {
-                let e = Box::new(Self::parse_expr(cur)?);
+                let e = Rc::new(Self::parse_expr(cur)?);
                 Expr::Un(*op, e)
             }
             Some(Token::Bin(op)) => {
-                let e1 = Box::new(Self::parse_expr(cur)?);
-                let e2 = Box::new(Self::parse_expr(cur)?);
+                let e1 = Rc::new(Self::parse_expr(cur)?);
+                let e2 = Rc::new(Self::parse_expr(cur)?);
                 Expr::Bin(*op, e1, e2)
             }
             Some(Token::If) => {
-                let e1 = Box::new(Self::parse_expr(cur)?);
-                let e2 = Box::new(Self::parse_expr(cur)?);
-                let e3 = Box::new(Self::parse_expr(cur)?);
+                let e1 = Rc::new(Self::parse_expr(cur)?);
+                let e2 = Rc::new(Self::parse_expr(cur)?);
+                let e3 = Rc::new(Self::parse_expr(cur)?);
                 Expr::If(e1, e2, e3)
             }
             Some(Token::Lambda(v)) => {
-                let e = Box::new(Self::parse_expr(cur)?);
+                let e = Rc::new(Self::parse_expr(cur)?);
                 Expr::Lambda(*v, e)
             }
             e => bail!("invalid expr: {e:?}"),

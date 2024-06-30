@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::expr::{BinOp, Expr};
 
 pub fn cps_conversion(e: &Expr) -> Expr {
@@ -13,10 +15,10 @@ fn cps_conv_internal(e: &Expr) -> Expr {
         Expr::String(_) => e.clone(),
         Expr::Var(v) => Expr::Lambda(
             200,
-            Box::new(Expr::Bin(
+            Rc::new(Expr::Bin(
                 BinOp::AppV,
-                Box::new(Expr::Var(200)),
-                Box::new(Expr::Var(*v)),
+                Rc::new(Expr::Var(200)),
+                Rc::new(Expr::Var(*v)),
             )),
         ),
         Expr::Un(_, _) => e.clone(),
@@ -26,24 +28,24 @@ fn cps_conv_internal(e: &Expr) -> Expr {
                 let r = cps_conv_internal(r);
                 Expr::Lambda(
                     100,
-                    Box::new(Expr::Bin(
+                    Rc::new(Expr::Bin(
                         BinOp::AppV,
-                        Box::new(l),
-                        Box::new(Expr::Lambda(
+                        Rc::new(l),
+                        Rc::new(Expr::Lambda(
                             101,
-                            Box::new(Expr::Bin(
+                            Rc::new(Expr::Bin(
                                 BinOp::AppV,
-                                Box::new(r),
-                                Box::new(Expr::Lambda(
+                                Rc::new(r),
+                                Rc::new(Expr::Lambda(
                                     102,
-                                    Box::new(Expr::Bin(
+                                    Rc::new(Expr::Bin(
                                         BinOp::AppV,
-                                        Box::new(Expr::Bin(
+                                        Rc::new(Expr::Bin(
                                             BinOp::AppV,
-                                            Box::new(Expr::Var(101)),
-                                            Box::new(Expr::Var(102)),
+                                            Rc::new(Expr::Var(101)),
+                                            Rc::new(Expr::Var(102)),
                                         )),
-                                        Box::new(Expr::Var(100)),
+                                        Rc::new(Expr::Var(100)),
                                     )),
                                 )),
                             )),
@@ -57,10 +59,10 @@ fn cps_conv_internal(e: &Expr) -> Expr {
         Expr::If(_, _, _) => e.clone(),
         Expr::Lambda(v, e) => {
             let e = cps_conv_internal(e);
-            let lin = Box::new(Expr::Lambda(*v, Box::new(e)));
+            let lin = Rc::new(Expr::Lambda(*v, Rc::new(e)));
             Expr::Lambda(
                 100,
-                Box::new(Expr::Bin(BinOp::AppV, Box::new(Expr::Var(100)), lin)),
+                Rc::new(Expr::Bin(BinOp::AppV, Rc::new(Expr::Var(100)), lin)),
             )
         }
     }
