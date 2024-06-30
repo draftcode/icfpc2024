@@ -1,6 +1,9 @@
 use std::rc::Rc;
 
-use common::expr::{BinOp, Expr};
+use common::{
+    eval::eval,
+    expr::{BinOp, Expr},
+};
 use num_bigint::BigInt;
 
 trait ToExpr {
@@ -146,6 +149,54 @@ fn problem19() -> Expr {
     }
 }
 
+fn problem20() -> Expr {
+    let header = "solve lambdaman20 ";
+    icfp! {
+        (concat (#header)
+            (
+                (fn r ->
+                    (
+                        fix (fn f n o ->
+                            (if (== n 0) {
+                                ""
+                            } else {
+                                (concat (concat (concat (concat (concat (concat (concat (concat (concat (concat (concat (concat (concat (concat (concat (concat (concat (concat
+                                    (r "U" n)
+                                    "R")
+                                    (f (- n 1)))
+                                    "L")
+                                    (r "D" n))
+                                    "L")
+                                    (r "D" n))
+                                    (f (- n 1)))
+                                    (r "U" n))
+                                    (r "L" n))
+                                    "UR")
+                                    (f (- n 1)))
+                                    "D")
+                                    (r "R" n))
+                                    "D")
+                                    (r "R" n))
+                                    (f (- n 1)))
+                                    (r "L" n))
+                                    "U")
+                            })
+                        )
+                        6
+                        "x"
+                    )
+                )
+                (fix (fn f s n -> (if (== n 0) { s } else { (concat (f s (- n 1)) (f s (- n 1))) })))
+            )
+        )
+    }
+}
+
 fn main() {
-    println!("{}", problem19().encoded());
+    let expr = problem20();
+    println!("{}", expr.encoded());
+    let Expr::String(s) = eval(&expr).unwrap() else {
+        panic!("not a string")
+    };
+    println!("{}", s);
 }
