@@ -61,50 +61,6 @@ enum Command {
     SubmitAll,
 }
 
-fn compile_expr(
-    problem_id: usize,
-    seed: u64,
-    stride: usize,
-    moves: usize,
-    rng: &Rng,
-) -> Result<Expr> {
-    let rng_expr = rng.expr();
-
-    let header = format!("solve lambdaman{problem_id} ");
-    let seed = seed as u128;
-
-    let steps = (moves / stride) as u128;
-
-    let mut seeds = vec![seed as u64];
-    for _ in 1..=steps {
-        let (_, new_seed) = rng.next(*seeds.last().unwrap());
-        seeds.push(new_seed);
-    }
-    let last_seed = seeds.pop().unwrap();
-    if seeds.contains(&last_seed) {
-        bail!("seed cycle detected");
-    }
-    let last_seed = last_seed as u128;
-
-    let step_expr = match stride {
-        1 => icfp! { (take 1 (drop (/ s 4611686018427387904) "LUDR")) },
-        2 => icfp! { (take 2 (drop (* (/ s 4611686018427387904) 2) "LLUUDDRR")) },
-        _ => bail!("unsupported stride: {stride}"),
-    };
-
-    // ***HELP ME***: Optimize this code.
-    let expr = icfp! {
-        (concat (#header) (fix (fn f s ->
-            (if (== s (#last_seed)) {
-                ""
-            } else {
-                (concat (#step_expr) (f (#rng_expr)))
-            })
-        ) (#seed)))
-    };
-    Ok(expr)
-}
-
 fn compile_main(
     problem_id: usize,
     seed: u64,
@@ -113,7 +69,7 @@ fn compile_main(
     rng_name: &str,
 ) -> Result<()> {
     let rng = Rng::from_name(rng_name).context("unknown RNG name")?;
-    let expr = compile_expr(problem_id, seed, stride, moves, &rng)?;
+    let expr = rng.compile_expr(problem_id, seed, stride, moves)?;
     println!("{}", expr.encoded());
     eprintln!("({} bytes)", expr.encoded().to_string().len());
     Ok(())
@@ -127,7 +83,7 @@ fn submit_main(
     rng_name: &str,
 ) -> Result<()> {
     let rng = Rng::from_name(rng_name).context("unknown RNG name")?;
-    let expr = compile_expr(problem_id, seed, stride, moves, &rng)?;
+    let expr = rng.compile_expr(problem_id, seed, stride, moves)?;
     do_submit(problem_id, &expr)?;
     Ok(())
 }
@@ -224,13 +180,10 @@ const KNOWN_SOLUTIONS: &[KnownSolution] = &[
 
 fn submit_all_main() -> Result<()> {
     for known in KNOWN_SOLUTIONS {
-        let expr = compile_expr(
-            known.problem_id,
-            known.seed,
-            known.stride,
-            known.moves,
-            &known.rng,
-        )?;
+        let expr =
+            known
+                .rng
+                .compile_expr(known.problem_id, known.seed, known.stride, known.moves)?;
         do_submit(known.problem_id, &expr)?;
     }
     Ok(())

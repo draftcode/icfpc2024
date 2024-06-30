@@ -58,6 +58,50 @@ impl Rng {
             },
         }
     }
+
+    pub fn compile_expr(
+        &self,
+        problem_id: usize,
+        seed: u64,
+        stride: usize,
+        moves: usize,
+    ) -> Result<Expr> {
+        let rng_expr = self.expr();
+
+        let header = format!("solve lambdaman{problem_id} ");
+        let seed = seed as u128;
+
+        let steps = (moves / stride) as u128;
+
+        let mut seeds = vec![seed as u64];
+        for _ in 1..=steps {
+            let (_, new_seed) = self.next(*seeds.last().unwrap());
+            seeds.push(new_seed);
+        }
+        let last_seed = seeds.pop().unwrap();
+        if seeds.contains(&last_seed) {
+            bail!("seed cycle detected");
+        }
+        let last_seed = last_seed as u128;
+
+        let step_expr = match stride {
+            1 => icfp! { (take 1 (drop (/ s 4611686018427387904) "LUDR")) },
+            2 => icfp! { (take 2 (drop (* (/ s 4611686018427387904) 2) "LLUUDDRR")) },
+            _ => bail!("unsupported stride: {stride}"),
+        };
+
+        // ***HELP ME***: Optimize this code.
+        let expr = icfp! {
+            (concat (#header) (fix (fn f s ->
+                (if (== s (#last_seed)) {
+                    ""
+                } else {
+                    (concat (#step_expr) (f (#rng_expr)))
+                })
+            ) (#seed)))
+        };
+        Ok(expr)
+    }
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
