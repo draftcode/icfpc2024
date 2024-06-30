@@ -221,6 +221,7 @@ impl State {
             for c in l.split_whitespace() {
                 row.push(Cell::from_str(c)?);
             }
+            row.push(Cell::Empty);
             s.board.0.push(row);
         }
         s.input_a = a;
