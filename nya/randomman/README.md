@@ -13,3 +13,15 @@ Compiling code with a seed:
 ```
 $ cargo run --release -p randomman -- compile [--rng=<name>] [--stride=<N>] <problemID> <seed>
 ```
+
+Compiling and submitting code with a seed:
+
+```
+$ cargo run --release -p randomman -- submit [--rng=<name>] [--stride=<N>] <problemID> <seed>
+```
+
+Submitting all known solutions:
+
+```
+$ cargo run --release -p randomman -- submit-all
+```

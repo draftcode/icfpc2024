@@ -7,7 +7,7 @@ use std::{
 
 use anyhow::{bail, ensure, Context, Result};
 use clap::{Parser, Subcommand};
-use common::expr::{BinOp, Expr};
+use common::expr::{BinOp, Expr, Token};
 use rayon::prelude::*;
 
 use crate::assembler::ToExpr;
@@ -51,12 +51,13 @@ impl Rng {
     }
 
     pub fn expr(&self) -> Expr {
+        // RNG expression takes `s` as an argument.
         match self {
             Self::Default => icfp! {
-                (fn s -> (% (* s 48271) 18446744073709551557))
+                (% (* s 48271) 18446744073709551557)
             },
             Self::Better => icfp! {
-                (fn s -> (% (+ (* s 0xd1342543de82ef95) 1) 18446744073709551616))
+                (% (+ (* s 0xd1342543de82ef95) 1) 18446744073709551616)
             },
         }
     }
@@ -248,9 +249,21 @@ enum Command {
 
         seed: u64,
     },
+    Submit {
+        #[arg(long, default_value_t = 2)]
+        stride: usize,
+
+        #[arg(long, default_value = "default")]
+        rng: String,
+
+        problem_id: usize,
+
+        seed: u64,
+    },
+    SubmitAll,
 }
 
-fn search(problem_id: usize, stride: usize, rng_name: &str) -> Result<()> {
+fn search_main(problem_id: usize, stride: usize, rng_name: &str) -> Result<()> {
     println!("Searching seed for problem {problem_id} with stride {stride}...");
 
     let game = load_game(problem_id)?;
@@ -293,33 +306,122 @@ fn search(problem_id: usize, stride: usize, rng_name: &str) -> Result<()> {
     Ok(())
 }
 
-fn compile(problem_id: usize, seed: u64, stride: usize, rng_name: &str) -> Result<()> {
-    let rng = Rng::from_name(rng_name).context("unknown RNG name")?;
+fn compile_expr(problem_id: usize, seed: u64, stride: usize, rng: &Rng) -> Result<Expr> {
     let rng_expr = rng.expr();
 
     let header = format!("solve lambdaman{problem_id} ");
     let seed = seed as u128;
 
     let step_expr = match stride {
-        1 => icfp! { (d s) },
-        2 => icfp! { (concat (d s) (d s)) },
+        1 => icfp! { (take 1 (drop (/ s 4611686018427387904) "LUDR")) },
+        2 => icfp! { (take 2 (drop (* (/ s 4611686018427387904) 2) "LLUUDDRR")) },
         _ => bail!("unsupported stride: {stride}"),
     };
 
     // ***HELP ME***: Optimize this code.
     let expr = icfp! {
-        let R = (#rng_expr) in
-        let d = (fn s -> (take 1 (drop (/ s 4611686018427387904) "LUDR"))) in
-        (concat (#header) (fix (fn f c s r ->
+        (concat (#header) (fix (fn f c s ->
             (if (== c 0) {
-                r
+                ""
             } else {
-                (f (- c 1) (R s) (concat r (#step_expr)))
+                (concat (#step_expr) (f (- c 1) (#rng_expr)))
             })
-        ) 500000 (#seed) ""))
+        ) 500000 (#seed)))
+    };
+    Ok(expr)
+}
+
+fn compile_main(problem_id: usize, seed: u64, stride: usize, rng_name: &str) -> Result<()> {
+    let rng = Rng::from_name(rng_name).context("unknown RNG name")?;
+    let expr = compile_expr(problem_id, seed, stride, &rng)?;
+    println!("{}", expr.encoded());
+    Ok(())
+}
+
+fn do_submit(problem_id: usize, expr: &Expr) -> Result<()> {
+    let api_token = std::env::var("API_TOKEN").context("API_TOKEN is not set")?;
+
+    eprintln!(
+        "lambdaman{problem_id}: submitting {}B solution...",
+        expr.encoded().to_string().len()
+    );
+
+    let client = reqwest::blocking::Client::new();
+
+    let response = client
+        .post("https://icfp-api.badalloc.com/communicate")
+        .header("Authorization", format!("Bearer {}", api_token))
+        .header("Content-Type", "text/plain")
+        .body(expr.encoded().to_string())
+        .send()?;
+    ensure!(
+        response.status().is_success(),
+        "request failed: {}",
+        response.status()
+    );
+
+    let raw = response.text()?;
+    let Ok(Token::String(text)) = raw.parse() else {
+        bail!("Failed to parse response: {raw}");
     };
 
-    println!("{}", expr.encoded());
+    eprintln!("lambdaman{problem_id}: {text}");
+    Ok(())
+}
+
+fn submit_main(problem_id: usize, seed: u64, stride: usize, rng_name: &str) -> Result<()> {
+    let rng = Rng::from_name(rng_name).context("unknown RNG name")?;
+    let expr = compile_expr(problem_id, seed, stride, &rng)?;
+    do_submit(problem_id, &expr)?;
+    Ok(())
+}
+
+struct KnownSolution {
+    problem_id: usize,
+    rng: Rng,
+    seed: u64,
+    stride: usize,
+}
+
+// ***HELP ME***: Please add known solutions here.
+const KNOWN_SOLUTIONS: &[KnownSolution] = &[
+    KnownSolution {
+        problem_id: 11,
+        rng: Rng::Default,
+        seed: 4610551,
+        stride: 2,
+    },
+    KnownSolution {
+        problem_id: 12,
+        rng: Rng::Default,
+        seed: 663880,
+        stride: 2,
+    },
+    KnownSolution {
+        problem_id: 13,
+        rng: Rng::Default,
+        seed: 217404,
+        stride: 2,
+    },
+    KnownSolution {
+        problem_id: 14,
+        rng: Rng::Default,
+        seed: 35975,
+        stride: 2,
+    },
+    KnownSolution {
+        problem_id: 15,
+        rng: Rng::Default,
+        seed: 1663183,
+        stride: 2,
+    },
+];
+
+fn submit_all_main() -> Result<()> {
+    for known in KNOWN_SOLUTIONS {
+        let expr = compile_expr(known.problem_id, known.seed, known.stride, &known.rng)?;
+        do_submit(known.problem_id, &expr)?;
+    }
     Ok(())
 }
 
@@ -331,12 +433,19 @@ fn main() -> Result<()> {
             rng,
             stride,
             problem_id,
-        } => search(problem_id, stride, &rng),
+        } => search_main(problem_id, stride, &rng),
         Command::Compile {
             rng,
             stride,
             problem_id,
             seed,
-        } => compile(problem_id, seed, stride, &rng),
+        } => compile_main(problem_id, seed, stride, &rng),
+        Command::Submit {
+            rng,
+            stride,
+            problem_id,
+            seed,
+        } => submit_main(problem_id, seed, stride, &rng),
+        Command::SubmitAll => submit_all_main(),
     }
 }
