@@ -1,48 +1,45 @@
 import {
   WaypointVizState,
-  calculateWaypoints,
 } from "@/components/spaceviz/state";
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useRef } from "react";
 
 const CANVAS_SIZE = 4000;
 
-export default function Visualizer({
-  path,
-  reqPoints,
-}: {
-  path: string;
-  reqPoints: [number, number][];
-}) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const waypoints = useMemo(() => calculateWaypoints(path), [path]);
+export default function Visualizer({ state }: { state: WaypointVizState }) {
+  const canvasCancelRef = useRef<(() => void) | null>(null);
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) {
-      return;
-    }
-
-    const state = new WaypointVizState(waypoints, reqPoints);
-    const remove = state.addEventListeners(canvas);
-    let animationFrameId: number = 0;
-    const render = () => {
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        state.plotWaypoints(ctx);
+  const initCanvas = useCallback(
+    (canvas: HTMLCanvasElement | null) => {
+      if (canvas) {
+        const remove = state.addEventListeners(canvas);
+        let animationFrameId: number = 0;
+        const render = () => {
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            state.plotWaypoints(ctx);
+            state.plotBasis(ctx);
+          }
+          animationFrameId = window.requestAnimationFrame(render);
+        };
+        render();
+        canvasCancelRef.current = () => {
+          remove();
+          window.cancelAnimationFrame(animationFrameId);
+        };
+      } else {
+        if (canvasCancelRef.current) {
+          canvasCancelRef.current();
+        }
       }
-      animationFrameId = window.requestAnimationFrame(render);
-    };
-    render();
-    return () => {
-      remove();
-      window.cancelAnimationFrame(animationFrameId);
-    };
-  }, [canvasRef]);
+    },
+    [state],
+  );
 
   return (
     <canvas
       className="w-full h-full border"
-      ref={canvasRef}
+      ref={initCanvas}
       width={CANVAS_SIZE}
       height={CANVAS_SIZE}
     ></canvas>

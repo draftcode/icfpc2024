@@ -4,12 +4,16 @@ import CommunicationContainer from "@/app/CommunicationContainer";
 import Sidebar from "@/app/Sidebar";
 import {
   CommunicationLog,
-  useCommunicationsWithRequestPrefix,
   useProblem,
+  useSolutions,
 } from "@/components/api";
-import { parseReqPoints } from "@/components/spaceviz/state";
+import {
+  WaypointVizState,
+  calculateWaypoints,
+  parseReqPoints,
+} from "@/components/spaceviz/state";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import Markdown from "react-markdown";
 import Visualizer from "../Visualizer";
 
@@ -25,8 +29,9 @@ export default function Home({
     "spaceship",
     parseInt(idStr),
   );
-  const { data, error } = useCommunicationsWithRequestPrefix(
-    `solve spaceship${idStr} `,
+  const { data, error } = useSolutions(
+    "spaceship",
+    parseInt(idStr),
     page * 10,
     10,
   );
@@ -49,7 +54,7 @@ export default function Home({
         <Sidebar current={`/spaceship/${idStr}`} />
         <div className="grow">
           <div className="space-y-4">
-            <Visualizer path={""} reqPoints={reqPoints} />
+            <SingleViz path={""} reqPoints={reqPoints} />
           </div>
         </div>
       </div>
@@ -93,6 +98,24 @@ export default function Home({
   );
 }
 
+function SingleViz({
+  path,
+  reqPoints,
+}: {
+  path: string;
+  reqPoints: [number, number][];
+}) {
+  const vizStateRef = useRef<WaypointVizState>(new WaypointVizState());
+  const waypoints = calculateWaypoints(path);
+  vizStateRef.current.setCheckPointsAndInitViewport(reqPoints, waypoints);
+
+  return (
+    <div className="space-y-4">
+      <Visualizer state={vizStateRef.current} />
+    </div>
+  );
+}
+
 function noValidSolution(data: CommunicationLog[]) {
   return data.every((log) => {
     const solution = (log.decoded_request || "").split(" ").pop();
@@ -129,14 +152,19 @@ function SubmittedSpaceshipProblem({
 
   return (
     <CommunicationContainer log={log}>
-      <div className="font-mono bg-base-200 border p-2">
-        <div className="font-mono">
-          <textarea className="w-full" rows={1} disabled>
-            {log.decoded_request}
-          </textarea>
+      <div className="flex space-x-2">
+        <div className="font-mono bg-base-200 border p-2 grow">
+          <div className="font-mono">
+            <textarea className="w-full" rows={1} disabled>
+              {log.decoded_request}
+            </textarea>
+          </div>
         </div>
+        <Link className="btn" href={`/spaceship/editor?base=${log.id}`}>
+          編集
+        </Link>
       </div>
-      <Visualizer path={solution} reqPoints={reqPoints} />
+      <SingleViz path={solution} reqPoints={reqPoints} />
       <div className="bg-base-200 border-base-300 p-2">
         <div className="prose font-mono">
           <Markdown>{log.decoded_response}</Markdown>

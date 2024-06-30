@@ -138,6 +138,12 @@ pub struct State {
     pub input_a: i32,
     pub input_b: i32,
     pub output: Option<BigInt>,
+    pub tick: i32,
+    max_tick: i32,
+    min_x: i32,
+    max_x: i32,
+    min_y: i32,
+    max_y: i32,
     written: Vec<Vec<bool>>,
 }
 
@@ -149,6 +155,12 @@ impl Default for State {
             input_a: 0,
             input_b: 0,
             output: None,
+            tick: 1,
+            max_tick: 1,
+            min_x: i32::MAX,
+            max_x: i32::MIN,
+            min_y: i32::MAX,
+            max_y: i32::MIN,
             written: vec![],
         }
     }
@@ -177,7 +189,92 @@ fn readable(board: &Vec<Vec<Cell>>, pos: (i32, i32)) -> bool {
     }
 }
 
+pub fn print_for_submit(state: &State) -> String {
+    let mut col_len = vec![0; state.board.0[0].len()];
+
+    for l in state.board.0.iter() {
+        for (idx, c) in l.iter().enumerate() {
+            let len = if let Cell::Warp(_) = c {
+                1
+            } else {
+                format!("{}", c).len()
+            };
+            col_len[idx] = col_len[idx].max(len);
+        }
+    }
+
+    let mut s = String::new();
+    for l in state.board.0.iter() {
+        let mut cols = vec![];
+        for (idx, c) in l.iter().enumerate() {
+            let cs = if let Cell::Warp(_) = c {
+                "@".to_owned()
+            } else {
+                format!("{}", c)
+            };
+            cols.push(" ".repeat(0.max(col_len[idx] - cs.len())) + &cs);
+        }
+        s += format!("{}\n", cols.join(" ")).as_str();
+    }
+    s
+}
+
 impl State {
+    pub fn new(board: &str, a: i32, b: i32) -> anyhow::Result<Self> {
+        let mut s: State = Default::default();
+        for l in board.lines() {
+            let mut row = vec![];
+            for c in l.split_whitespace() {
+                row.push(Cell::from_str(c)?);
+            }
+            s.board.0.push(row);
+        }
+        s.input_a = a;
+        s.input_b = b;
+
+        // Replace A and B immediately after parsing.
+        for l in s.board.0.iter_mut() {
+            for c in l.iter_mut() {
+                match c {
+                    Cell::InputA => {
+                        *c = Cell::Number(s.input_a.into());
+                    }
+                    Cell::InputB => {
+                        *c = Cell::Number(s.input_b.into());
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        Ok(s)
+    }
+
+    pub fn new_with_input_port(board: &str, a: i32, b: i32) -> anyhow::Result<Self> {
+        let mut s: State = Default::default();
+        for l in board.lines() {
+            let mut row = vec![];
+            for c in l.split_whitespace() {
+                row.push(Cell::from_str(c)?);
+            }
+            s.board.0.push(row);
+        }
+        s.input_a = a;
+        s.input_b = b;
+        Ok(s)
+    }
+
+    pub fn used_x(&self) -> i32 {
+        self.max_x - self.min_x + 1
+    }
+    pub fn used_y(&self) -> i32 {
+        self.max_y - self.min_y + 1
+    }
+
+    pub fn score(&self) -> i32 {
+        self.used_x() * self.used_y() * (self.max_tick + 1)
+    }
+
     pub fn resolve_label(&mut self) -> anyhow::Result<()> {
         let mut labels = vec![];
         let mut refs = vec![];
@@ -228,8 +325,8 @@ impl State {
             }
         }
         self.history.push(self.board.clone());
-
-        // eprintln!("one step: t = {}, board = {}", self.history.len(), self.board);
+        self.tick += 1;
+        self.max_tick = self.max_tick.max(self.tick);
 
         let mut warp_requests = vec![];
 
@@ -269,8 +366,12 @@ impl State {
             }
         }
 
+        if self.output.is_some() {
+            // Do not process warp requests if 'S' is already written
+            return Ok(());
+        }
+
         if !warp_requests.is_empty() {
-            // eprintln!("warp reuqest is coming");
             let dt = warp_requests[0].0;
             for (ddt, _, _, _) in &warp_requests {
                 if dt != *ddt {
@@ -279,6 +380,7 @@ impl State {
             }
             let target_t = (self.history.len() as i32 - dt - 1) as usize;
             new_board = self.history[target_t].0.clone();
+            self.tick = (target_t + 1) as i32;
             self.history = self.history.split_at(target_t).0.to_vec();
             for (_, x, y, v) in &warp_requests {
                 self.write_to(
@@ -302,6 +404,7 @@ impl State {
         dx: i32,
         dy: i32,
     ) -> anyhow::Result<()> {
+        self.update_min_max((x as i32, y as i32));
         let from_x = x as i32 - dx;
         let from_y = y as i32 - dy;
         let to_x = x as i32 + dx;
@@ -320,16 +423,20 @@ impl State {
             // Arg is not ready yet.
             return Ok(());
         }
-        if !self.writable(board, (to_x, to_y)) {
+        if !inside(board, (to_x, to_y)) {
             return Ok(());
-            // bail!("Trying to write the cell twice {},{}", to_x, to_y);
+        }
+        if !self.writable(board, (to_x, to_y)) {
+            bail!("Trying to write the cell twice {},{}", to_x, to_y);
         }
         let to_x = to_x as usize;
         let to_y = to_y as usize;
         if let Some(i) = self.get_number((from_x, from_y)) {
             self.write_to(board, to_x, to_y, Cell::Number(i))?;
             // Not updating written
-            board[from_y as usize][from_x as usize] = Cell::Empty;
+            if self.writable(board, (from_x, from_y)) {
+                self.raw_write(board, (from_x, from_y), Cell::Empty)?;
+            }
         } else {
             bail!("@@@@@@");
         }
@@ -354,6 +461,21 @@ impl State {
         }
         board[y][x] = v;
         self.written[y][x] = true;
+        self.update_min_max((x as i32, y as i32));
+        Ok(())
+    }
+
+    fn raw_write(
+        &mut self,
+        board: &mut Vec<Vec<Cell>>,
+        pos: (i32, i32),
+        v: Cell,
+    ) -> anyhow::Result<()> {
+        if !inside(&board, pos) {
+            bail!("Invalid write to {:?}", pos);
+        }
+        board[pos.1 as usize][pos.0 as usize] = v;
+        self.update_min_max(pos);
         Ok(())
     }
 
@@ -371,6 +493,8 @@ impl State {
             // Args are not ready yet.
             return Ok(());
         }
+
+        self.update_min_max((x as i32, y as i32));
         let op1 = if let Some(v) = self.get_number(arg1) {
             v
         } else {
@@ -391,7 +515,10 @@ impl State {
             Cell::Rem => op1 % op2,
             _ => bail!("Non arith binop {:?}", board[y][x]),
         };
-        if self.writable(board, to1) {
+        if inside(board, to1) {
+            if !self.writable(board, to1) {
+                bail!("Writing to the same cell twice: {:?}", to1);
+            }
             self.write_to(
                 board,
                 to1.0 as usize,
@@ -399,7 +526,10 @@ impl State {
                 Cell::Number(result.clone()),
             )?;
         }
-        if self.writable(board, to2) {
+        if inside(&board, to2) {
+            if !self.writable(board, to2) {
+                bail!("Writing to the same cell twice: {:?}", to2);
+            }
             self.write_to(
                 board,
                 to2.0 as usize,
@@ -407,8 +537,14 @@ impl State {
                 Cell::Number(result.clone()),
             )?;
         }
-        self.write_to(board, arg1.0 as usize, arg1.1 as usize, Cell::Empty)?;
-        self.write_to(board, arg2.0 as usize, arg2.1 as usize, Cell::Empty)?;
+
+        // Make the argument cells empty only when no other ops wrote there.
+        if self.writable(board, arg1) {
+            self.raw_write(board, arg1, Cell::Empty)?;
+        }
+        if self.writable(board, arg2) {
+            self.raw_write(board, arg2, Cell::Empty)?;
+        }
 
         Ok(())
     }
@@ -445,14 +581,24 @@ impl State {
             _ => bail!("Invalid comp op {}", board[y][x]),
         };
         if res {
-            if self.writable(board, to1) {
+            if inside(board, to1) {
+                if !self.writable(board, to1) {
+                    bail!("Trying to write to the same cell twice: {:?}", to1);
+                }
                 self.write_to(board, to1.0 as usize, to1.1 as usize, Cell::Number(op2))?;
             }
-            if self.writable(&board, to2) {
+            if inside(board, to2) {
+                if !self.writable(&board, to2) {
+                    bail!("Trying to write to the same cell twice: {:?}", to2);
+                }
                 self.write_to(board, to2.0 as usize, to2.1 as usize, Cell::Number(op1))?;
             }
-            self.write_to(board, arg1.0 as usize, arg1.1 as usize, Cell::Empty)?;
-            self.write_to(board, arg2.0 as usize, arg2.1 as usize, Cell::Empty)?;
+            if self.writable(board, arg1) {
+                self.raw_write(board, arg1, Cell::Empty)?;
+            }
+            if self.writable(board, arg2) {
+                self.raw_write(board, arg2, Cell::Empty)?;
+            }
         }
         Ok(())
     }
@@ -506,4 +652,14 @@ impl State {
 
         Ok(())
     }
+
+    fn update_min_max(&mut self, pos: (i32, i32)) {
+        self.min_x = self.min_x.min(pos.0);
+        self.max_x = self.max_x.max(pos.0);
+        self.min_y = self.min_y.min(pos.1);
+        self.max_y = self.max_y.max(pos.1);
+    }
 }
+
+#[cfg(test)]
+mod tests {}

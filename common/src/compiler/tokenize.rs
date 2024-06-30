@@ -23,8 +23,11 @@ impl<'a> Iterator for Tokenizer<'a> {
 }
 
 impl<'a> Tokenizer<'a> {
-    pub fn new(cs: Chars<'a>) -> Self {
-        Tokenizer { cs, c: None }
+    pub fn new(input: &'a str) -> Self {
+        Tokenizer {
+            cs: input.chars(),
+            c: None,
+        }
     }
 
     fn next_char(&mut self) -> Option<char> {
@@ -48,6 +51,14 @@ impl<'a> Tokenizer<'a> {
         match fst {
             '(' => Some(Token::OpenParen),
             ')' => Some(Token::CloseParen),
+            ';' => {
+                while let Some(c) = self.next_char() {
+                    if c == '\n' {
+                        break;
+                    }
+                }
+                self.next_token()
+            }
             '0'..='9' => {
                 let mut num = (fst as i32) - ('0' as i32);
                 while let Some(c) = self.next_char() {

@@ -1,26 +1,38 @@
-use std::{io, str::FromStr};
+use std::{
+    fs,
+    io::{self, Write},
+};
 
 use anyhow::{anyhow, bail, Result};
 
-use common::planar::{Board, Cell, State};
+use common::planar::State;
 
-fn main() -> Result<()> {
+#[argopt::subcmd]
+fn resolve_label() -> Result<()> {
     let s = io::read_to_string(io::stdin())?;
+    let mut state = State::new_with_input_port(s.as_str(), 0, 0)?;
+    state.resolve_label()?;
+    println!("{}", common::planar::print_for_submit(&state));
+    Ok(())
+}
 
-    let mut it = s.lines();
-    let first = it.next().unwrap().split_whitespace().collect::<Vec<&str>>();
+#[argopt::subcmd]
+fn run(
+    #[opt(short = 'p', long = "program")] program: std::path::PathBuf,
+    #[opt(short = 't', long = "turn")] turn: Option<u32>,
+) -> Result<()> {
+    let s = fs::read_to_string(program)?;
 
-    let mut state: State = Default::default();
-    state.input_a = first[0].parse::<i32>()?;
-    state.input_b = first[1].parse::<i32>()?;
-
-    for l in it {
-        let mut row = vec![];
-        for c in l.split_whitespace() {
-            row.push(Cell::from_str(c)?);
-        }
-        state.board.0.push(row);
+    print!("Input A and B >>> ");
+    io::stdout().flush()?;
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+    let mut a_and_b = vec![];
+    for num in input.split_whitespace() {
+        a_and_b.push(num.parse::<i32>()?);
     }
+
+    let mut state = State::new(&s, a_and_b[0], a_and_b[1])?;
 
     println!("before label processing");
     println!("{}", state.board);
@@ -28,13 +40,24 @@ fn main() -> Result<()> {
     println!("after label processing");
     println!("{}", state.board);
 
+    let max_turn = if let Some(t) = turn { t } else { 1000000 };
     let mut turn = 0;
-    while state.output.is_none() {
+    while state.output.is_none() && turn < max_turn {
         state.onestep()?;
+        println!(
+            "[t={},x={},y={}]",
+            state.tick,
+            state.used_x(),
+            state.used_y()
+        );
         println!("{}", state.board);
         turn += 1;
     }
 
-    println!("finished {}", state.output.unwrap());
+    let score = state.score();
+    println!("finished {}, score = {}", state.output.unwrap(), score);
     Ok(())
 }
+
+#[argopt::cmd_group(commands = [resolve_label, run])]
+fn main() -> Result<()> {}

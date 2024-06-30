@@ -2,7 +2,7 @@
 
 import Communication from "@/app/Communication";
 import Sidebar from "@/app/Sidebar";
-import { useCommunicationsWithRequestPrefix } from "@/components/api";
+import { useSolutions } from "@/components/api";
 import Link from "next/link";
 
 export default function Home({
@@ -13,8 +13,9 @@ export default function Home({
   searchParams: { page: string };
 }) {
   const page = parseInt(searchParams.page ?? "1") - 1;
-  const { data, error } = useCommunicationsWithRequestPrefix(
-    `solve efficiency${idStr} `,
+  const { data, error } = useSolutions(
+    "efficiency",
+    parseInt(idStr),
     page * 10,
     10,
   );

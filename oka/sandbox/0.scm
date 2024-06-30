@@ -1,12 +1,13 @@
-(define (repeat f v) (f (f (f (f (f (f (f (f (f (f (f v))))))))))))
+(define (string-take n s) (substring s 0 n))
+(define (string-drop n s) (substring s n (string-length s)))
 
-(define (left x) (repeat (lambda (v) (string-append v v)) "L"))
-(define (right x) (repeat (lambda (v) (string-append v v)) "R"))
-(define (up x) (repeat (lambda (v) (string-append v v)) "U"))
-(define (down x) (repeat (lambda (v) (string-append v v)) "D"))
+(define (x4 x) (string-append (string-append x x) (string-append x x)))
+(define (res2) (x4 (x4 (x4 "RRRR"))))
 
-(define (turn x) (string-append (down x) (string-append (left x) (string-append (up x) (right x)))))
-
-(define (res) (string-append "solve lambdaman8 " (turn "a")))
+(define (res) (
+    string-append
+    "solve lambdaman6 "
+    (res2)
+))
 
 (define (main args) (print (res)))

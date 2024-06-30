@@ -1,3 +1,0 @@
-(define (string-head s n) (substring s 0 n))
-(define (string-tail s n) (substring s n (string-length s)))
-(print ((lambda (Z) ((lambda (string-car) ((lambda (string-cdr) ((lambda (power2repeat) ((lambda (string-map) ((power2repeat 7) ((string-map (lambda (x) ((power2repeat 7) x))) "DLUR"))) (lambda (f) ((Z (lambda (string-map) (lambda (f) (lambda (l) (if (string=? l "") "" (string-append (f (string-car l)) ((string-map f) (string-cdr l)))))))) f)))) (lambda (y) ((Z (lambda (power2repeat) (lambda (y) (lambda (x) (if (= y 0) x (string-append ((power2repeat (- y 1)) x) ((power2repeat (- y 1)) x))))))) y)))) (lambda (s) (string-tail s 1)))) (lambda (s) (string-head s 1)))) (lambda (f) ((lambda (x) (f (lambda (y) ((x x) y)))) (lambda (x) (f (lambda (y) ((x x) y))))))))

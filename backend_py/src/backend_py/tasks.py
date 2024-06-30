@@ -1,19 +1,22 @@
 import datetime
+import re
 
 import httpx
 from celery import Celery
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-import re
+from backend_rs import encode_message  # type: ignore
+
+from .communicate import send_encoded_req
 from .config import settings
 from .db import engine
 from .models import (
+    CommunicationLog,
     ScoreboardLog,
     ScoreboardRow,
     ScoreParseResult,
     ScoreParseResultLog,
-    CommunicationLog,
 )
 
 app = Celery("icfpc2024", broker="redis://localhost")
@@ -27,6 +30,11 @@ app.conf.beat_schedule = {
     "update_scoreboard": {
         # Fetch from the official scoreboard. This is a remote op, so run every 5 minutes.
         "task": "backend_py.tasks.update_scoreboard",
+        "schedule": 300.0,
+    },
+    "update_scores": {
+        # Issue get XXX. This is a remote op, so run every 5 minutes.
+        "task": "backend_py.tasks.update_scores",
         "schedule": 300.0,
     },
 }
@@ -60,6 +68,15 @@ def update_scoreboard():
         log.threed_score_row = threed_score.model_dump_json()
         log.efficiency_score_row = efficiency_score.model_dump_json()
         session.commit()
+
+
+@app.task
+def update_scores():
+    with Session(engine) as session:
+        send_encoded_req(session, encode_message("get lambdaman"))
+        send_encoded_req(session, encode_message("get spaceship"))
+        send_encoded_req(session, encode_message("get 3d"))
+    update_parsed_result.delay()  # type: ignore
 
 
 @app.task

@@ -1,8 +1,6 @@
 use anyhow::Result;
 use std::io;
 
-use common::cps::cps_conversion;
-use common::eval::eval;
 use common::expr::{BinOp, Expr, UnOp};
 
 pub fn pretty_print_scheme(expr: &Expr) -> String {

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf, rc::Rc};
 
 use anyhow::Result;
 use clap::Parser;
@@ -55,44 +55,44 @@ macro_rules! icfp {
     (fn $($args:ident)+ -> $body:tt) => {{
         let mut e = icfp!{ $body };
         for arg in [$(stringify!($args)), *].iter().rev() {
-            e = Expr::Lambda(varid(arg), Box::new(e));
+            e = Expr::Lambda(varid(arg), Rc::new(e));
         }
         e
     }};
     (let $var:ident = $val:tt in $($body:tt)+) => {
         Expr::Bin(BinOp::App,
-            Box::new(Expr::Lambda(varid(stringify!($var)), Box::new(icfp!{ $($body)* }))),
-            Box::new(icfp!{ $val }))
+            Rc::new(Expr::Lambda(varid(stringify!($var)), Rc::new(icfp!{ $($body)* }))),
+            Rc::new(icfp!{ $val }))
     };
     (if $cond:tt { $($th:tt)+ } else { $($el:tt)+ }) => {
-        Expr::If(Box::new(icfp!{ $cond }), Box::new(icfp!{ $($th)* }), Box::new(icfp!{ $($el)* }))
+        Expr::If(Rc::new(icfp!{ $cond }), Rc::new(icfp!{ $($th)* }), Rc::new(icfp!{ $($el)* }))
     };
     (concat $a1:tt $a2:tt) => {
-        Expr::Bin(BinOp::Concat, Box::new(icfp!{ $a1 }), Box::new(icfp!{ $a2 }))
+        Expr::Bin(BinOp::Concat, Rc::new(icfp!{ $a1 }), Rc::new(icfp!{ $a2 }))
     };
     (take $a1:tt $a2:tt) => {
-        Expr::Bin(BinOp::Take, Box::new(icfp!{ $a1 }), Box::new(icfp!{ $a2 }))
+        Expr::Bin(BinOp::Take, Rc::new(icfp!{ $a1 }), Rc::new(icfp!{ $a2 }))
     };
     (drop $a1:tt $a2:tt) => {
-        Expr::Bin(BinOp::Drop, Box::new(icfp!{ $a1 }), Box::new(icfp!{ $a2 }))
+        Expr::Bin(BinOp::Drop, Rc::new(icfp!{ $a1 }), Rc::new(icfp!{ $a2 }))
     };
     (== $a1:tt $a2:tt) => {
-        Expr::Bin(BinOp::Eq, Box::new(icfp!{ $a1 }), Box::new(icfp!{ $a2 }))
+        Expr::Bin(BinOp::Eq, Rc::new(icfp!{ $a1 }), Rc::new(icfp!{ $a2 }))
     };
     (+ $a1:tt $a2:tt) => {
-        Expr::Bin(BinOp::Add, Box::new(icfp!{ $a1 }), Box::new(icfp!{ $a2 }))
+        Expr::Bin(BinOp::Add, Rc::new(icfp!{ $a1 }), Rc::new(icfp!{ $a2 }))
     };
     (- $a1:tt $a2:tt) => {
-        Expr::Bin(BinOp::Sub, Box::new(icfp!{ $a1 }), Box::new(icfp!{ $a2 }))
+        Expr::Bin(BinOp::Sub, Rc::new(icfp!{ $a1 }), Rc::new(icfp!{ $a2 }))
     };
     (* $a1:tt $a2:tt) => {
-        Expr::Bin(BinOp::Mul, Box::new(icfp!{ $a1 }), Box::new(icfp!{ $a2 }))
+        Expr::Bin(BinOp::Mul, Rc::new(icfp!{ $a1 }), Rc::new(icfp!{ $a2 }))
     };
     (/ $a1:tt $a2:tt) => {
-        Expr::Bin(BinOp::Div, Box::new(icfp!{ $a1 }), Box::new(icfp!{ $a2 }))
+        Expr::Bin(BinOp::Div, Rc::new(icfp!{ $a1 }), Rc::new(icfp!{ $a2 }))
     };
     (% $a1:tt $a2:tt) => {
-        Expr::Bin(BinOp::Mod, Box::new(icfp!{ $a1 }), Box::new(icfp!{ $a2 }))
+        Expr::Bin(BinOp::Mod, Rc::new(icfp!{ $a1 }), Rc::new(icfp!{ $a2 }))
     };
     (# $var:ident) => {
         ToExpr::to_expr(&$var)
@@ -100,7 +100,7 @@ macro_rules! icfp {
     ($f:tt $($args:tt)+) => {{
         let mut e = icfp!{ $f };
         $(
-            e = Expr::Bin(BinOp::App, Box::new(e), Box::new(icfp!{ $args }));
+            e = Expr::Bin(BinOp::App, Rc::new(e), Rc::new(icfp!{ $args }));
         )+
         e
     }};

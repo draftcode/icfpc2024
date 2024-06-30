@@ -1,5 +1,9 @@
+use common::compiler::program;
 use common::eval::eval;
 use common::expr::{Expr, Token};
+use common::planar;
+use num_bigint::BigInt;
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 #[pyfunction]
@@ -27,11 +31,39 @@ fn evaluate_message(input: String) -> PyResult<String> {
     Ok("".to_string())
 }
 
+#[pyfunction]
+fn onestep_3d(program: String, a: i32, b: i32, turn: usize) -> PyResult<(String, Option<i32>)> {
+    let state = planar::State::new(&program, a, b);
+    if state.is_err() {
+        return Err(PyErr::new::<PyValueError, _>(format!(
+            "failed to load program"
+        )));
+    }
+    let mut state = state.unwrap();
+
+    for t in 0..turn {
+        if state.onestep().is_err() {
+            return Err(PyErr::new::<PyValueError, _>(format!(
+                "eval failed at turn {}:\n{}",
+                t, state.board
+            )));
+        }
+    }
+
+    let i32_max: BigInt = i32::MAX.into();
+    let i32_min: BigInt = i32::MIN.into();
+    let res: Option<i32> = state
+        .output
+        .map(|v| v.min(i32_max).max(i32_min).try_into().unwrap());
+    Ok((format!("{}", state.board), res))
+}
+
 /// A Python module implemented in Rust.
 #[pymodule]
 fn backend_rs(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(encode_message, m)?)?;
     m.add_function(wrap_pyfunction!(decode_message, m)?)?;
     m.add_function(wrap_pyfunction!(evaluate_message, m)?)?;
+    m.add_function(wrap_pyfunction!(onestep_3d, m)?)?;
     Ok(())
 }

@@ -12,24 +12,43 @@ impl Program {
     }
 
     pub(crate) fn get_res_as_single_lambda_inner(&mut self) -> Expr {
-        let lst = self.exprs.pop().expect("(define (res) ... ) not found");
+        let lst = self
+            .exprs
+            .pop()
+            .expect("(define (res) ... ) or (define (solve-...) ...) not found");
         let Some((args, expr)) = lst.get_define() else {
             return self.get_res_as_single_lambda_inner();
         };
-        if !(args.len() == 1 && args[0] == "res") {
-            return self.get_res_as_single_lambda_inner();
+        if args.len() == 1 && args[0] == "res" {
+            return self.make_single_lambda(expr);
+        }
+        if args.len() == 1 && args[0].starts_with("solve-") {
+            let prefix = args[0].replace("-", " ") + " ";
+            let expr = Expr::proc3(
+                Expr::Var("string-append".to_string()),
+                Expr::Str(prefix),
+                expr,
+            );
+            return self.make_single_lambda(expr);
         }
 
-        self.make_single_lambda(expr)
+        return self.get_res_as_single_lambda_inner();
     }
 
     fn make_single_lambda(&mut self, expr: Expr) -> Expr {
         let Some(lst) = self.exprs.pop() else {
             return expr;
         };
+
         let Some((args, def)) = lst.get_define() else {
             return self.make_single_lambda(expr);
         };
+
+        // (define (name) def) expr = ((lambda (name) expr) def)
+        if let [name] = args.as_slice() {
+            let nxt_expr = Expr::proc2(Expr::lambda(name.to_string(), expr), def);
+            return self.make_single_lambda(nxt_expr);
+        }
 
         let [name, var] = args.as_slice() else {
             return self.make_single_lambda(expr);

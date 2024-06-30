@@ -8,38 +8,21 @@ use crate::{
     expr::{BinOp, Expr, UnOp},
 };
 
-#[derive(Default)]
-struct Env {
-    _count: usize,
-}
-
-impl Env {
-    // fn push(&mut self, v: usize, e: Expr) {
-    //     eprintln!("push: v{v} {e:?}");
-    //     self.vars.push((v, e));
-    // }
-
-    // fn pop(&mut self) {
-    //     eprintln!("pop");
-    //     self.vars.pop();
-    // }
-
-    // fn lookup(&self, v: usize) -> Option<&Expr> {
-    //     eprintln!("lookup: v{v} {:?}", self.vars);
-    //     self.vars.iter().rev().find(|(w, _)| *w == v).map(|r| &r.1)
-    // }
+#[derive(Default, Clone, Debug)]
+struct Stats {
+    beta_reductions: usize,
 }
 
 pub fn eval(e: &Expr) -> anyhow::Result<Expr> {
-    reduce_to_nf(e, &mut Env::default())
+    reduce_to_nf(e, &mut Stats::default())
 }
 
-fn reduce_to_nf(e: &Expr, env: &mut Env) -> anyhow::Result<Expr> {
+fn reduce_to_nf(e: &Expr, stats: &mut Stats) -> anyhow::Result<Expr> {
     log::trace!("eval: {e}");
 
     Ok(match e {
         Expr::Un(op, e) => {
-            let e = reduce_to_nf(e.as_ref(), env)?;
+            let e = reduce_to_nf(e.as_ref(), stats)?;
             match op {
                 UnOp::Neg => match e {
                     Expr::Int(n) => Expr::Int(Rc::new(-n.as_ref().clone())),
@@ -62,12 +45,13 @@ fn reduce_to_nf(e: &Expr, env: &mut Env) -> anyhow::Result<Expr> {
         Expr::Bin(op, l, r) => {
             if matches!(op, BinOp::App) {
                 log::trace!("app: {l}, {r}");
-                let f = reduce_to_nf(l.as_ref(), env)?;
+                let f = reduce_to_nf(l.as_ref(), stats)?;
                 match f {
                     Expr::Lambda(v, e) => {
+                        stats.beta_reductions += 1;
                         return reduce_to_nf(
                             &beta_reduction(e.as_ref(), v, r.as_ref(), &mut vec![])?,
-                            env,
+                            stats,
                         );
                     }
                     _ => bail!("Invalid operator for app: {f}"),
@@ -75,19 +59,23 @@ fn reduce_to_nf(e: &Expr, env: &mut Env) -> anyhow::Result<Expr> {
             }
             if matches!(op, BinOp::AppV) {
                 log::trace!("app: {l}, {r}");
-                let f = reduce_to_nf(l.as_ref(), env)?;
+                let f = reduce_to_nf(l.as_ref(), stats)?;
                 // It's okay to eval the rhs because it's call-by-value.
-                let g = reduce_to_nf(r.as_ref(), env)?;
+                let g = reduce_to_nf(r.as_ref(), stats)?;
                 match f {
                     Expr::Lambda(v, e) => {
-                        return reduce_to_nf(&beta_reduction(e.as_ref(), v, &g, &mut vec![])?, env);
+                        stats.beta_reductions += 1;
+                        return reduce_to_nf(
+                            &beta_reduction(e.as_ref(), v, &g, &mut vec![])?,
+                            stats,
+                        );
                     }
                     _ => bail!("Invalid operator for appv: {f}"),
                 }
             }
 
-            let l = reduce_to_nf(l.as_ref(), env)?;
-            let r = reduce_to_nf(r.as_ref(), env)?;
+            let l = reduce_to_nf(l.as_ref(), stats)?;
+            let r = reduce_to_nf(r.as_ref(), stats)?;
             match (op, &l, &r) {
                 (BinOp::Add, l, r) => match (l, r) {
                     (Expr::Int(n1), Expr::Int(n2)) => Expr::Int((n1.as_ref() + n2.as_ref()).into()),
@@ -159,10 +147,10 @@ fn reduce_to_nf(e: &Expr, env: &mut Env) -> anyhow::Result<Expr> {
             }
         }
         Expr::If(cond, th, el) => {
-            let cond = reduce_to_nf(cond.as_ref(), env)?;
+            let cond = reduce_to_nf(cond.as_ref(), stats)?;
             match cond {
-                Expr::Bool(true) => reduce_to_nf(th.as_ref(), env)?,
-                Expr::Bool(false) => reduce_to_nf(el.as_ref(), env)?,
+                Expr::Bool(true) => reduce_to_nf(th.as_ref(), stats)?,
+                Expr::Bool(false) => reduce_to_nf(el.as_ref(), stats)?,
                 _ => bail!("Invalid condition: {cond:?}"),
             }
         }
@@ -226,5 +214,46 @@ mod tests {
     fn conversion() {
         assert_eq!(str_to_int("test"), 15818151.into());
         assert_eq!(int_to_str(&15818151.into()), "test");
+    }
+
+    #[test]
+    fn language_test() {
+        let expr: Expr = r#"? B= B$ B$ B$ B$ L$ L$ L$ L# v$ I" I# I$ I% I$ ? B= B$ L$ v$ I+ I+ ? B= BD I$ S4%34 S4 ? B= BT I$ S4%34 S4%3 ? B= B. S4% S34 S4%34 ? U! B& T F ? B& T T ? U! B| F F ? B| F T ? B< U- I$ U- I# ? B> I$ I# ? B= U- I" B% U- I$ I# ? B= I" B% I( I$ ? B= U- I" B/ U- I$ I# ? B= I# B/ I( I$ ? B= I' B* I# I$ ? B= I$ B+ I" I# ? B= U$ I4%34 S4%34 ? B= U# S4%34 I4%34 ? U! F ? B= U- I$ B- I# I& ? B= I$ B- I& I# ? B= S4%34 S4%34 ? B= F F ? B= I$ I$ ? T B. B. SM%,&k#(%#+}IEj}3%.$}z3/,6%},!.'5!'%y4%34} U$ B+ I# B* I$> I1~s:U@ Sz}4/}#,!)-}0/).43}&/2})4 S)&})3}./4}#/22%#4 S").!29}q})3}./4}#/22%#4 S").!29}q})3}./4}#/22%#4 S").!29}q})3}./4}#/22%#4 S").!29}k})3}./4}#/22%#4 S5.!29}k})3}./4}#/22%#4 S5.!29}_})3}./4}#/22%#4 S5.!29}a})3}./4}#/22%#4 S5.!29}b})3}./4}#/22%#4 S").!29}i})3}./4}#/22%#4 S").!29}h})3}./4}#/22%#4 S").!29}m})3}./4}#/22%#4 S").!29}m})3}./4}#/22%#4 S").!29}c})3}./4}#/22%#4 S").!29}c})3}./4}#/22%#4 S").!29}r})3}./4}#/22%#4 S").!29}p})3}./4}#/22%#4 S").!29}{})3}./4}#/22%#4 S").!29}{})3}./4}#/22%#4 S").!29}d})3}./4}#/22%#4 S").!29}d})3}./4}#/22%#4 S").!29}l})3}./4}#/22%#4 S").!29}N})3}./4}#/22%#4 S").!29}>})3}./4}#/22%#4 S!00,)#!4)/.})3}./4}#/22%#4 S!00,)#!4)/.})3}./4}#/22%#4"#.parse().unwrap();
+        assert_eq!(
+            eval(&expr).unwrap(),
+            Expr::String(
+                "Self-check OK, send `solve language_test 4w3s0m3` to claim points for it"
+                    .to_string()
+                    .into()
+            )
+        );
+    }
+
+    #[test]
+    fn beta_reductions() {
+        let expr: Expr = r#"B$ B$ L" B$ L# B$ v" B$ v# v# L# B$ v" B$ v# v# L" L# ? B= v# I! I" B$ L$ B+ B$ v" v$ B$ v" v$ B- v# I" I%"#.parse().unwrap();
+        let mut stats = Stats::default();
+        assert_eq!(
+            reduce_to_nf(&expr, &mut stats).unwrap(),
+            Expr::Int(BigInt::from(16).into())
+        );
+        assert_eq!(stats.beta_reductions, 109);
+    }
+
+    //#[test]
+    fn tail_call() {
+        // (
+        //     fix
+        //     (fn f n r ->
+        //         (if (== n 0) {
+        //             r
+        //         } else {
+        //             (f (- n 1) (+ r 1))
+        //         })
+        //     )
+        //     10000 0
+        // )
+        let expr: Expr = r#"B$ B$ B$ L& B$ L8 B$ v& B$ v8 v8 L8 B$ v& B$ v8 v8 L& L. L2 ? B= v. I! v2 B$ B$ v& B- v. I" B+ v2 I" I"-E I!"#.parse().unwrap();
+        assert_eq!(eval(&expr).unwrap(), Expr::Int(BigInt::from(1000).into()));
     }
 }

@@ -18,6 +18,8 @@ pub fn binary_op(s: &str) -> Option<String> {
         "string-drop" => Some(b + "D"),
 
         "string=?" => Some(b + "="),
+        "modulo" => Some(b + "%"),
+        "div" => Some(b + "/"),
         _ => None,
     }
 }

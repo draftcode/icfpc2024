@@ -1,6 +1,7 @@
 import axios from "axios";
 import type { AxiosResponse } from "axios";
-import useSWR from "swr";
+import useSWR, { Key } from "swr";
+import useSWRMutation from "swr/mutation";
 
 const client = axios.create({
   baseURL: "https://icfp-api.badalloc.com/",
@@ -43,11 +44,75 @@ export interface ParsedProblem {
   content: string;
 }
 
+export interface ThreedSimulationResult {
+  board: string;
+  output: number | null;
+}
+
 export function useProblem(category: string, id: number) {
   const { data, error, isLoading } = useSWR<AxiosResponse<ParsedProblem>>(
     {
       method: "get",
       url: `/problems/${category}/${id}`,
+    },
+    client,
+  );
+  return { data: data?.data, error, isLoading };
+}
+
+export function useCommunicationSubmit(request: string) {
+  const { data, error, trigger, isMutating } = useSWRMutation<
+    AxiosResponse<CommunicationLog>
+  >(
+    {
+      method: "post",
+      url: "/communicate/submit",
+      data: {
+        plaintext: request,
+      },
+    },
+    client,
+  );
+  return { data: data?.data, error, isMutating, trigger };
+}
+
+interface ThreedSimulationArg {
+  board: string;
+  valA: number;
+  valB: number;
+  turns: number;
+}
+
+export function use3DSimulation() {
+  const fetcher = async (
+    url: string,
+    { arg: { board, valA, valB, turns } }: { arg: ThreedSimulationArg },
+  ) => {
+    return await client({
+      method: "post",
+      url: url,
+      data: {
+        board: board,
+        val_a: valA,
+        val_b: valB,
+        turns: turns,
+      },
+    });
+  };
+  const { data, error, trigger, isMutating } = useSWRMutation<
+    AxiosResponse<ThreedSimulationResult>,
+    any,
+    Key,
+    ThreedSimulationArg
+  >("/simulation/3d", fetcher);
+  return { data: data?.data, error, isMutating, trigger };
+}
+
+export function useCommunicationLog(id: number) {
+  const { data, error, isLoading } = useSWR<AxiosResponse<CommunicationLog>>(
+    {
+      method: "get",
+      url: `/communications/${id}`,
     },
     client,
   );
@@ -69,39 +134,19 @@ export function useCommunications(offset?: number, limit?: number) {
   return { data: data?.data, error, isLoading };
 }
 
-export function useCommunicationsWithExactRequest(
-  request: string,
+export function useSolutions(
+  category: string,
+  id: number,
   offset?: number,
   limit?: number,
 ) {
   const { data, error, isLoading } = useSWR<AxiosResponse<CommunicationLog[]>>(
     {
       method: "get",
-      url: "/communications",
+      url: `/solutions/${category}/${id}`,
       params: {
         offset: offset,
         limit: limit,
-        decoded_request: request,
-      },
-    },
-    client,
-  );
-  return { data: data?.data, error, isLoading };
-}
-
-export function useCommunicationsWithRequestPrefix(
-  prefix: string,
-  offset?: number,
-  limit?: number,
-) {
-  const { data, error, isLoading } = useSWR<AxiosResponse<CommunicationLog[]>>(
-    {
-      method: "get",
-      url: "/communications",
-      params: {
-        offset: offset,
-        limit: limit,
-        decoded_request_prefix: prefix,
       },
     },
     client,

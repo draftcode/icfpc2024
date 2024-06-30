@@ -2,11 +2,9 @@
 
 import Communication from "@/app/Communication";
 import Sidebar from "@/app/Sidebar";
-import {
-  useCommunicationsWithExactRequest,
-  useCommunicationsWithRequestPrefix,
-} from "@/components/api";
+import { useProblem, useSolutions } from "@/components/api";
 import Link from "next/link";
+import Markdown from "react-markdown";
 
 export default function Home({
   params: { id: idStr },
@@ -16,13 +14,11 @@ export default function Home({
   searchParams: { page: string };
 }) {
   const page = parseInt(searchParams.page ?? "1") - 1;
-  const { data: problemData, error: problemError } =
-    useCommunicationsWithExactRequest(`get 3d${idStr}`, 0, 1);
-  const { data, error } = useCommunicationsWithRequestPrefix(
-    `solve 3d${idStr}\n`,
-    page * 10,
-    10,
+  const { data: problemData, error: problemError } = useProblem(
+    "3d",
+    parseInt(idStr),
   );
+  const { data, error } = useSolutions("3d", parseInt(idStr), page * 10, 10);
   if (!data || !problemData) {
     return null;
   }
@@ -36,10 +32,12 @@ export default function Home({
     <div className="flex gap-x-4">
       <Sidebar current={`/3d/${idStr}`} />
       <div className="grow">
-        {problemData.map((log) => {
-          return <Communication key={log.id} log={log} />;
-        })}
         <div className="space-y-4">
+          <div className="p-4 border-2 border-dotted">
+            <div className="prose font-mono">
+              <Markdown>{problemData.content}</Markdown>
+            </div>
+          </div>
           {data.map((log) => {
             return <Communication key={log.id} log={log} />;
           })}

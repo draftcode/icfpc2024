@@ -4,7 +4,7 @@ import { DateTime } from "luxon";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-const DEADLINE = DateTime.fromISO("2024-06-29T12:00:00Z");
+const DEADLINE = DateTime.fromISO("2024-07-01T12:00:00Z");
 
 export default function ContentsContainer({
   children,
@@ -55,7 +55,7 @@ function TimeLeft() {
     <div>
       {hour > 0 || min > 0 ? (
         <div className="font-mono">
-          <p>Lightning〆切 {DEADLINE.toFormat("ccc HH:mm")}</p>
+          <p>〆切 {DEADLINE.toFormat("ccc HH:mm")}</p>
           <div className="text-2xl">
             あと {hour}時間 {min}分
           </div>

@@ -1,0 +1,10 @@
+[package]
+name = "lm"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.86"
+argopt = "0.3.0"
+regex = "1.10.5"
+common = { path = "../common" }

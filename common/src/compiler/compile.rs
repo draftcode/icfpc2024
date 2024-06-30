@@ -1,14 +1,19 @@
-use crate::compiler::{expr, parser::parse};
+use crate::compiler::parser::parse;
 
-use super::{expr::Expr, parser::parse_str, program::Program};
+use super::{expr::Expr, parser::parse_str};
 
 pub fn compile_to_lambda(prog: String) -> anyhow::Result<Expr> {
     let mut define_z = parse_str(
+        //         r#"(define (Z f) (
+        //     (lambda (x) (f (lambda (y) ((x x) y))))
+        //     (lambda (x) (f (lambda (y) ((x x) y))))
+        // ))
+        //     "#,
         r#"(define (Z f) (
-    (lambda (x) (f (lambda (y) ((x x) y))))
-    (lambda (x) (f (lambda (y) ((x x) y))))
+        (lambda (x) (f (x x)))
+        (lambda (x) (f (x x)))
 ))
-    "#,
+"#,
     )?
     .exprs[0]
         .clone();
@@ -28,33 +33,5 @@ pub fn compile_to_lambda(prog: String) -> anyhow::Result<Expr> {
     }
     let expr = program.get_res_as_single_lambda();
 
-    // // while let Some(p) = update(program) {
-    // //     program = p;
-    // // }
-
-    // println!("{:?}", expr);
-
     Ok(expr)
 }
-
-// struct Compiler {
-//     program: Program,
-
-//     fn trans_to_lambda(&mut self) {
-//         self.program.exprs = self.program.exprs.into_iter().map(|expr| {
-//             match expr {
-//                 Expr::Proc { name, args } => {
-//                     let mut args = args.into_iter().map(|arg| {
-//                         match arg {
-//                             Expr::Var(name) => name,
-//                             _ => panic!("unexpected expr"),
-//                         }
-//                     }).collect();
-//                     args.reverse();
-//                     Expr::Lambda { name, args }
-//                 },
-//                 _ => panic!("unexpected expr"),
-//             }
-//         }).collect();
-//     }
-// }

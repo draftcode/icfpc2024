@@ -2,15 +2,14 @@ import datetime
 import importlib.resources as pkg_resources
 from typing import Sequence
 
-import httpx
-from backend_rs import decode_message  # type: ignore
+from backend_rs import onestep_3d, encode_message  # type: ignore
 from fastapi import Body, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, RedirectResponse
 from pydantic import BaseModel
 from sqlmodel import select
 
-from .config import settings
+from .communicate import send_encoded_req
 from .deps import SessionDep
 from .models import (
     CommunicationLog,
@@ -28,8 +27,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-http_client = httpx.Client(headers={"Authorization": f"Bearer {settings.API_TOKEN}"})
-
 
 @app.get("/", include_in_schema=False)
 async def root():
@@ -40,25 +37,44 @@ async def root():
 async def communicate(
     session: SessionDep, body: str = Body(..., media_type="text/plain")
 ) -> str:
-    resp = http_client.post("https://boundvariable.space/communicate", content=body)
-    if not resp.is_success:
-        raise HTTPException(status_code=resp.status_code, detail=resp.text)
+    log = send_encoded_req(session, body)
+    return log.response
 
-    resp_str = resp.text
-    decoded_response = decode_message(resp_str)
-    req_str = decode_message(body)
-    log = CommunicationLog(
-        created=datetime.datetime.now(),
-        request=body,
-        response=resp_str,
-        decoded_request_prefix=req_str[:100],
-        decoded_request=req_str,
-        decoded_response=decoded_response,
+
+class SubmitRequest(BaseModel):
+    plaintext: str | None = None
+    icfp: str | None = None
+
+
+@app.post("/communicate/submit")
+async def communicate_submit_plaintext(
+    session: SessionDep, body: SubmitRequest
+) -> CommunicationLog:
+    if body.plaintext is not None:
+        return send_encoded_req(session, encode_message(body.plaintext))
+    elif body.icfp is not None:
+        return send_encoded_req(session, body.icfp)
+    raise HTTPException(
+        status_code=400, detail="Either plaintext or icfp must be provided"
     )
-    session.add(log)
-    session.commit()
 
-    return resp_str
+
+class ThreedSimulationRequest(BaseModel):
+    board: str
+    val_a: int
+    val_b: int
+    turns: int
+
+
+class ThreedSimulationResult(BaseModel):
+    board: str
+    output: int | None
+
+
+@app.post("/simulation/3d")
+async def run_3d_simulation(body: ThreedSimulationRequest) -> ThreedSimulationResult:
+    result_board, output = onestep_3d(body.board, body.val_a, body.val_b, body.turns)
+    return ThreedSimulationResult(board=result_board, output=output)
 
 
 @app.get("/communications")
@@ -79,6 +95,47 @@ async def communications(
 
     return session.exec(
         q.order_by(CommunicationLog.id.desc())  # type: ignore
+        .offset(offset)
+        .limit(limit)
+    ).all()
+
+
+@app.get("/communications/{communication_id}")
+async def get_communication(
+    session: SessionDep, communication_id: int
+) -> CommunicationLog:
+    log = session.scalar(
+        select(CommunicationLog).where(CommunicationLog.id == communication_id)
+    )
+    if not log:
+        raise HTTPException(status_code=404, detail="CommunicationLog not found")
+    return log
+
+
+@app.get("/solutions/{category}/{problem_id}")
+async def solution(
+    session: SessionDep,
+    category: str,
+    problem_id: int,
+    offset: int = 0,
+    limit: int = Query(default=10),
+) -> list[CommunicationLog]:
+    if category == "lambdaman":
+        prefix = f"solve lambdaman{problem_id}"
+    elif category == "spaceship":
+        prefix = f"solve spaceship{problem_id}"
+    elif category == "3d":
+        prefix = f"solve 3d{problem_id}"
+    elif category == "efficiency":
+        prefix = f"solve efficiency{problem_id}"
+    else:
+        raise HTTPException(status_code=404, detail="Category not found")
+    return session.exec(
+        select(CommunicationLog)
+        .where(
+            CommunicationLog.decoded_request_prefix.op("similar to")(prefix + "( |\n)%")  # type: ignore
+        )
+        .order_by(CommunicationLog.id.desc())  # type: ignore
         .offset(offset)
         .limit(limit)
     ).all()

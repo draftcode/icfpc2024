@@ -1,4 +1,4 @@
-use std::{io::Write as _, path::PathBuf};
+use std::{io::Write as _, path::PathBuf, rc::Rc};
 
 use common::{
     eval,
@@ -112,16 +112,14 @@ fn simplify_comb(e: &Expr) -> Expr {
     }
 
     match e {
-        Expr::Un(op, e) => Expr::Un(*op, Box::new(simplify_comb(e))),
-        Expr::Bin(op, l, r) => {
-            Expr::Bin(*op, Box::new(simplify_comb(l)), Box::new(simplify_comb(r)))
-        }
+        Expr::Un(op, e) => Expr::Un(*op, Rc::new(simplify_comb(e))),
+        Expr::Bin(op, l, r) => Expr::Bin(*op, Rc::new(simplify_comb(l)), Rc::new(simplify_comb(r))),
         Expr::If(cond, th, el) => Expr::If(
-            Box::new(simplify_comb(cond)),
-            Box::new(simplify_comb(th)),
-            Box::new(simplify_comb(el)),
+            Rc::new(simplify_comb(cond)),
+            Rc::new(simplify_comb(th)),
+            Rc::new(simplify_comb(el)),
         ),
-        Expr::Lambda(v, e) => Expr::Lambda(*v, Box::new(simplify_comb(e))),
+        Expr::Lambda(v, e) => Expr::Lambda(*v, Rc::new(simplify_comb(e))),
         _ => e.clone(),
     }
 }
