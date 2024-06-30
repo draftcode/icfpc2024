@@ -160,8 +160,8 @@ impl std::fmt::Display for Board {
 pub struct State {
     pub board: Board,
     pub history: Vec<Board>,
-    pub input_a: i32,
-    pub input_b: i32,
+    pub input_a: BigInt,
+    pub input_b: BigInt,
     pub output: Option<BigInt>,
     pub tick: i32,
     max_tick: i32,
@@ -178,8 +178,8 @@ impl Default for State {
         State {
             board: Board(vec![]),
             history: vec![],
-            input_a: 0,
-            input_b: 0,
+            input_a: 0.into(),
+            input_b: 0.into(),
             output: None,
             tick: 1,
             max_tick: 1,
@@ -247,7 +247,7 @@ pub fn print_for_submit(state: &State) -> String {
 }
 
 impl State {
-    pub fn new(board: &str, a: i32, b: i32) -> anyhow::Result<Self> {
+    pub fn new(board: &str, a: BigInt, b: BigInt) -> anyhow::Result<Self> {
         let mut s: State = Default::default();
 
         let mut col_max = 0;
@@ -280,10 +280,10 @@ impl State {
             for c in l.iter_mut() {
                 match c {
                     Cell::InputA => {
-                        *c = Cell::Number(s.input_a.into());
+                        *c = Cell::Number(s.input_a.clone());
                     }
                     Cell::InputB => {
-                        *c = Cell::Number(s.input_b.into());
+                        *c = Cell::Number(s.input_b.clone());
                     }
                     _ => {}
                 }
@@ -293,7 +293,7 @@ impl State {
         Ok(s)
     }
 
-    pub fn new_with_input_port(board: &str, a: i32, b: i32) -> anyhow::Result<Self> {
+    pub fn new_with_input_port(board: &str, a: BigInt, b: BigInt) -> anyhow::Result<Self> {
         let mut s: State = Default::default();
         for l in board.lines() {
             if l.is_empty() || l.chars().nth(0).unwrap() == '?' {
@@ -306,8 +306,8 @@ impl State {
             row.push(Cell::Empty);
             s.board.0.push(row);
         }
-        s.input_a = a;
-        s.input_b = b;
+        s.input_a = a.clone();
+        s.input_b = b.clone();
         Ok(s)
     }
 
@@ -408,8 +408,8 @@ impl State {
         for y in 0..new_board.len() {
             for x in 0..new_board[y].len() {
                 match new_board[y][x] {
-                    Cell::InputA => new_board[y][x] = Cell::Number(self.input_a.into()),
-                    Cell::InputB => new_board[y][x] = Cell::Number(self.input_b.into()),
+                    Cell::InputA => new_board[y][x] = Cell::Number(self.input_a.clone()),
+                    Cell::InputB => new_board[y][x] = Cell::Number(self.input_b.clone()),
                     Cell::Up => {
                         self.move_v(&mut new_board, x, y, 0, -1)?;
                     }
@@ -690,8 +690,8 @@ impl State {
         }
         match &self.board.0[pos.1 as usize][pos.0 as usize] {
             Cell::Number(i) => Some(i.clone()),
-            Cell::InputA => Some(self.input_a.into()),
-            Cell::InputB => Some(self.input_b.into()),
+            Cell::InputA => Some(self.input_a.clone()),
+            Cell::InputB => Some(self.input_b.clone()),
             _ => None,
         }
     }

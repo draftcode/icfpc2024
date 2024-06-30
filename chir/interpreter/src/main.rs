@@ -5,13 +5,14 @@ use std::{
 };
 
 use anyhow::{anyhow, bail, Result};
+use num_bigint::BigInt;
 
 use common::planar::{Cell, State};
 
 #[argopt::subcmd]
 fn resolve_label() -> Result<()> {
     let s = io::read_to_string(io::stdin())?;
-    let mut state = State::new_with_input_port(s.as_str(), 0, 0)?;
+    let mut state = State::new_with_input_port(s.as_str(), 0.into(), 0.into())?;
     state.resolve_label()?;
     println!("{}", common::planar::print_for_submit(&state));
     Ok(())
@@ -41,12 +42,13 @@ fn bfs(
 ) -> (i32, i32, i32, i32) {
     println!("bfs {},{}", x, y);
     let mut q = VecDeque::new();
+    visited[y as usize][x as usize] = true;
     q.push_back((x as i32, y as i32));
 
-    let mut min_x = i32::MAX;
-    let mut min_y = i32::MAX;
-    let mut max_x = i32::MIN;
-    let mut max_y = i32::MIN;
+    let mut min_x = x as i32;
+    let mut min_y = y as i32;
+    let mut max_x = x as i32;
+    let mut max_y = y as i32;
 
     while !q.is_empty() {
         let (x, y) = q.pop_front().unwrap();
@@ -54,8 +56,6 @@ fn bfs(
         min_y = min_y.min(y);
         max_x = max_x.max(x);
         max_y = max_y.max(y);
-
-        visited[y as usize][x as usize] = true;
 
         match board[y as usize][x as usize] {
             Cell::Plus
@@ -154,7 +154,7 @@ fn find_boxes(state: &State) -> Vec<(i32, i32, i32, i32)> {
 #[argopt::subcmd]
 fn placement() -> Result<()> {
     let s = io::read_to_string(io::stdin())?;
-    let state = State::new_with_input_port(s.as_str(), 0, 0)?;
+    let state = State::new_with_input_port(s.as_str(), 0.into(), 0.into())?;
 
     let boxes = find_boxes(&state);
 
@@ -176,10 +176,10 @@ fn run(
     io::stdin().read_line(&mut input)?;
     let mut a_and_b = vec![];
     for num in input.split_whitespace() {
-        a_and_b.push(num.parse::<i32>()?);
+        a_and_b.push(num.parse::<num_bigint::BigInt>()?);
     }
 
-    let mut state = State::new(&s, a_and_b[0], a_and_b[1])?;
+    let mut state = State::new(&s, a_and_b[0].clone(), a_and_b[1].clone())?;
 
     println!("before label processing");
     println!("{}", state.board);
