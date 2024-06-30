@@ -1,10 +1,15 @@
-use std::rc::Rc;
+use std::{
+    rc::Rc,
+    sync::atomic::{AtomicUsize, Ordering},
+};
 
 use common::{
     eval::eval,
     expr::{BinOp, Expr},
+    lambdaman::map::LMap,
 };
 use num_bigint::BigInt;
+use rayon::prelude::*;
 
 trait ToExpr {
     fn to_expr(&self) -> Expr;
@@ -28,7 +33,7 @@ impl ToExpr for &str {
     }
 }
 
-impl ToExpr for i32 {
+impl ToExpr for u64 {
     fn to_expr(&self) -> Expr {
         Expr::Int(BigInt::from(*self).into())
     }
@@ -54,7 +59,7 @@ macro_rules! icfp {
         e
     }};
     (let $var:ident = $val:tt in $($body:tt)+) => {
-        Expr::Bin(BinOp::App,
+        Expr::Bin(BinOp::AppL,
             Rc::new(Expr::Lambda(varid(stringify!($var)), Rc::new(icfp!{ $($body)* }))),
             Rc::new(icfp!{ $val }))
     };
@@ -97,7 +102,7 @@ macro_rules! icfp {
     ($f:tt $($args:tt)+) => {{
         let mut e = icfp!{ $f };
         $(
-            e = Expr::Bin(BinOp::App, Rc::new(e), Rc::new(icfp!{ $args }));
+            e = Expr::Bin(BinOp::AppL, Rc::new(e), Rc::new(icfp!{ $args }));
         )+
         e
     }};
@@ -113,7 +118,7 @@ macro_rules! icfp {
 }
 
 fn varid(s: &str) -> usize {
-    s.chars().next().unwrap() as usize - 'a' as usize
+    s.chars().next().unwrap() as usize - 'A' as usize
 }
 
 fn problem6() -> Expr {
@@ -207,6 +212,16 @@ fn problem6() -> Expr {
     }
 }
 
+fn problem8() -> Expr {
+    let header = "solve lambdaman8 ";
+
+    icfp! {
+        let d = (fn s -> (concat s (concat s s))) in
+        let p = (fn s -> (d (d (d (d s))))) in
+        (concat (#header) (p (concat (concat (concat (p "DD") (p "LL")) (p "UU")) (p "RR"))))
+    }
+}
+
 fn problem19() -> Expr {
     let header = "solve lambdaman19 ";
     icfp! {
@@ -284,13 +299,81 @@ fn problem20() -> Expr {
     }
 }
 
+fn problem11() -> Expr {
+    let lmap0 = LMap::from_id(11).unwrap();
+
+    // {
+    //     let mut rng = 4610551u128;
+    //     let mut route = String::new();
+    //     for step in 1..=500000 {
+    //         let d = match rng >> 62 {
+    //             0 => "LL",
+    //             1 => "UU",
+    //             2 => "DD",
+    //             3 => "RR",
+    //             _ => unreachable!(),
+    //         };
+    //         route.push_str(d);
+    //         rng = (rng * 48271) % (2u128.pow(64) - 59);
+    //     }
+    //     let mut lmap = lmap0.clone();
+    //     lmap.do_move(&route);
+    //     assert_eq!(lmap.remaining_pills(), 0);
+    //     println!("{}", route);
+    //     todo!();
+    // }
+
+    // let mut best = AtomicUsize::new(1000000);
+    // (0..=1000000u128).into_par_iter().for_each(|rng0| {
+    //     if rng0 % 100 == 0 {
+    //         eprint!("{}\r", rng0);
+    //     }
+    //     let mut rng = rng0;
+    //     let mut lmap = lmap0.clone();
+    //     for step in 1..=500000 {
+    //         let d = match rng >> 62 {
+    //             0 => "LL",
+    //             1 => "UU",
+    //             2 => "DD",
+    //             3 => "RR",
+    //             _ => unreachable!(),
+    //         };
+    //         lmap.do_move(d).unwrap();
+    //         rng = (rng * 48271) % (2u128.pow(64) - 59);
+    //         if lmap.remaining_pills() == 0 {
+    //             eprintln!("at {} step", step);
+    //             break;
+    //         }
+    //     }
+    //     let score = lmap.remaining_pills();
+    //     if score < best.fetch_min(score, Ordering::SeqCst) {
+    //         eprintln!("{} => {} ({})", rng0, score, rng);
+    //     }
+    //     if score == 0 {
+    //         eprint!("\nfound!!! {}\n\n", rng0);
+    //     }
+    // });
+
+    icfp! {
+        let R = (fn s -> (% (* s 48271) 18446744073709551557)) in
+        let d = (fn s -> (take 1 (drop (/ s 4611686018427387904) "LUDR"))) in
+        (concat "solve lambdaman11 " (fix (fn f c s r ->
+            (if (== c 0) {
+                r
+            } else {
+                (f (- c 1) (R s) (concat r (concat (d s) (d s))))
+            })
+        ) 500000 4610551 ""))
+    }
+}
+
 fn main() {
-    let expr = problem19();
+    let expr = problem11();
     println!("{}", expr.encoded());
     eprintln!("{}", expr);
     eprintln!("{} bytes", expr.encoded().to_string().len());
     let Expr::String(s) = eval(&expr).unwrap() else {
-        panic!("not a string")
+        panic!("not a string: {}", expr)
     };
-    //eprintln!("{}", s);
+    eprintln!("{}", s);
 }

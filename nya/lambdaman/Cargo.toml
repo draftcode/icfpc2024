@@ -8,3 +8,4 @@ anyhow = "1.0.86"
 clap = "4.5.8"
 common = { path = "../../common" }
 num-bigint = "0.4.6"
+rayon = "1.10.0"

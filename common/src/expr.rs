@@ -35,7 +35,7 @@ impl std::fmt::Display for TokenEncoded<'_> {
             Token::Bool(v) => write!(f, "{}", if *v { "T" } else { "F" }),
             Token::Int(n) => {
                 if *n < BigInt::ZERO {
-                    return Err(std::fmt::Error);
+                    panic!("negative number: {n}");
                 }
                 write!(f, "I")?;
                 if *n == BigInt::ZERO {
@@ -55,20 +55,16 @@ impl std::fmt::Display for TokenEncoded<'_> {
                 }
                 Ok(())
             }
-            Token::String(s) => write!(f, "S{}", encode_str(s).map_err(|_| std::fmt::Error)?),
+            Token::String(s) => write!(f, "S{}", encode_str(s).expect("invalid string")),
             Token::Un(op) => write!(f, "U{}", op.encoded()),
             Token::Bin(op) => write!(f, "B{}", op.encoded()),
             Token::If => write!(f, "?"),
             Token::Lambda(v) => write!(
                 f,
                 "L{}",
-                encode_base94_int(*v as i64).map_err(|_| std::fmt::Error)?
+                encode_base94_int(*v as i64).expect("invalid lambda var")
             ),
-            Token::Var(v) => write!(
-                f,
-                "v{}",
-                encode_base94_int(*v as i64).map_err(|_| std::fmt::Error)?
-            ),
+            Token::Var(v) => write!(f, "v{}", encode_base94_int(*v as i64).expect("invalid var")),
         }
     }
 }

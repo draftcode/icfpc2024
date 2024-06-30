@@ -1,12 +1,12 @@
 use std::{fmt::Display, str::FromStr};
 
-use anyhow::bail;
+use anyhow::{bail, Context};
 
 #[derive(Debug, Clone)]
 pub struct LMap {
-    pub width: usize,
-    pub height: usize,
-    pub data: Vec<Vec<LCell>>,
+    data: Vec<Vec<LCell>>,
+    pills: usize,
+    pos: (usize, usize),
 }
 
 impl Display for LMap {
@@ -30,7 +30,7 @@ impl Display for LMap {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LCell {
     Wall,
     Empty,
@@ -38,16 +38,16 @@ pub enum LCell {
     Lambdaman,
 }
 
-impl FromStr for LCell {
-    type Err = anyhow::Error;
+impl TryFrom<char> for LCell {
+    type Error = anyhow::Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "#" => Ok(LCell::Wall),
-            " " => Ok(LCell::Empty),
-            "." => Ok(LCell::Pill),
-            "L" => Ok(LCell::Lambdaman),
-            _ => bail!("unknown cell type: {}", s),
+    fn try_from(c: char) -> Result<Self, Self::Error> {
+        match c {
+            '#' => Ok(LCell::Wall),
+            ' ' => Ok(LCell::Empty),
+            '.' => Ok(LCell::Pill),
+            'L' => Ok(LCell::Lambdaman),
+            _ => bail!("unknown cell type: {c:?}"),
         }
     }
 }
@@ -58,7 +58,7 @@ impl FromStr for LMap {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut width = 0;
         let mut height = 0;
-        let mut data = Vec::new();
+        let mut data: Vec<Vec<LCell>> = Vec::new();
         for line in s.lines() {
             let line = line.trim();
             if line.is_empty() {
@@ -71,16 +71,37 @@ impl FromStr for LMap {
             }
             data.push(
                 line.chars()
-                    .map(|c| c.to_string().parse())
+                    .map(|c| c.try_into())
                     .collect::<Result<_, _>>()?,
             );
             height += 1;
         }
-        Ok(LMap {
-            width,
-            height,
-            data,
-        })
+
+        // Count pills.
+        let mut pills = 0;
+        for row in &data {
+            for cell in row {
+                if *cell == LCell::Pill {
+                    pills += 1;
+                }
+            }
+        }
+
+        // Locate lambdaman.
+        let mut pos: Option<(usize, usize)> = None;
+        for x in 0..height {
+            for y in 0..width {
+                if data[x][y] == LCell::Lambdaman {
+                    if pos.is_some() {
+                        bail!("corrupted map: multiple lambdamen");
+                    }
+                    pos = Some((x, y));
+                }
+            }
+        }
+        let pos = pos.context("lambdaman not found")?;
+
+        Ok(LMap { data, pills, pos })
     }
 }
 
@@ -94,32 +115,15 @@ impl LMap {
         Ok(content.parse()?)
     }
 
-    fn lambdaman_position(&self) -> (usize, usize) {
-        for x in 0..self.height {
-            for y in 0..self.width {
-                if self.data[x][y] == LCell::Lambdaman {
-                    return (x, y);
-                }
-            }
-        }
-        panic!("lambdaman not found");
-    }
-
     pub fn remaining_pills(&self) -> usize {
-        let mut count = 0;
-        for x in 0..self.height {
-            for y in 0..self.width {
-                if self.data[x][y] == LCell::Pill {
-                    count += 1;
-                }
-            }
-        }
-        count
+        self.pills
     }
 
     pub fn do_move(&mut self, instr: &str) -> anyhow::Result<()> {
-        let (mut x, mut y) = self.lambdaman_position();
+        let height = self.data.len();
+        let width = self.data[0].len();
         for c in instr.chars() {
+            let (x, y) = self.pos;
             let (dx, dy) = match c {
                 'U' => (-1, 0),
                 'D' => (1, 0),
@@ -129,20 +133,22 @@ impl LMap {
             };
             let nx = x as isize + dx;
             let ny = y as isize + dy;
-            if nx < 0 || nx >= self.height as isize || ny < 0 || ny >= self.width as isize {
+            if nx < 0 || nx >= height as isize || ny < 0 || ny >= width as isize {
                 bail!("out of map");
             }
             let nx = nx as usize;
             let ny = ny as usize;
-            if self.data[nx][ny] == LCell::Wall {
-                continue;
-            } else {
-                self.data[x][y] = LCell::Empty;
-                self.data[nx][ny] = LCell::Lambdaman;
+            match self.data[nx][ny] {
+                LCell::Wall => continue,
+                LCell::Empty => {}
+                LCell::Pill => {
+                    self.pills -= 1;
+                }
+                LCell::Lambdaman => panic!("two lambdamen: identity crisis"),
             }
-
-            x = nx;
-            y = ny;
+            self.data[x][y] = LCell::Empty;
+            self.data[nx][ny] = LCell::Lambdaman;
+            self.pos = (nx, ny);
         }
         Ok(())
     }
