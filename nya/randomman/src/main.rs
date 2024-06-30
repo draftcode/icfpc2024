@@ -56,6 +56,7 @@ enum Command {
 
         seed: u64,
     },
+    CompileAll,
     SubmitAll,
 }
 
@@ -199,6 +200,18 @@ const KNOWN_SOLUTIONS: &[KnownSolution] = &[
     },
 ];
 
+fn compile_all_main() -> Result<()> {
+    for known in KNOWN_SOLUTIONS {
+        let expr =
+            known
+                .rng
+                .compile_expr(known.problem_id, known.seed, known.stride, known.moves)?;
+        let code = expr.encoded().to_string();
+        eprintln!("lambdaman{}: {} bytes", known.problem_id, code.len());
+    }
+    Ok(())
+}
+
 fn submit_all_main() -> Result<()> {
     for known in KNOWN_SOLUTIONS {
         let expr =
@@ -234,6 +247,7 @@ fn main() -> Result<()> {
             problem_id,
             seed,
         } => submit_main(problem_id, seed, stride, moves, &rng),
+        Command::CompileAll => compile_all_main(),
         Command::SubmitAll => submit_all_main(),
     }
 }
