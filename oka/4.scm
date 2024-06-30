@@ -8,8 +8,10 @@
   (string-take 1 (string-drop (div rng 536870912) "DLUR"))
 )))
 
-(define (solve-lambdaman4) (
-    solve 1 40000
-))
+(define (res) 
+  (string-append "solve lambdaman4 " (
+    solve 1 80000
+  ))
+)
 
-(define (main args) (print (solve-lambdaman4)))
+(define (main args) (print (res)))

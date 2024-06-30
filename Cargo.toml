@@ -15,6 +15,9 @@ members = [
   "scmcomp",
   "tanakh/evaluator",
   "tanakh/solver",
-  "tanakh/spaceship", "chun/spaceship_trivialsolver",
-  "fuqinho/fuqinho-spaceship", "nya/lambdaman",
+  "tanakh/spaceship",
+  "chun/spaceship_trivialsolver",
+  "fuqinho/fuqinho-spaceship",
+  "nya/lambdaman",
+  "lm",
 ]
