@@ -275,7 +275,7 @@ impl Expr {
                     // (f) => f
                 } else if !args[0].is_buildin_var(Some(args.len() - 1)) {
                     assert_eq!(args.len(), 2, "{}", self);
-                    res.push("B$".to_string());
+                    res.push("B~".to_string());
                 }
                 args.iter()
                     .for_each(|arg| arg.icfp_inner(res, env, args.len() == 2))
