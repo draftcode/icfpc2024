@@ -73,6 +73,18 @@ export default function Sidebar({ current }: { current?: string }) {
             <span className="label-text">差分</span>
           </label>
         </div>
+        <div className="form-control">
+          <label className="label cursor-pointer justify-normal gap-x-1">
+            <input
+              type="radio"
+              name="radio-10"
+              className="radio radio-xs"
+              checked={badgeType === "bestScore"}
+              onChange={() => setBadgeType("bestScore")}
+            />
+            <span className="label-text">トップスコア</span>
+          </label>
+        </div>
       </form>
       <hr />
       <ul className="menu menu-xs w-56 shrink-0">
@@ -259,6 +271,13 @@ function Badge({
       </div>
     );
   }
+  if (badge_type === "bestScore") {
+    if (best_score === null) {
+      return <div className="badge badge-warning">No Score</div>;
+    }
+    return <div className="badge badge-primary">{best_score}</div>;
+  }
+  return null;
 }
 
 function CategoryBadge({ rank }: { rank: number | null }) {

@@ -4,8 +4,8 @@ import CommunicationContainer from "@/app/CommunicationContainer";
 import Sidebar from "@/app/Sidebar";
 import {
   CommunicationLog,
-  useCommunicationsWithRequestPrefix,
   useProblem,
+  useSolutions,
 } from "@/components/api";
 import {
   WaypointVizState,
@@ -29,8 +29,9 @@ export default function Home({
     "spaceship",
     parseInt(idStr),
   );
-  const { data, error } = useCommunicationsWithRequestPrefix(
-    `solve spaceship${idStr} `,
+  const { data, error } = useSolutions(
+    "spaceship",
+    parseInt(idStr),
     page * 10,
     10,
   );
