@@ -10,7 +10,7 @@
 
 (define (res) 
   (string-append "solve lambdaman4 " (
-    solve 1 40000
+    solve 1 80000
   ))
 )
 
