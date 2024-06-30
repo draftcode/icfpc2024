@@ -58,9 +58,6 @@ impl FromStr for Cell {
                         Cell::Label(s.to_owned())
                     } else if s.len() >= 2 && s.chars().next().unwrap() == '@' {
                         let label = &s[1..];
-                        if !label.chars().all(|c| c.is_lowercase()) {
-                            bail!("label should be lower case")
-                        }
                         Cell::Warp(label.to_owned())
                     } else {
                         bail!("Invalid cell: {}", s);
