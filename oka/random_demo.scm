@@ -12,14 +12,14 @@
 )
 
 (define (solve rng iter) (if (= iter 0) "" (
-  (lambda (rng) 
-    (string-append (solve rng (- iter 1)) (get rng))
+  (lambda (rng)
+    (string-append (get rng) (solve rng (- iter 1)))
   ) (next-rng rng)
 )
 ))
 
 (define (solve-lambdaman4) (
-    solve 1 100
+    solve 1 5000
 ))
 
-(define (main args) (print (res)))
+(define (main args) (print (solve-lambdaman4)))
