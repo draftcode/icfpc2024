@@ -51,6 +51,10 @@ impl Expr {
         Expr::Proc(vec![x, y])
     }
 
+    pub fn proc3(x: Expr, y: Expr, z: Expr) -> Expr {
+        Expr::Proc(vec![x, y, z])
+    }
+
     fn is_variadic(&self) -> bool {
         let Expr::Var(v) = self else { return false };
 

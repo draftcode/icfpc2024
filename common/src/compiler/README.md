@@ -19,11 +19,15 @@ top level の expression はすべて `(define ...)` 形式である必要があ
 
 `string-take` と `string-drop` の実装は書いても書かなくてもよい（無視される）。
 
+`(define (res) ...)` の代わりに、`(define (solve-lambdaman4) ...)` などと、`solve-` で始まる
+変数を定義してもよい。この場合、`-` を空白に変え、空白を足した、`"solve lambdaman4 "` を追加するコードが自動的に
+追加される。res, solve-... が両方ある場合、後にあるものが優先され、それより前にあるものはコードに組み入れられてしまうので注意。
+
 ## 組み込み関数
 
 以下の関数は定義なしで使える。
 
-string-append は特別に 2 以上の任意個の引数をとれる。
+`string-append` は特別に 2 以上の任意個の引数をとれる。
 
 ```
 # Unary
@@ -49,6 +53,8 @@ string-append は特別に 2 以上の任意個の引数をとれる。
 (A B)               -> B$ A' B'
 
 (string=? A B)      -> B= A' B'
+(modulo A B)        -> B% A' B'
+(div A B)           -> B/ A' B'
 
 # If
 (if A B C)            -> ? A' B' C'
@@ -107,3 +113,21 @@ B
 B
 
 に書き換えられる
+
+## Let の書き換え (未実装)
+
+(let () A)
+
+は
+
+A
+
+と同じ。
+
+(let (... (x y)) A)
+
+は
+
+(let (...) ((lambda (x) A) y))
+
+と同じ。
