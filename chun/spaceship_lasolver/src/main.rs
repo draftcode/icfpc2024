@@ -17,13 +17,13 @@ fn surrogate_cost_with_velocity(curpt: Point, curv: Velocity, goal: Point) -> i3
     let dx = goal.0 - curpt.0;
     let dy = goal.1 - curpt.1;
     let vx = curv.0;
-    let (avx, xpenalty) = if dx.signum() == vx.signum() {
+    let (avx, xpenalty) = if (dx.signum() - vx.signum()).abs() <= 1 {
         (cmp::max(1, vx.abs()), 0)
     } else {
         (1, vx.abs() * vx.abs() + 1)
     };
     let vy = curv.1;
-    let (avy, ypenalty) = if dy.signum() == vy.signum() {
+    let (avy, ypenalty) = if (dy.signum() - vy.signum()).abs() <= 1 {
         (cmp::max(1, vy.abs()), 0)
     } else {
         (1, vy.abs() * vy.abs() + 1)
@@ -293,7 +293,7 @@ fn solve_fallback_singleaxis(px: i32, nx: i32) -> Vec<i32> {
     }
 
     let mut k = 1;
-    let mut x = 0;
+    let mut x;
     loop {
         x = if k % 2 != 0 {
             (k + 1) / 2 * (k + 1) / 2
@@ -323,7 +323,7 @@ fn solve_fallback_singleaxis(px: i32, nx: i32) -> Vec<i32> {
             p.push(-1);
         }
     }
-    let offset = if k % 2 != 0 { 0 } else { 1 };
+    //let offset = if k % 2 != 0 { 0 } else { 1 };
     for i in 0..(x - d) {
         if k % 2 != 0 {
             p[((k + 1) / 2 - 1 - i) as usize] -= 1;
@@ -454,7 +454,25 @@ fn solve(points: Vec<(i32, i32)>) -> String {
         curpt = nextmid;
         curv = midv;
     }
-    let accs = solve_onept(curpt, curv, points[points.len() - 1]);
+    let finalpt = points[points.len() - 1];
+    eprintln!(
+        "Solving {:?}, {:?} to {:?} (final pt)",
+        curpt, curv, finalpt
+    );
+    let accs = if surrogate_cost(curpt, finalpt) > 1000 {
+        // to heavy to search, falling back
+        // stop particle
+        while curv != (0, 0) {
+            let acc = (-curv.0.signum(), -curv.1.signum());
+            retbuf.push_str(&encode_thrust_into_keypad(vec![acc]));
+            curv = (curv.0 + acc.0, curv.1 + acc.1);
+            curpt = (curpt.0 + curv.0, curpt.1 + curv.1);
+        }
+        solve_fallback(curpt, finalpt)
+    } else {
+        solve_onept(curpt, curv, points[points.len() - 1])
+    };
+    eprintln!("accs returned, len={}", accs.len());
     let vel = {
         let check_by_simulate = simulate(curpt, curv, &accs);
         check_by_simulate.last().unwrap().1
