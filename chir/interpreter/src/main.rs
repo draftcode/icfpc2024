@@ -1,22 +1,11 @@
-use std::{io, str::FromStr};
+use std::{
+    fs,
+    io::{self, Write},
+};
 
 use anyhow::{anyhow, bail, Result};
 
-use common::planar::{Cell, State};
-
-fn parse_input(s: &str) -> Result<State> {
-    if let Some((first, board)) = s.split_once("\n") {
-        let first = first.split_whitespace().collect::<Vec<&str>>();
-        if first.len() != 2 {
-            bail!("Please put A and B in the first line");
-        }
-        let a = first[0].parse::<i32>()?;
-        let b = first[1].parse::<i32>()?;
-        State::new(board, a, b)
-    } else {
-        Err(anyhow!("Failed to parse the input"))
-    }
-}
+use common::planar::State;
 
 #[argopt::subcmd]
 fn resolve_label() -> Result<()> {
@@ -28,10 +17,22 @@ fn resolve_label() -> Result<()> {
 }
 
 #[argopt::subcmd]
-fn run() -> Result<()> {
-    let s = io::read_to_string(io::stdin())?;
+fn run(
+    #[opt(short = 'p', long = "program")] program: std::path::PathBuf,
+    #[opt(short = 't', long = "turn")] turn: Option<u32>,
+) -> Result<()> {
+    let s = fs::read_to_string(program)?;
 
-    let mut state = parse_input(s.as_str())?;
+    print!("Input A and B >>> ");
+    io::stdout().flush()?;
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+    let mut a_and_b = vec![];
+    for num in input.split_whitespace() {
+        a_and_b.push(num.parse::<i32>()?);
+    }
+
+    let mut state = State::new(&s, a_and_b[0], a_and_b[1])?;
 
     println!("before label processing");
     println!("{}", state.board);
@@ -39,8 +40,9 @@ fn run() -> Result<()> {
     println!("after label processing");
     println!("{}", state.board);
 
+    let max_turn = if let Some(t) = turn { t } else { 1000000 };
     let mut turn = 0;
-    while state.output.is_none() {
+    while state.output.is_none() && turn < max_turn {
         state.onestep()?;
         println!("{}", state.board);
         turn += 1;
