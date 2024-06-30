@@ -343,6 +343,9 @@ impl State {
         }
 
         for (l, tx, ty, _) in labels.iter() {
+            if l == "A" || l == "B" {
+                continue;
+            }
             let mut found = false;
             for (c, x, y) in refs.iter() {
                 if *c == *l {
