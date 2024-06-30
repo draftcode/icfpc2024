@@ -1,26 +1,27 @@
 use std::{io, str::FromStr};
 
-use anyhow::Result;
+use anyhow::{anyhow, bail, Result};
 
 use common::planar::{Cell, State};
+
+fn parse_input(s: &str) -> Result<State> {
+    if let Some((first, board)) = s.split_once("\n") {
+        let first = first.split_whitespace().collect::<Vec<&str>>();
+        if first.len() != 2 {
+            bail!("Please put A and B in the first line");
+        }
+        let a = first[0].parse::<i32>()?;
+        let b = first[1].parse::<i32>()?;
+        State::new(board, a, b)
+    } else {
+        Err(anyhow!("Failed to parse the input"))
+    }
+}
 
 fn main() -> Result<()> {
     let s = io::read_to_string(io::stdin())?;
 
-    let mut it = s.lines();
-    let first = it.next().unwrap().split_whitespace().collect::<Vec<&str>>();
-
-    let mut state: State = Default::default();
-    state.input_a = first[0].parse::<i32>()?;
-    state.input_b = first[1].parse::<i32>()?;
-
-    for l in it {
-        let mut row = vec![];
-        for c in l.split_whitespace() {
-            row.push(Cell::from_str(c)?);
-        }
-        state.board.0.push(row);
-    }
+    let mut state = parse_input(s.as_str())?;
 
     println!("before label processing");
     println!("{}", state.board);

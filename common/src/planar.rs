@@ -178,6 +178,20 @@ fn readable(board: &Vec<Vec<Cell>>, pos: (i32, i32)) -> bool {
 }
 
 impl State {
+    pub fn new(board: &str, a: i32, b: i32) -> anyhow::Result<Self> {
+        let mut s: State = Default::default();
+        for l in board.lines() {
+            let mut row = vec![];
+            for c in l.split_whitespace() {
+                row.push(Cell::from_str(c)?);
+            }
+            s.board.0.push(row);
+        }
+        s.input_a = a;
+        s.input_b = b;
+        Ok(s)
+    }
+
     pub fn resolve_label(&mut self) -> anyhow::Result<()> {
         let mut labels = vec![];
         let mut refs = vec![];
@@ -228,8 +242,6 @@ impl State {
             }
         }
         self.history.push(self.board.clone());
-
-        // eprintln!("one step: t = {}, board = {}", self.history.len(), self.board);
 
         let mut warp_requests = vec![];
 
