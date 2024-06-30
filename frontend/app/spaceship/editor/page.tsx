@@ -6,6 +6,7 @@ import {
   useProblem,
 } from "@/components/api";
 import {
+  Waypoint,
   WaypointVizState,
   calculateSplitWaypoints,
 } from "@/components/spaceviz/state";
@@ -62,6 +63,8 @@ function Editor({
   );
   const [path, setPath] = useState(initPath ?? "");
   const [debugStep, setDebugStep] = useState(0);
+  const [currentWaypoint, setCurrentWaypoint] = useState<Waypoint | null>(null);
+  const [undoChar, setUndoChar] = useState<string | null>(null);
 
   useEffect(() => {
     const reqPoints = parseReqPoints(problemData?.content ?? "");
@@ -73,8 +76,9 @@ function Editor({
       path.slice(0, debugStep),
       path.slice(debugStep),
     );
+    setCurrentWaypoint(w1[w1.length - 1]);
     vizStateRef.current.setWaypoints(w1, w2);
-  }, [path, debugStep]);
+  }, [path, debugStep, setCurrentWaypoint]);
   const {
     trigger: triggerSubmit,
     isMutating,
@@ -120,11 +124,31 @@ function Editor({
   const insertOne = (s: string) => {
     setPath(path.slice(0, debugStep) + s + path.slice(debugStep));
     setDebugStep(debugStep + 1);
+    setUndoChar(null);
   };
   const deleteOne = () => {
+    setUndoChar(path[debugStep - 1]);
     setPath(path.slice(0, Math.max(0, debugStep - 1)) + path.slice(debugStep));
     setDebugStep(Math.max(0, debugStep - 1));
   };
+
+  let execContext = null;
+  if (path.length > 0) {
+    let prefix = path.slice(0, debugStep);
+    let suffix = path.slice(debugStep);
+    if (prefix.length > 4) {
+      prefix = "..." + prefix.slice(-4);
+    }
+    if (suffix.length > 4) {
+      suffix = suffix.slice(0, 4) + "...";
+    }
+    execContext = (
+      <div>
+        <div>ここにくるまでに実行: {prefix}</div>
+        <div>ここから実行: {suffix}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-2 p-4">
@@ -152,6 +176,16 @@ function Editor({
           <div>
             ステップ: {debugStep}/{path.length}
           </div>
+          {currentWaypoint && (
+            <div>
+              <p>
+                現在位置: ({currentWaypoint[0]},{currentWaypoint[1]})
+              </p>
+              <p>
+                速度: ({currentWaypoint[2]},{currentWaypoint[3]})
+              </p>
+            </div>
+          )}
           <div className="grid grid-cols-4">
             <button
               className="btn btn-xs"
@@ -241,33 +275,45 @@ function Editor({
             </div>
           </div>
 
+          {execContext}
+
           <button
             className="btn btn-sm bg-gray-300"
             onClick={() => deleteOne()}
           >
-            現在の一文字削除
+            直前の一文字削除
           </button>
-
-          <button
-            className="btn btn-sm bg-primary text-white"
-            disabled={isMutating}
-            onClick={() => triggerSubmit()}
-          >
-            提出
-          </button>
-
-          {submitData && (
-            <div>
-              <Link
-                href={`/spaceship/editor?base=${submitData.id}`}
-                className="underline text-blue-500"
-                target="_blank"
-              >
-                保存されたリクエストへのパーマリンク
-              </Link>
-              <div>{submitData.decoded_response}</div>
-            </div>
+          {undoChar && (
+            <button
+              className="btn btn-sm bg-gray-300"
+              onClick={() => insertOne(undoChar ?? "")}
+            >
+              さっき削除した{undoChar}を挿入
+            </button>
           )}
+
+          <div>
+            <button
+              className="btn btn-sm bg-primary text-white w-full"
+              disabled={isMutating}
+              onClick={() => triggerSubmit()}
+            >
+              提出
+            </button>
+
+            {submitData && (
+              <div>
+                <Link
+                  href={`/spaceship/editor?base=${submitData.id}`}
+                  className="underline text-blue-500"
+                  target="_blank"
+                >
+                  保存されたリクエストへのパーマリンク
+                </Link>
+                <div>{submitData.decoded_response}</div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

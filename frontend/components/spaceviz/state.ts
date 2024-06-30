@@ -1,4 +1,4 @@
-type Waypoint = [number, number, number, number]; // [x, y, vx, vy]
+export type Waypoint = [number, number, number, number]; // [x, y, vx, vy]
 
 export class WaypointVizState {
   // Space座標系
