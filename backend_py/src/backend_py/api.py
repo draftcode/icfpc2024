@@ -94,6 +94,35 @@ async def get_communication(
     return log
 
 
+@app.get("/solutions/{category}/{problem_id}")
+async def solution(
+    session: SessionDep,
+    category: str,
+    problem_id: int,
+    offset: int = 0,
+    limit: int = Query(default=10),
+) -> list[CommunicationLog]:
+    if category == "lambdaman":
+        prefix = f"solve lambdaman{problem_id}"
+    elif category == "spaceship":
+        prefix = f"solve spaceship{problem_id}"
+    elif category == "threed":
+        prefix = f"solve threed{problem_id}"
+    elif category == "efficiency":
+        prefix = f"solve efficiency{problem_id}"
+    else:
+        raise HTTPException(status_code=404, detail="Category not found")
+    return session.exec(
+        select(CommunicationLog)
+        .where(
+            CommunicationLog.decoded_request_prefix.op("similar to")(prefix + "( |\n)%")  # type: ignore
+        )
+        .order_by(CommunicationLog.id.desc())  # type: ignore
+        .offset(offset)
+        .limit(limit)
+    ).all()
+
+
 class ParsedProblem(BaseModel):
     category: str
     id: int
