@@ -431,7 +431,21 @@ impl State {
             new_board = self.history[target_t].0.clone();
             self.tick = (target_t + 1) as i32;
             self.history = self.history.split_at(target_t).0.to_vec();
+
+            self.written = vec![vec![false; new_board[0].len()]; new_board.len()];
             for (_, x, y, v) in &warp_requests {
+                if self.written[*y as usize][*x as usize] {
+                    // Check if the same value is used or not.
+                    if let Cell::Number(w) = &new_board[*y as usize][*x as usize] {
+                        if v != w {
+                            bail!(
+                                "The different value is goint to be written by warp ({},{})",
+                                x,
+                                y
+                            );
+                        }
+                    }
+                }
                 self.write_to(&mut new_board, *x, *y, Cell::Number(v.clone()))?;
             }
         }
