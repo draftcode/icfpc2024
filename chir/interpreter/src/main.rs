@@ -192,7 +192,8 @@ fn run(
     while state.output.is_none() && turn < max_turn {
         state.onestep()?;
         println!(
-            "[t={},x={},y={}]",
+            "[time={},tick={},x={},y={}]",
+            state.monotonic_tick,
             state.tick,
             state.used_x(),
             state.used_y()

@@ -170,6 +170,7 @@ pub struct State {
     min_y: i32,
     max_y: i32,
     written: Vec<Vec<bool>>,
+    pub monotonic_tick: i32,
 }
 
 impl Default for State {
@@ -187,6 +188,7 @@ impl Default for State {
             min_y: i32::MAX,
             max_y: i32::MIN,
             written: vec![],
+            monotonic_tick: 0,
         }
     }
 }
@@ -366,6 +368,7 @@ impl State {
     }
 
     pub fn onestep(&mut self) -> anyhow::Result<()> {
+        self.monotonic_tick += 1;
         for y in 0..self.board.0.len() {
             for x in 0..self.board.0[y].len() {
                 if let Cell::Label(_, _) = self.board.0[y][x] {
