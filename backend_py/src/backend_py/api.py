@@ -106,8 +106,8 @@ async def solution(
         prefix = f"solve lambdaman{problem_id}"
     elif category == "spaceship":
         prefix = f"solve spaceship{problem_id}"
-    elif category == "threed":
-        prefix = f"solve threed{problem_id}"
+    elif category == "3d":
+        prefix = f"solve 3d{problem_id}"
     elif category == "efficiency":
         prefix = f"solve efficiency{problem_id}"
     else:
