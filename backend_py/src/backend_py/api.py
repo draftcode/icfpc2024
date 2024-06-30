@@ -2,7 +2,7 @@ import datetime
 import importlib.resources as pkg_resources
 from typing import Sequence
 
-from backend_rs import encode_message  # type: ignore
+from backend_rs import onestep_3d, encode_message  # type: ignore
 from fastapi import Body, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, RedirectResponse
@@ -57,6 +57,24 @@ async def communicate_submit_plaintext(
     raise HTTPException(
         status_code=400, detail="Either plaintext or icfp must be provided"
     )
+
+
+class ThreedSimulationRequest(BaseModel):
+    board: str
+    val_a: int
+    val_b: int
+    turns: int
+
+
+class ThreedSimulationResult(BaseModel):
+    board: str
+    output: int | None
+
+
+@app.post("/simulation/3d")
+async def run_3d_simulation(body: ThreedSimulationRequest) -> ThreedSimulationResult:
+    result_board, output = onestep_3d(body.board, body.val_a, body.val_b, body.turns)
+    return ThreedSimulationResult(board=result_board, output=output)
 
 
 @app.get("/communications")
