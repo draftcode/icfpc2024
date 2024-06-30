@@ -219,6 +219,22 @@ impl State {
         }
         s.input_a = a;
         s.input_b = b;
+
+        // Replace A and B immediately after parsing.
+        for l in s.board.0.iter_mut() {
+            for c in l.iter_mut() {
+                match c {
+                    Cell::InputA => {
+                        *c = Cell::Number(s.input_a.into());
+                    }
+                    Cell::InputB => {
+                        *c = Cell::Number(s.input_b.into());
+                    }
+                    _ => {}
+                }
+            }
+        }
+
         Ok(s)
     }
 
