@@ -307,6 +307,12 @@ function Debugger({ input }: { input: string }) {
               </button>
             </div>
           </div>
+          {data?.output && (
+            <div>
+              <h2 className="font-bold">出力</h2>
+              <div>{data?.output}</div>
+            </div>
+          )}
         </div>
       </div>
     </div>
