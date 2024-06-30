@@ -11,15 +11,13 @@
     (string-take 1 (string-drop (div rng 536870912) "DLUR"))
 )
 
-(define (solve rng iter) (if (= iter 0) "" (
-  (lambda (rng)
-    (string-append (get rng) (solve rng (- iter 1)))
-  ) (next-rng rng)
+(define (solve rng iter res) (if (= iter 0) res (
+  (solve (next-rng rng) (- iter 1) (string-append res (get rng)))
 )
 ))
 
 (define (solve-lambdaman4) (
-    solve 1 5000
+    solve 1 2500 ""
 ))
 
 (define (main args) (print (solve-lambdaman4)))

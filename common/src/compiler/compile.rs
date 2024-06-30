@@ -4,11 +4,16 @@ use super::{expr::Expr, parser::parse_str};
 
 pub fn compile_to_lambda(prog: String) -> anyhow::Result<Expr> {
     let mut define_z = parse_str(
+        //         r#"(define (Z f) (
+        //     (lambda (x) (f (lambda (y) ((x x) y))))
+        //     (lambda (x) (f (lambda (y) ((x x) y))))
+        // ))
+        //     "#,
         r#"(define (Z f) (
-    (lambda (x) (f (lambda (y) ((x x) y))))
-    (lambda (x) (f (lambda (y) ((x x) y))))
+        (lambda (x) (f (x x)))
+        (lambda (x) (f (x x)))
 ))
-    "#,
+"#,
     )?
     .exprs[0]
         .clone();
