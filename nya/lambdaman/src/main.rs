@@ -116,6 +116,97 @@ fn varid(s: &str) -> usize {
     s.chars().next().unwrap() as usize - 'a' as usize
 }
 
+fn problem6() -> Expr {
+    let header = "solve lambdaman6 ";
+
+    // 90 bytes
+    // B$ L8 B$ L8 B. S3/,6%},!-"$!-!.[} B. B. v8 v8 B. v8 v8 B. B. v8 v8 B. v8 v8 SLLLLLLLLLLLLL
+    // B$
+    //   L8
+    //     B$
+    //       L8
+    //         B.
+    //           S3/,6%},!-"$!-!.[}
+    //           B.
+    //             B.
+    //               v8
+    //               v8
+    //             B.
+    //               v8
+    //               v8
+    //       B.
+    //         B.
+    //           v8
+    //           v8
+    //         B.
+    //           v8
+    //           v8
+    //   SLLLLLLLLLLLLL
+    //
+    icfp! {
+        let x = "RRRRRRRRRRRRR" in
+        let x = (concat (concat x x) (concat x x)) in
+        (concat (#header) (concat (concat x x) (concat x x)))
+    };
+
+    // 87 bytes
+    // B$ L0 B$ L8 B. S3/,6%},!-"$!-!.[} B$ v0 B$ v0 v8 SLLLLLLLLLLLLL L8 B. B. v8 v8 B. v8 v8
+    icfp! {
+        let p = (fn x -> (concat (concat x x) (concat x x))) in
+        let x = "RRRRRRRRRRRRR" in
+        (concat (#header) (p (p x)))
+    };
+
+    // 75 bytes
+    // B$ L! B. S3/,6%},!-"$!-!.[} B$ v! B$ v! B$ v! SLLLL L! B. B. v! v! B. v! v!
+    // B$
+    //   L!
+    //     B.
+    //       S3/,6%},!-"$!-!.[}
+    //       B$
+    //         v!
+    //         B$
+    //           v!
+    //           B$
+    //             v!
+    //             SLLLL
+    //   L!
+    //     B.
+    //       B.
+    //         v!
+    //         v!
+    //       B.
+    //         v!
+    //         v!
+    icfp! {
+        let f = (fn x -> (concat (concat x x) (concat x x))) in
+        (concat
+            (#header)
+            (f (f (f "RRRR")))
+        )
+    };
+
+    // 74 bytes
+    // B$ L& B. S3/,6%},!-"$!-!.[} B$ v& B$ v& B$ v& B$ v& SLLL L8 B. v8 B. v8 v8
+    icfp! {
+        let f = (fn x -> (concat x (concat x x))) in
+        (concat
+            (#header)
+            (f (f (f (f "RRR"))))
+        )
+    };
+
+    // 73 bytes
+    // B$ L& B. S3/,6%},!-"$!-!.[} B$ v& B$ v& B$ v& SLLLLLLLL L8 B. v8 B. v8 v8
+    icfp! {
+        let f = (fn x -> (concat x (concat x x))) in
+        (concat
+            (#header)
+            (f (f (f "RRRRRRRR")))
+        )
+    }
+}
+
 fn problem19() -> Expr {
     let header = "solve lambdaman19 ";
     icfp! {
@@ -193,10 +284,11 @@ fn problem20() -> Expr {
 }
 
 fn main() {
-    let expr = problem20();
+    let expr = problem6();
     println!("{}", expr.encoded());
+    eprintln!("{}", expr);
     let Expr::String(s) = eval(&expr).unwrap() else {
         panic!("not a string")
     };
-    println!("{}", s);
+    eprintln!("{}", s);
 }
