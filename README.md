@@ -135,9 +135,13 @@ The interpreter automatically fills the jump location for the time warp operator
 
 The interpreter also provides a mode to convert a program with labels into a program which can be submitted to the server.
 
-### Efficiency
+#### 3D editor
 
-TODO(all): Add work about efficiency here
+We implemented a Web-based editor for the 3D language. It utilizes the interpreter described above via PyO3.
+
+![screenshot of the 3d editor](./images/3d-editor.jpg)
+
+### Efficiency
 
 * Problem 7, 8
 
@@ -150,3 +154,7 @@ This problem is to find the dictionary-ordered minimum solution of Sudoku encode
 * Problem 12
 
 This was also a program that could not be executed in a decent amount of time, so we read the contents, made a memo and rewrote it into an equivalent, faster program to find a solution.
+
+* All other problems
+
+They are simple enough to be interpreted by human (Mersenne prime, Fibonacci prime, etc.). We calculated the answer by hand or a simple script.
