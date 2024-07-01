@@ -1,9 +1,7 @@
 use anyhow::Result;
-use rand::prelude::SliceRandom;
 use rand::rngs::ThreadRng;
 use rand::Rng;
 use std::cmp::max;
-use std::collections::LinkedList;
 use std::collections::VecDeque;
 use std::io::stdin;
 use std::path::PathBuf;
@@ -118,35 +116,6 @@ fn solve(problem: &Problem) -> String {
 
     reorder_checkpoints(&mut checkpoints);
 
-    let mut prev_x = 0;
-    let mut prev_y = 0;
-    let mut new_checkpoints = vec![];
-    for i in 0..checkpoints.len() {
-        let x = checkpoints[i].0;
-        let y = checkpoints[i].1;
-        let dx = x - prev_x;
-        let dy = y - prev_y;
-        if dx < MIN_D || dx > MAX_D || dy < MIN_D || dy > MAX_D {
-            let num_sections = max(dx.abs(), dy.abs()) / (MAX_D).abs() + 100;
-            for m in 1..num_sections {
-                let nx = prev_x + dx * m / num_sections;
-                let ny = prev_y + dy * m / num_sections;
-                new_checkpoints.push((nx, ny));
-            }
-        }
-        new_checkpoints.push((x, y));
-
-        prev_x = x;
-        prev_y = y;
-    }
-
-    checkpoints = new_checkpoints;
-
-    /*
-       for i in 0..checkpoints.len() {
-           println!("{} {}", checkpoints[i].0, checkpoints[i].1);
-       }
-    */
     // Solve the problem on the give visiting order |checkpoints|.
     let mut best_answer = solve_one(&checkpoints, &min_steps);
 
@@ -157,17 +126,13 @@ fn solve(problem: &Problem) -> String {
 
 fn reorder_checkpoints(checkpoints: &mut Vec<(i32, i32)>) {
     let config = SAConfig {
-        //num_iterations: 500000000,
-        //initial_temperature: 500.0,
-        num_iterations: 5000000000,
-        initial_temperature: 1000.0,
+        num_iterations: 500000000,
+        initial_temperature: 500.0,
         final_temperature: 1.0,
         solutions_dir: PathBuf::from("results"),
         cooling_schedule: CoolingSchedule::Quadratic,
         accept_function: AcceptFunction::Linear,
     };
-
-    //let mut list = LinkedList::from(checkpoints.clone());
 
     let mut iteration = 1;
     let mut iteration_percent = 0;
@@ -225,14 +190,6 @@ fn checkpoints_score(checkpoints: &Vec<(i32, i32)>) -> f64 {
         let dy = (ny - y) as f64;
         let length = (dx * dx + dy * dy).sqrt();
         score -= length;
-        /*
-        if i >= 1 {
-            let prev_dx = (checkpoints[i].0 - checkpoints[i - 1].0) as f64;
-            let prev_dy = (checkpoints[i].1 - checkpoints[i - 1].1) as f64;
-            let dot_product = prev_dx * dx + prev_dy * dy;
-            //score += dot_product / length / (prev_dx*prev_dx+ prev_dy*prev_dy).sqrt() * 2.0;
-        }
-         */
 
         x = nx;
         y = ny;
@@ -269,7 +226,7 @@ fn solve_one(checkpoints: &Vec<(i32, i32)>, min_steps: &Vec<Vec<Vec<i32>>>) -> S
             }
 
             let lb_steps = max(moves_x[0].steps, moves_y[0].steps);
-            for s in lb_steps..=(lb_steps + 50) {
+            for s in lb_steps..=(lb_steps + 10) {
                 let moves_x = get_moves_with_steps(vx, dx, s, GET_MOVES_MAX_RESULTS, &min_steps);
                 let moves_y = get_moves_with_steps(vy, dy, s, GET_MOVES_MAX_RESULTS, &min_steps);
                 if moves_x.is_empty() || moves_y.is_empty() {
@@ -303,7 +260,7 @@ fn solve_one(checkpoints: &Vec<(i32, i32)>, min_steps: &Vec<Vec<Vec<i32>>>) -> S
                 }
 
                 let lb_steps = max(moves_x[0].steps, moves_y[0].steps);
-                for s in lb_steps..=(lb_steps + 150) {
+                for s in lb_steps..=(lb_steps + 50) {
                     let moves_x =
                         get_moves_with_steps(vx, dx, s, GET_MOVES_MAX_RESULTS * 2, &min_steps);
                     let moves_y =
@@ -324,7 +281,7 @@ fn solve_one(checkpoints: &Vec<(i32, i32)>, min_steps: &Vec<Vec<Vec<i32>>>) -> S
                 }
             }
         }
-        beams[i + 1].sort_by_key(|x| (x.num_steps, x.vx.abs() + x.vy.abs(), x.vx, x.vy));
+        beams[i + 1].sort_by_key(|x| (x.num_steps, max(x.vx.abs(), x.vy.abs()), x.vx, x.vy));
         beams[i + 1].dedup();
         beams[i + 1].truncate(BEAM_WIDTH);
         beams[i + 1].shrink_to_fit();
