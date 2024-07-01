@@ -41,6 +41,12 @@ fn onestep_3d(program: String, a: i32, b: i32, turn: usize) -> PyResult<(String,
     }
     let mut state = state.unwrap();
 
+    if state.resolve_label().is_err() {
+        return Err(PyErr::new::<PyValueError, _>(format!(
+            "failed to resolve label"
+        )));
+    }
+
     for t in 0..turn {
         if state.onestep().is_err() {
             return Err(PyErr::new::<PyValueError, _>(format!(
