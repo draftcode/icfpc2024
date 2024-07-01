@@ -65,7 +65,21 @@ TODO(draftcode): Describe this
 
 [./nya/randomman](./nya/randomman)
 
-TODO(nya): Describe this
+We used random walk for many problems (4, 5, 7, 10, 11, 12, 13, 14, 15, 17, 18,
+21). For each program, we searched for a random seed that collects all pills in
+1,000,000 moves. Essentially this is the ICFP program we used in all problems:
+
+```
+(fix (fn f s ->
+  (if (== s END_SEED) {
+    "solve lambdamanXX "
+  } else {
+    (concat
+      (f (% (* s 48271) 18446744073709551557))
+      (take 2 (drop (* (/ s 4611686018427387904) 2) "LLUUDDRR")))
+  })
+) START_SEED)
+```
 
 ### Spaceship
 
@@ -77,7 +91,7 @@ I created an input pre-ordering utility [spaceship_order](chun/spaceship_order),
 
 `spaceship_order` reorders input so that the points are visited by the spaceship in this order. It is mostly greedy order, but the simulated annealing was also used depending on the map.
 
-`spaceship_lasolver` tries to visit the target in pre-sorted order with a A*-like heuristic search. It tries to "look-ahead" one target; suppose the ship is at `p0` with `v0` and  tries to visit `p1` then `p2`. The program searches the fastest route to `p2` via `p1`, then use  only the path between `p0` and `p1` (trash `p1` to `p2` path), then 
+`spaceship_lasolver` tries to visit the target in pre-sorted order with a A*-like heuristic search. It tries to "look-ahead" one target; suppose the ship is at `p0` with `v0` and  tries to visit `p1` then `p2`. The program searches the fastest route to `p2` via `p1`, then use  only the path between `p0` and `p1` (trash `p1` to `p2` path), then
 
 `spaceship_analytical` implemnts several utility as well as optimizer for the already generated keypad seqeunce. First it converts the keypad sequence to the vector of `(point, velocity)`. Then the program tries to locally optimize the sequence. There are three optimizers inside. (1) 3-pt optimizer, take `p0-p1-p2` visited in this order, then change `v1` preserving `v0` and `v2`. (2) 4-pt optimizer. (3) swap optimizer, take `p0-p1-p2-p3` and try `p0-p1-p2-p3` visiting sequence.
 
