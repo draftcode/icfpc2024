@@ -105,7 +105,12 @@ TODO(tanakh): Describe this
 
 [./fuqinho/fuqinho-spaceship](./fuqinho/fuqinho-spaceship)
 
-TODO(fuqinho): Describe this
+1. Determine visiting order using simulated annealing. (score is total traveling distance)
+2. Precompute minimum steps to move dx with initial velocity v0 and terminal velocity v1. 
+   - -100 <= v0, v1 <= 100, -10000 <= dx <= 10000
+3. In 2-dimension movement, calculate the lower bound of steps using above data and search the minimum steps by incrementing target steps.
+4. Using the data above, efficiently list up several possible paths from point 1 to point 2.
+5. Find paths to visit all given points using beam search. (We keep best 1000 routes at each visited point)
 
 ### 3D
 
