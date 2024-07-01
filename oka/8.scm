@@ -9,7 +9,7 @@
 (define (res) (
     string-append
     "solve lambdaman8 "
-    (d2 (string-append (d2 "DD") (d2 "LL") (d2 "UU") (d2 "RR")))
+    (d2 (string-append (d2 "DLDLD") (d2 "URURU")))
 ))
 
 (define (main args) (print (res)))
