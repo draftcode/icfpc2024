@@ -7,6 +7,7 @@ import {
   serializeState,
   serializeToTSV,
 } from "@/components/threededit/state";
+import clsx from "clsx";
 import { useEffect, useState } from "react";
 
 export default function Page() {
@@ -148,7 +149,14 @@ function PlainState({ state }: { state: Map<string, CellValue> }) {
   for (let y = minY; y <= maxY; y++) {
     const row = [];
     for (let x = minX; x <= maxX; x++) {
-      row.push(<PlainCell key={`${x},${y}`} cell={state.get(`${x},${y}`)} />);
+      row.push(
+        <PlainCell
+          key={`${x},${y}`}
+          cell={state.get(`${x},${y}`)}
+          x={x}
+          y={y}
+        />,
+      );
     }
     rows.push(
       <div key={`row-${y}`} className="flex">
@@ -159,12 +167,25 @@ function PlainState({ state }: { state: Map<string, CellValue> }) {
   return <div className="font-mono">{rows}</div>;
 }
 
-function PlainCell({ cell }: { cell: CellValue | undefined }) {
-  if (cell) {
-    return <div className="size-8 border text-center">{cell.value}</div>;
-  } else {
-    return <div className="size-8 border"></div>;
-  }
+function PlainCell({
+  cell,
+  x,
+  y,
+}: {
+  cell: CellValue | undefined;
+  x: number;
+  y: number;
+}) {
+  return (
+    <div
+      className={clsx(
+        "size-8 border text-center",
+        Math.abs(x) % 2 === Math.abs(y) % 2 && "bg-gray-100",
+      )}
+    >
+      {cell?.value ?? ""}
+    </div>
+  );
 }
 
 function EditableState({
@@ -224,7 +245,10 @@ function EditableCell({
 }) {
   return (
     <input
-      className="size-8 border text-center"
+      className={clsx(
+        "size-8 border text-center",
+        Math.abs(x) % 2 === Math.abs(y) % 2 && "bg-gray-100",
+      )}
       value={cell?.value ?? ""}
       onChange={(e) => {
         setCell({ coord: [x, y], value: e.target.value });
