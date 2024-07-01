@@ -139,7 +139,9 @@ impl LMap {
             let nx = nx as usize;
             let ny = ny as usize;
             match self.data[nx][ny] {
-                LCell::Wall => continue,
+                LCell::Wall => {
+                    // eprintln!("hit wall");
+                }
                 LCell::Empty => {}
                 LCell::Pill => {
                     self.pills -= 1;
