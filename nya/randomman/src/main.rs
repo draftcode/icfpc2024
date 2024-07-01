@@ -206,17 +206,24 @@ const KNOWN_SOLUTIONS: &[KnownSolution] = &[
     //     moves: 54181,
     // },
     KnownSolution {
-        // 142B
+        // 141B
         problem_id: 4,
         rng: Rng::SmallModRev,
         seed: 46,
         stride: 1,
         moves: 22091,
     },
-    // TODO: 5 can be revisited if code gets shorter
+    KnownSolution {
+        // 141B
+        problem_id: 5,
+        rng: Rng::SmallModRev,
+        seed: 1,
+        stride: 1,
+        moves: 9388,
+    },
     // 6 has a shorter solution
     KnownSolution {
-        // 142B
+        // 141B
         problem_id: 7,
         rng: Rng::SmallModRev,
         seed: 58,
@@ -225,12 +232,12 @@ const KNOWN_SOLUTIONS: &[KnownSolution] = &[
     },
     // 8-9 have shorter solutions
     KnownSolution {
-        // 144B
+        // 143B
         problem_id: 10,
         rng: Rng::SmallModRev,
-        seed: 128,
+        seed: 1,
         stride: 1,
-        moves: 47672,
+        moves: 95427,
     },
     KnownSolution {
         // 177B
