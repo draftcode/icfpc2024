@@ -136,7 +136,7 @@ impl Rng {
                 ) (#seed)))
             },
             Self::DefaultRev | Self::MediumModRev | Self::SmallModRev => {
-                if steps <= 65536 {
+                if steps <= 2 << 16 {
                     icfp! {
                         let d = (fn f x -> (f (f x))) in
                         (d d d d (fn f s -> (concat (f (#rng_expr)) (#step_expr))) (fn x -> (#header)) (#seed))
