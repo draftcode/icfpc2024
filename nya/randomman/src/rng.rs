@@ -117,7 +117,7 @@ impl Rng {
             Self::SmallModRev => 207645,
             Self::MediumModRev => 536870912,
             Self::Better | Self::Default | Self::DefaultRev => 4611686018427387904,
-            Self::Reference => unreachable!(),
+            Self::Reference => panic!("reference RNG is not compilable"),
         };
 
         let step_expr = match stride {
