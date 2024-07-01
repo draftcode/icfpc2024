@@ -10,6 +10,8 @@ import {
 import clsx from "clsx";
 import { useEffect, useState } from "react";
 
+const COLORS = ["border-red-500", "border-blue-500", "border-green-500"];
+
 export default function Page() {
   const [input, setInput] = useState("");
   const [state, setState] = useState(parseStateString(input));
@@ -145,16 +147,24 @@ function PlainState({ state }: { state: Map<string, CellValue> }) {
     maxX = Math.max(maxX, cell.coord[0]);
     maxY = Math.max(maxY, cell.coord[1]);
   }
+  const jumpLocations = findJumpLocations(state);
   const rows = [];
   for (let y = minY; y <= maxY; y++) {
     const row = [];
     for (let x = minX; x <= maxX; x++) {
+      const coord = `${x},${y}`;
+      const jumpIndex = jumpLocations.findIndex(
+        ([from, to]) => from === coord || to === coord,
+      );
       row.push(
         <PlainCell
-          key={`${x},${y}`}
-          cell={state.get(`${x},${y}`)}
+          key={coord}
+          cell={state.get(coord)}
           x={x}
           y={y}
+          isJumpLocation={
+            jumpIndex !== -1 ? COLORS[jumpIndex % COLORS.length] : undefined
+          }
         />,
       );
     }
@@ -171,16 +181,19 @@ function PlainCell({
   cell,
   x,
   y,
+  isJumpLocation,
 }: {
   cell: CellValue | undefined;
   x: number;
   y: number;
+  isJumpLocation: string | undefined;
 }) {
   return (
     <div
       className={clsx(
         "size-8 border text-center",
         Math.abs(x) % 2 === Math.abs(y) % 2 && "bg-gray-100",
+        isJumpLocation,
       )}
     >
       {cell?.value ?? ""}
@@ -209,16 +222,24 @@ function EditableState({
     maxX = Math.max(maxX, cell.coord[0]);
     maxY = Math.max(maxY, cell.coord[1]);
   }
+  const jumpLocations = findJumpLocations(state);
   const rows = [];
   for (let y = minY; y <= maxY; y++) {
     const row = [];
     for (let x = minX; x <= maxX; x++) {
+      const coord = `${x},${y}`;
+      const jumpIndex = jumpLocations.findIndex(
+        ([from, to]) => from === coord || to === coord,
+      );
       row.push(
         <EditableCell
-          key={`${x},${y}`}
-          cell={state.get(`${x},${y}`)}
+          key={coord}
+          cell={state.get(coord)}
           x={x}
           y={y}
+          isJumpLocation={
+            jumpIndex !== -1 ? COLORS[jumpIndex % COLORS.length] : undefined
+          }
           setCell={setCell}
         />,
       );
@@ -236,11 +257,13 @@ function EditableCell({
   cell,
   x,
   y,
+  isJumpLocation,
   setCell,
 }: {
   cell: CellValue | undefined;
   x: number;
   y: number;
+  isJumpLocation: string | undefined;
   setCell: (cell: CellValue) => void;
 }) {
   return (
@@ -248,6 +271,7 @@ function EditableCell({
       className={clsx(
         "size-8 border text-center",
         Math.abs(x) % 2 === Math.abs(y) % 2 && "bg-gray-100",
+        isJumpLocation,
       )}
       value={cell?.value ?? ""}
       onChange={(e) => {
@@ -341,4 +365,27 @@ function Debugger({ input }: { input: string }) {
       </div>
     </div>
   );
+}
+
+function findJumpLocations(board: Map<string, CellValue>): [string, string][] {
+  const ret: [string, string][] = [];
+  for (const cell of Array.from(board.values())) {
+    if (cell.value === "@") {
+      const [x, y] = cell.coord;
+      const dxCell = board.get(`${x - 1},${y}`);
+      const dyCell = board.get(`${x + 1},${y}`);
+      if (
+        dxCell &&
+        dyCell &&
+        /^\d+$/.test(dxCell.value) &&
+        /^\d+$/.test(dyCell.value)
+      ) {
+        ret.push([
+          `${x},${y}`,
+          `${x - parseInt(dxCell.value)},${y - parseInt(dyCell.value)}`,
+        ]);
+      }
+    }
+  }
+  return ret;
 }
