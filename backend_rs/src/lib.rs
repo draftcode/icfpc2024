@@ -33,7 +33,7 @@ fn evaluate_message(input: String) -> PyResult<String> {
 
 #[pyfunction]
 fn onestep_3d(program: String, a: i32, b: i32, turn: usize) -> PyResult<(String, Option<i32>)> {
-    let state = planar::State::new(&program, a, b);
+    let state = planar::State::new(&program, a.into(), b.into());
     if state.is_err() {
         return Err(PyErr::new::<PyValueError, _>(format!(
             "failed to load program"
