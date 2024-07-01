@@ -3,7 +3,7 @@ use std::str::FromStr;
 use anyhow::{self, bail};
 use num_bigint::BigInt;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Cell {
     Empty,
     InputA,
@@ -183,10 +183,10 @@ impl Default for State {
             output: None,
             tick: 1,
             max_tick: 1,
-            min_x: i32::MAX,
-            max_x: i32::MIN,
-            min_y: i32::MAX,
-            max_y: i32::MIN,
+            min_x: i32::MAX / 3,
+            max_x: i32::MIN / 3,
+            min_y: i32::MAX / 3,
+            max_y: i32::MIN / 3,
             written: vec![],
             monotonic_tick: 0,
         }
@@ -212,6 +212,16 @@ fn readable(board: &Vec<Vec<Cell>>, pos: (i32, i32)) -> bool {
         Some(Cell::Number(_)) => true,
         Some(Cell::InputA) => true,
         Some(Cell::InputB) => true,
+        _ => false,
+    }
+}
+
+fn is_cell_emtpy(board: &Vec<Vec<Cell>>, pos: (i32, i32)) -> bool {
+    if !inside(board, pos) {
+        return false;
+    }
+    match get_cell(board, pos) {
+        Some(Cell::Empty) => true,
         _ => false,
     }
 }
@@ -505,7 +515,7 @@ impl State {
         let from_y = y as i32 - dy;
         let to_x = x as i32 + dx;
         let to_y = y as i32 + dy;
-        // eprintln!("move_v {},{} {},{} -> {},{}", x, y, from_x, from_y, to_x, to_y);
+
         if !inside(&board, (from_x, from_y)) || !inside(&board, (to_x, to_y)) {
             bail!(
                 "Invalid move from {},{} to {},{}",
@@ -640,26 +650,12 @@ impl State {
         let arg2 = (x as i32, y as i32 - 1);
         let to1 = (x as i32 + 1, y as i32);
         let to2 = (x as i32, y as i32 + 1);
-        if !readable(&self.board.0, arg1) || !readable(&self.board.0, arg2) {
+        if is_cell_emtpy(&self.board.0, arg1) || is_cell_emtpy(&self.board.0, arg2) {
             // Args are not ready yet.
             return Ok(());
         }
-        let op1 = if let Some(v) = self.get_number(arg1) {
-            v
-        } else {
-            println!(
-                "found arg1 {:?} {}",
-                self.board.0[arg1.1 as usize][arg1.0 as usize],
-                readable(&self.board.0, arg1)
-            );
-            bail!("non number at {:?}", arg1);
-        };
-        let op2 = if let Some(v) = self.get_number(arg2) {
-            v
-        } else {
-            println!("found {:?}", self.board.0[arg1.1 as usize][arg1.0 as usize]);
-            bail!("non number at {:?}", arg2);
-        };
+        let op1 = get_cell(&self.board.0, arg1).unwrap_or(Cell::Empty);
+        let op2 = get_cell(&self.board.0, arg2).unwrap_or(Cell::Empty);
 
         let res = match board[y][x] {
             Cell::Eq => op1 == op2,
@@ -671,13 +667,13 @@ impl State {
                 if !self.writable(board, to1) {
                     bail!("Trying to write to the same cell twice: {:?}", to1);
                 }
-                self.write_to(board, to1.0, to1.1, Cell::Number(op2))?;
+                self.write_to(board, to1.0, to1.1, op2)?;
             }
             if inside(board, to2) {
                 if !self.writable(&board, to2) {
                     bail!("Trying to write to the same cell twice: {:?}", to2);
                 }
-                self.write_to(board, to2.0, to2.1, Cell::Number(op1))?;
+                self.write_to(board, to2.0, to2.1, op1)?;
             }
             if self.writable(board, arg1) {
                 self.raw_write(board, arg1, Cell::Empty)?;
