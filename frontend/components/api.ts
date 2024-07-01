@@ -115,10 +115,14 @@ export function use3DSimulation() {
   return { data: data?.data, error, isMutating, trigger };
 }
 
+interface ThreedResolveArg {
+    board: string;
+    }
+
 export function use3DResolve() {
   const fetcher = async (
     url: string,
-    { arg: { board } }: { arg: { board: string } },
+    { arg: { board } }: { arg: ThreedResolveArg },
   ) => {
     return await client({
       method: "post",
@@ -132,7 +136,7 @@ export function use3DResolve() {
     AxiosResponse<ThreedResolveResult>,
     any,
     Key,
-    ThreedSimulationArg
+    ThreedResolveArg
   >("/simulation/3d/resolve", fetcher);
   return { data: data?.data, error, isMutating, trigger };
 }
