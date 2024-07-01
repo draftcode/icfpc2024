@@ -234,8 +234,8 @@ const KNOWN_SOLUTIONS: &[KnownSolution] = &[
     },
     KnownSolution {
         problem_id: 11,
-        rng: Rng::Default,
-        seed: 4610551,
+        rng: Rng::DefaultRev,
+        seed: 5129096,
         stride: 2,
         moves: MAX_MOVES,
     },
