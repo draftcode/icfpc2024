@@ -16,7 +16,7 @@ const MAX_D: i32 = 10000;
 const NUM_D: usize = (MAX_D - MIN_D + 1) as usize;
 const INF: i32 = 1e9 as i32;
 const GET_MOVES_MAX_RESULTS: usize = 10;
-const BEAM_WIDTH: usize = 200;
+const BEAM_WIDTH: usize = 1000;
 
 struct Problem {
     v: Vec<(i32, i32)>,
@@ -118,12 +118,35 @@ fn solve(problem: &Problem) -> String {
 
     reorder_checkpoints(&mut checkpoints);
 
-    /*
+    let mut prev_x = 0;
+    let mut prev_y = 0;
+    let mut new_checkpoints = vec![];
     for i in 0..checkpoints.len() {
-        println!("{} {}", checkpoints[i].0, checkpoints[i].1);
-    }
-     */
+        let x = checkpoints[i].0;
+        let y = checkpoints[i].1;
+        let dx = x - prev_x;
+        let dy = y - prev_y;
+        if dx < MIN_D || dx > MAX_D || dy < MIN_D || dy > MAX_D {
+            let num_sections = max(dx.abs(), dy.abs()) / (MAX_D).abs() + 100;
+            for m in 1..num_sections {
+                let nx = prev_x + dx * m / num_sections;
+                let ny = prev_y + dy * m / num_sections;
+                new_checkpoints.push((nx, ny));
+            }
+        }
+        new_checkpoints.push((x, y));
 
+        prev_x = x;
+        prev_y = y;
+    }
+
+    checkpoints = new_checkpoints;
+
+    /*
+       for i in 0..checkpoints.len() {
+           println!("{} {}", checkpoints[i].0, checkpoints[i].1);
+       }
+    */
     // Solve the problem on the give visiting order |checkpoints|.
     let mut best_answer = solve_one(&checkpoints, &min_steps);
 
@@ -136,8 +159,8 @@ fn reorder_checkpoints(checkpoints: &mut Vec<(i32, i32)>) {
     let config = SAConfig {
         //num_iterations: 500000000,
         //initial_temperature: 500.0,
-        num_iterations: 500000000,
-        initial_temperature: 500.0,
+        num_iterations: 5000000000,
+        initial_temperature: 1000.0,
         final_temperature: 1.0,
         solutions_dir: PathBuf::from("results"),
         cooling_schedule: CoolingSchedule::Quadratic,
@@ -246,7 +269,7 @@ fn solve_one(checkpoints: &Vec<(i32, i32)>, min_steps: &Vec<Vec<Vec<i32>>>) -> S
             }
 
             let lb_steps = max(moves_x[0].steps, moves_y[0].steps);
-            for s in lb_steps..=(lb_steps + 10) {
+            for s in lb_steps..=(lb_steps + 50) {
                 let moves_x = get_moves_with_steps(vx, dx, s, GET_MOVES_MAX_RESULTS, &min_steps);
                 let moves_y = get_moves_with_steps(vy, dy, s, GET_MOVES_MAX_RESULTS, &min_steps);
                 if moves_x.is_empty() || moves_y.is_empty() {
@@ -264,9 +287,47 @@ fn solve_one(checkpoints: &Vec<(i32, i32)>, min_steps: &Vec<Vec<Vec<i32>>>) -> S
                 }
             }
         }
+        if beams[i + 1].is_empty() {
+            eprintln!("Expand s and re-search beam.");
+            for j in 0..beams[i].len() {
+                let BeamState {
+                    num_steps,
+                    vx,
+                    vy,
+                    prev_index: _prev_index,
+                } = beams[i][j];
+                let moves_x = get_moves(vx, dx, GET_MOVES_MAX_RESULTS * 2, &min_steps);
+                let moves_y = get_moves(vy, dy, GET_MOVES_MAX_RESULTS * 2, &min_steps);
+                if moves_x.is_empty() || moves_y.is_empty() {
+                    continue;
+                }
+
+                let lb_steps = max(moves_x[0].steps, moves_y[0].steps);
+                for s in lb_steps..=(lb_steps + 150) {
+                    let moves_x =
+                        get_moves_with_steps(vx, dx, s, GET_MOVES_MAX_RESULTS * 2, &min_steps);
+                    let moves_y =
+                        get_moves_with_steps(vy, dy, s, GET_MOVES_MAX_RESULTS * 2, &min_steps);
+                    if moves_x.is_empty() || moves_y.is_empty() {
+                        continue;
+                    }
+                    for k in 0..moves_x.len() {
+                        for l in 0..moves_y.len() {
+                            beams[i + 1].push(BeamState {
+                                num_steps: num_steps + s,
+                                vx: moves_x[k].terminal_velocity,
+                                vy: moves_y[l].terminal_velocity,
+                                prev_index: j,
+                            });
+                        }
+                    }
+                }
+            }
+        }
         beams[i + 1].sort_by_key(|x| (x.num_steps, x.vx.abs() + x.vy.abs(), x.vx, x.vy));
         beams[i + 1].dedup();
         beams[i + 1].truncate(BEAM_WIDTH);
+        beams[i + 1].shrink_to_fit();
 
         x = checkpoints[i].0;
         y = checkpoints[i].1;
@@ -451,7 +512,15 @@ fn get_moves_with_steps(
                 let ndx0 = dx - nv0;
                 let nv1 = nv0 + a1;
                 let ndx1 = ndx0 - nv1;
-                if nv1 < MIN_V || nv1 > MAX_V || ndx1 < MIN_D || ndx1 > MAX_D {
+                if nv0 < MIN_V
+                    || nv0 > MAX_V
+                    || nv1 < MIN_V
+                    || nv1 > MAX_V
+                    || ndx0 < MIN_D
+                    || ndx0 > MAX_D
+                    || ndx1 < MIN_D
+                    || ndx1 > MAX_D
+                {
                     continue;
                 }
                 for ve in MIN_V..=MAX_V {
@@ -478,7 +547,19 @@ fn get_moves_with_steps(
                     let ndx1 = ndx0 - nv1;
                     let nv2 = nv1 + a2;
                     let ndx2 = ndx1 - nv2;
-                    if nv2 < MIN_V || nv2 > MAX_V || ndx2 < MIN_D || ndx2 > MAX_D {
+                    if nv0 < MIN_V
+                        || nv0 > MAX_V
+                        || nv1 < MIN_V
+                        || nv1 > MAX_V
+                        || nv2 < MIN_V
+                        || nv2 > MAX_V
+                        || ndx0 < MIN_D
+                        || ndx0 > MAX_D
+                        || ndx1 < MIN_D
+                        || ndx1 > MAX_D
+                        || ndx2 < MIN_D
+                        || ndx2 > MAX_D
+                    {
                         continue;
                     }
                     for ve in MIN_V..=MAX_V {
@@ -508,7 +589,23 @@ fn get_moves_with_steps(
                         let ndx2 = ndx1 - nv2;
                         let nv3 = nv2 + a3;
                         let ndx3 = ndx2 - nv3;
-                        if nv3 < MIN_V || nv3 > MAX_V || ndx3 < MIN_D || ndx3 > MAX_D {
+                        if nv0 < MIN_V
+                            || nv0 > MAX_V
+                            || nv1 < MIN_V
+                            || nv1 > MAX_V
+                            || nv2 < MIN_V
+                            || nv2 > MAX_V
+                            || nv3 < MIN_V
+                            || nv3 > MAX_V
+                            || ndx0 < MIN_D
+                            || ndx0 > MAX_D
+                            || ndx1 < MIN_D
+                            || ndx1 > MAX_D
+                            || ndx2 < MIN_D
+                            || ndx2 > MAX_D
+                            || ndx3 < MIN_D
+                            || ndx3 > MAX_D
+                        {
                             continue;
                         }
                         for ve in MIN_V..=MAX_V {
@@ -570,7 +667,15 @@ fn can_reach(vs: i32, ve: i32, dx: i32, steps: i32, min_steps: &Vec<Vec<Vec<i32>
                 let ndx0 = dx - nv0;
                 let nv1 = nv0 + a1;
                 let ndx1 = ndx0 - nv1;
-                if nv1 < MIN_V || nv1 > MAX_V || ndx1 < MIN_D || ndx1 > MAX_D {
+                if nv0 < MIN_V
+                    || nv0 > MAX_V
+                    || nv1 < MIN_V
+                    || nv1 > MAX_V
+                    || ndx0 < MIN_D
+                    || ndx0 > MAX_D
+                    || ndx1 < MIN_D
+                    || ndx1 > MAX_D
+                {
                     continue;
                 }
                 if min_steps[(nv1 - MIN_V) as usize][(ve - MIN_V) as usize][(ndx1 - MIN_D) as usize]
