@@ -299,12 +299,12 @@ const KNOWN_SOLUTIONS: &[KnownSolution] = &[
     // 19 is hard
     // TODO: tackle 20
     KnownSolution {
-        // 172B
+        // 167B
         problem_id: 21,
-        rng: Rng::Default,
-        seed: 13229262,
+        rng: Rng::DefaultRev,
+        seed: 15623093,
         stride: 1,
-        moves: 932995,
+        moves: 989246,
     },
 ];
 
