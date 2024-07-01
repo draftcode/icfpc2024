@@ -45,7 +45,7 @@ TODO(nya): Describe this
 
 [./tanakh/evaluator](./tanakh/evaluator)
 
-TODO(tanakh): Describe this
+I wrote the code in Rust to evaluate the ICFP expression. I also wrote code to convert it to Scheme and Haskell code. This was useful for debugging my own evaluator and understanding the code. I also implemented a simple Rust eDSL to generate ICFP expressions.
 
 #### Scheme-to-ICFP compiler
 
@@ -101,7 +101,7 @@ I created an input pre-ordering utility [spaceship_order](chun/spaceship_order),
 
 [./tanakh/spaceship](./tanakh/spaceship)
 
-TODO(tanakh): Describe this
+I implemented an algorithm that greedily selects the next point that can be reached in the shortest time based on the current position and current speed, but the performance was not very good. I also tried an annealing method that solves the order of the points as TSP and then calculates the route, but it did not work well in the case of many points.
 
 #### fuqinho's solver
 
@@ -138,3 +138,15 @@ The interpreter also provides a mode to convert a program with labels into a pro
 ### Efficiency
 
 TODO(all): Add work about efficiency here
+
+* Problem 7, 8
+
+This problem is a bit-encoded SAT sufficiency problem. Since we needed to find the minimum in lexicographic order among those satisfying the conditions, we used z3, a powerful solver, to find the minimum solution in lexicographic order by adding terms to see if the conditions can be satisfied by false, starting with the variables in the upper digits.
+
+* Problem 9, 10, 11
+
+This problem is to find the dictionary-ordered minimum solution of Sudoku encoded in decimal. z3, a powerful solver, was used for this problem as well, since, contrary to the name Efficiency, it is obvious that if the program is run properly, the program will not end even at the end of the universe z3. The answer can be obtained by solving iteratively, starting from the upper digits and adding the condition of using the smallest one that satisfies the constraints.
+
+* Problem 12
+
+This was also a program that could not be executed in a decent amount of time, so we read the contents, made a memo and rewrote it into an equivalent, faster program to find a solution.
