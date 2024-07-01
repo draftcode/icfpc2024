@@ -99,7 +99,20 @@ TODO(fuqinho): Describe this
 
 [./chir/interpreter](./chir/interpreter)
 
-TODO(chir): Describe this
+We implemented an interpreter for the 3D course in Rust. It implements all noted features and also has the labeling mechanism for easier development.
+For example, the interpreter can run the following program:
+
+```
+. A     here . .
+. v     .    . .
+. .     .    . .
+. @here .    . .
+. .1    .    . .
+```
+
+The interpreter automatically fills the jump location for the time warp operator by looking up the label name, 'here'.
+
+The interpreter also provides a mode to convert a program with labels into a program which can be submitted to the server.
 
 ### Efficiency
 
