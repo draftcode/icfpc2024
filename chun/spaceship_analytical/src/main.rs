@@ -733,7 +733,7 @@ fn save_plan(plan_fname: String, plan: &Plan) {
     }
 }
 
-fn make_plan(v: Vec<(i32, i32)>, seq: String, plan_fname: String) {
+fn make_plan(v: Vec<(i32, i32)>, seq: String, plan_fname: String, follow_order: bool) {
     let accl = decode_thrust_from_keypad(seq.as_str());
     let traj = simulate((0, 0), (0, 0), &accl);
     let mut visited: Vec<bool> = std::iter::repeat(false).take(v.len()).collect();
@@ -743,14 +743,24 @@ fn make_plan(v: Vec<(i32, i32)>, seq: String, plan_fname: String) {
         pt2idx.insert(v[i], i);
     }
     let mut prevptidx = -1;
-    for (t, (p, v)) in traj.into_iter().enumerate() {
-        if pt2idx.contains_key(&p) {
-            let idx = pt2idx.get(&p).unwrap();
-            if !visited[*idx] {
+    let mut curorder = 0usize;
+    for (t, (p, vel)) in traj.into_iter().enumerate() {
+        if follow_order {
+            if p == v[curorder] {
                 let keylen = (t as i32 - prevptidx) as usize;
-                plan.push((p, v, keylen));
+                plan.push((p, vel, keylen));
                 prevptidx = t as i32;
-                visited[*idx] = true;
+                curorder += 1
+            }
+        } else {
+            if pt2idx.contains_key(&p) {
+                let idx = pt2idx.get(&p).unwrap();
+                if !visited[*idx] {
+                    let keylen = (t as i32 - prevptidx) as usize;
+                    plan.push((p, vel, keylen));
+                    prevptidx = t as i32;
+                    visited[*idx] = true;
+                }
             }
         }
     }
@@ -834,8 +844,9 @@ fn greedy_local_opt(plan: Plan) -> Plan {
             }
         }
     }
-    let (p, v, _t) = plan.last().unwrap();
-    retplan.push((*p, *v, t1));
+    let (p, _v, _t) = plan.last().unwrap();
+    let best = generate_visit_plan(curp, curv, *p, 1)[0];
+    retplan.push((*p, best.1, best.0 as usize));
     return retplan;
 }
 
@@ -924,7 +935,16 @@ fn main() {
         let v = load_problem(args[2].clone());
         let seq = load_keypads(args[3].clone());
         let plan_fname = args[4].clone();
-        make_plan(v, seq, plan_fname);
+        let mut follow_order = false;
+        if args.len() >= 6 {
+            if args[5] == "follow" {
+                follow_order = true;
+            } else {
+                panic!("must be \"follow\"");
+            }
+        }
+
+        make_plan(v, seq, plan_fname, follow_order);
     } else if args[1] == "optimize_plan" {
         let mut run_loop = false;
         if args.len() >= 5 {
