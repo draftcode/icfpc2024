@@ -47,6 +47,7 @@ export interface ParsedProblem {
 export interface ThreedSimulationResult {
   board: string;
   output: number | null;
+  score: number;
 }
 
 export function useProblem(category: string, id: number) {

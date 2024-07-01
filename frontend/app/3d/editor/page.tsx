@@ -379,13 +379,21 @@ function Debugger({
                 10進む
               </button>
             </div>
+            {data?.output ? (
+              <div>
+                <h2 className="font-bold">出力</h2>
+                <div>{data?.output}</div>
+
+                <h2 className="font-bold">最終スコア</h2>
+                <div>{data.score}</div>
+              </div>
+            ) : data?.score ? (
+              <div>
+                <h2 className="font-bold">ここまでのスコア</h2>
+                <div>{data.score}</div>
+              </div>
+            ) : null}
           </div>
-          {data?.output && (
-            <div>
-              <h2 className="font-bold">出力</h2>
-              <div>{data?.output}</div>
-            </div>
-          )}
         </div>
       </div>
     </div>
