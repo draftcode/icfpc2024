@@ -1,3 +1,4 @@
+use rand::prelude::SliceRandom;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 
 use euclid::default::*;
@@ -23,58 +24,196 @@ fn main() {
     ps.dedup();
 
     // solve_shortest(ps);
-    solve_basic(ps);
+    // solve_basic(ps);
     // solve15(ps);
+
+    tsp(ps);
+
+    // solve_tsp(ps);
+}
+
+const ORDER: &str = include_str!("../../ord23-best.txt");
+
+fn solve_tsp(ps: Vec<Point2D<i64>>) {
+    let order = ORDER
+        .chars()
+        .filter(|c| c.is_digit(10) || *c == '-' || c.is_whitespace())
+        .collect::<String>()
+        .split_whitespace()
+        .map(|s| s.parse::<usize>().unwrap())
+        .collect::<Vec<_>>();
+
+    let order = order[1..order.len() - 1].to_vec();
+    assert_eq!(order.len(), ps.len());
+
+    let mut cur = Point2D::new(0, 0);
+    let mut vel = Vector2D::new(0, 0);
+    let mut moves = vec![];
+
+    for i in 0..order.len() {
+        let next = ps[order[i]];
+        let d = calc_dist(cur, vel, next, Some(&mut moves));
+        cur = next;
+        vel = d.1;
+
+        eprintln!(
+            "{i} / {}: total: {}, movs: {} pos: {cur:?} vel: {vel:?}",
+            order.len(),
+            moves.len(),
+            d.0,
+        );
+    }
+
+    eprintln!("{}", moves.len());
+    println!("{}", moves.into_iter().map(to_move).collect::<String>());
+}
+
+fn tsp(ps: Vec<Point2D<i64>>) {
+    let fps = ps.iter().copied().map(|p| p.to_f64()).collect::<Vec<_>>();
+
+    let p = TSP { ps: fps };
+
+    let res = saru::annealing(
+        &p,
+        &saru::AnnealingOptions::new(600.0, 1e-2)
+            .set_cooling_function(saru::CoolingFunction::Exponential)
+            .set_report_interval(1.0),
+        rand::random(),
+        8,
+    );
+
+    let order = res.solution.unwrap();
+
+    let mut dist = 0.0;
+
+    dist += ((ps[order[1]] - Point2D::new(0, 0)).square_length() as f64).sqrt();
+
+    for i in 1..order.len() - 2 {
+        dist += ((ps[order[i]] - ps[order[i + 1]]).square_length() as f64).sqrt();
+
+        eprintln!(
+            "{:?} -> {:?}: {}",
+            ps[order[i]],
+            ps[order[i + 1]],
+            ((ps[order[i]] - ps[order[i + 1]]).square_length() as f64).sqrt()
+        );
+    }
+
+    eprintln!("dist: {:#}", dist);
+
+    println!("{order:?}");
 }
 
 struct TSP {
-    ps: Vec<Point2D<i64>>,
+    ps: Vec<Point2D<f64>>,
 }
 
-struct TSPSTate {
+impl saru::StateInitializer for TSP {
+    type State = TSPState;
+
+    fn init_state(&self, rng: &mut impl rand::Rng) -> Self::State {
+        let mut order = vec![self.ps.len()];
+        order.extend((0..self.ps.len()).collect::<Vec<_>>());
+        order[1..].shuffle(rng);
+        order.push(self.ps.len() + 1);
+
+        let mut dist = 0.0;
+        for i in 0..order.len() - 1 {
+            dist += self.dist(order[i], order[i + 1]);
+        }
+
+        TSPState { order, dist }
+    }
+}
+
+impl TSP {
+    fn dist(&self, i: usize, j: usize) -> f64 {
+        if i == self.ps.len() + 1 || j == self.ps.len() + 1 {
+            0.0
+        } else if i == self.ps.len() {
+            (self.ps[j] - Point2D::new(0.0, 0.0)).length()
+        } else if j == self.ps.len() {
+            (self.ps[i] - Point2D::new(0.0, 0.0)).length()
+        } else {
+            (self.ps[i] - self.ps[j]).length()
+        }
+    }
+}
+
+struct TSPState {
     order: Vec<usize>,
-    dist: i64,
+    dist: f64,
+}
+
+impl saru::State for TSPState {
+    type Solution = Vec<usize>;
+
+    fn solution(&self) -> Self::Solution {
+        self.order.clone()
+    }
+}
+
+impl TSPState {
+    fn swap(&mut self, i: usize, j: usize, problem: &TSP) {
+        self.dist -= problem.dist(self.order[i], self.order[i + 1]);
+        self.dist -= problem.dist(self.order[j], self.order[j + 1]);
+
+        self.order[i + 1..=j].reverse();
+
+        self.dist += problem.dist(self.order[i], self.order[i + 1]);
+        self.dist += problem.dist(self.order[j], self.order[j + 1]);
+    }
 }
 
 impl saru::Annealer for TSP {
     type State = TSPState;
 
-    type Move;
+    type Move = (usize, usize);
 
-    fn start_temp(&self, init_score: f64) -> f64 {
-        todo!()
+    fn start_temp(&self, _init_score: f64) -> f64 {
+        // init_score
+        1e8
     }
 
     fn eval(
         &self,
         state: &Self::State,
-        progress_ratio: f64,
-        best_score: f64,
-        valid_best_score: f64,
+        _progress_ratio: f64,
+        _best_score: f64,
+        _valid_best_score: f64,
     ) -> (f64, Option<f64>) {
-        todo!()
+        let score = state.dist as f64;
+        (score, Some(score))
     }
 
     fn neighbour(
         &self,
         state: &mut Self::State,
         rng: &mut impl rand::Rng,
-        progress_ratio: f64,
+        _progress_ratio: f64,
     ) -> Self::Move {
-        todo!()
+        loop {
+            const MAX_GAP: usize = 100000;
+
+            let i = rng.gen_range(0..state.order.len() - 2);
+            let j = rng.gen_range(i + 1..(i + MAX_GAP).min(state.order.len() - 1));
+
+            if i < j && i + 1 != j && j - i < MAX_GAP {
+                return (i, j);
+            }
+        }
     }
 
     fn apply(&self, state: &mut Self::State, mov: &Self::Move) {
-        todo!()
+        state.swap(mov.0, mov.1, self);
     }
 
     fn unapply(&self, state: &mut Self::State, mov: &Self::Move) {
-        todo!()
+        state.swap(mov.0, mov.1, self);
     }
 }
 
-fn tsp(ps: &Vec<Point2D<i64>>) {}
-
+#[allow(unused)]
 fn solve_basic(mut ps: Vec<Point2D<i64>>) {
     ps.sort_by_key(|p| (p.x, p.y));
     ps.dedup();
@@ -207,6 +346,7 @@ fn calc_dist(
     while dx != 0 {
         assert!(curm > 0);
         let c = dx.abs().min(curm);
+
         if dx > 0 {
             if let Some(ref mut moves) = moves {
                 let len = moves.len();
@@ -232,6 +372,7 @@ fn calc_dist(
     while dy != 0 {
         assert!(curm > 0);
         let c = dy.abs().min(curm);
+
         if dy > 0 {
             if let Some(ref mut moves) = moves {
                 let len = moves.len();
@@ -255,6 +396,7 @@ fn calc_dist(
     (ret, v + Vector2D::new(xc, yc))
 }
 
+#[allow(unused)]
 fn solve_shortest(ps: Vec<Point2D<i64>>) {
     let mut ps = ps.iter().copied().collect::<HashSet<_>>();
     ps.remove(&Point2D::new(0, 0));
@@ -304,6 +446,7 @@ fn solve_shortest(ps: Vec<Point2D<i64>>) {
     panic!("no solution");
 }
 
+#[allow(unused)]
 fn solve15(ps: Vec<Point2D<i64>>) {
     let n = ps.len();
 

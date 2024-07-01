@@ -219,6 +219,7 @@ fn to_haskell(e: &Expr) -> String {
                 BinOp::Take => format!("(take {l} {r})"),
                 BinOp::Drop => format!("(drop {l} {r})"),
                 BinOp::App => format!("({l} {r})"),
+                BinOp::AppL => format!("({l} {r})"),
                 _ => unreachable!(),
             }
         }

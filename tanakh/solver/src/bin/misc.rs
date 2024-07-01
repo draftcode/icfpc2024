@@ -1,22 +1,17 @@
 fn main() {
-    let mut max = 0;
-    for x in -99..=99 {
-        for y in -99..=99 {
-            if y == 0 {
-                continue;
+    for a in 2..=10_000 {
+        for x in 2.. {
+            let mut s = vec![];
+            let mut t = a;
+            while t > 0 {
+                s.push(t % x);
+                t /= x;
             }
 
-            let mut cnt = 0;
-            for a in -100..=100_i32 {
-                let m = (a + x) % y;
-                if m == a.signum() {
-                    cnt += 1;
-                }
-            }
-
-            if cnt >= max {
-                max = cnt;
-                println!("{x} {y}: {cnt}");
+            let r = s.iter().rev().cloned().collect::<Vec<_>>();
+            if s == r {
+                println!("{a}: {x}");
+                break;
             }
         }
     }

@@ -52,6 +52,18 @@ impl ToExpr for i32 {
     }
 }
 
+impl ToExpr for i64 {
+    fn to_expr(&self) -> Expr {
+        Expr::Int(BigInt::from(*self).into())
+    }
+}
+
+impl ToExpr for i128 {
+    fn to_expr(&self) -> Expr {
+        Expr::Int(BigInt::from(*self).into())
+    }
+}
+
 impl ToExpr for Expr {
     fn to_expr(&self) -> Expr {
         self.clone()
@@ -67,44 +79,44 @@ macro_rules! icfp {
     (fn $($args:ident)+ -> $body:tt) => {{
         let mut e = icfp!{ $body };
         for arg in [$(stringify!($args)), *].iter().rev() {
-            e = Expr::Lambda(varid(arg), Rc::new(e));
+            e = Expr::Lambda(varid(arg), Box::new(e));
         }
         e
     }};
     (let $var:ident = $val:tt in $($body:tt)+) => {
         Expr::Bin(BinOp::App,
-            Rc::new(Expr::Lambda(varid(stringify!($var)), Rc::new(icfp!{ $($body)* }))),
-            Rc::new(icfp!{ $val }))
+            Box::new(Expr::Lambda(varid(stringify!($var)), Box::new(icfp!{ $($body)* }))),
+            Box::new(icfp!{ $val }))
     };
     (if $cond:tt { $($th:tt)+ } else { $($el:tt)+ }) => {
-        Expr::If(Rc::new(icfp!{ $cond }), Rc::new(icfp!{ $($th)* }), Rc::new(icfp!{ $($el)* }))
+        Expr::If(Box::new(icfp!{ $cond }), Box::new(icfp!{ $($th)* }), Box::new(icfp!{ $($el)* }))
     };
     (concat $a1:tt $a2:tt) => {
-        Expr::Bin(BinOp::Concat, Rc::new(icfp!{ $a1 }), Rc::new(icfp!{ $a2 }))
+        Expr::Bin(BinOp::Concat, Box::new(icfp!{ $a1 }), Box::new(icfp!{ $a2 }))
     };
     (take $a1:tt $a2:tt) => {
-        Expr::Bin(BinOp::Take, Rc::new(icfp!{ $a1 }), Rc::new(icfp!{ $a2 }))
+        Expr::Bin(BinOp::Take, Box::new(icfp!{ $a1 }), Box::new(icfp!{ $a2 }))
     };
     (drop $a1:tt $a2:tt) => {
-        Expr::Bin(BinOp::Drop, Rc::new(icfp!{ $a1 }), Rc::new(icfp!{ $a2 }))
+        Expr::Bin(BinOp::Drop, Box::new(icfp!{ $a1 }), Box::new(icfp!{ $a2 }))
     };
     (== $a1:tt $a2:tt) => {
-        Expr::Bin(BinOp::Eq, Rc::new(icfp!{ $a1 }), Rc::new(icfp!{ $a2 }))
+        Expr::Bin(BinOp::Eq, Box::new(icfp!{ $a1 }), Box::new(icfp!{ $a2 }))
     };
     (+ $a1:tt $a2:tt) => {
-        Expr::Bin(BinOp::Add, Rc::new(icfp!{ $a1 }), Rc::new(icfp!{ $a2 }))
+        Expr::Bin(BinOp::Add, Box::new(icfp!{ $a1 }), Box::new(icfp!{ $a2 }))
     };
     (- $a1:tt $a2:tt) => {
-        Expr::Bin(BinOp::Sub, Rc::new(icfp!{ $a1 }), Rc::new(icfp!{ $a2 }))
+        Expr::Bin(BinOp::Sub, Box::new(icfp!{ $a1 }), Box::new(icfp!{ $a2 }))
     };
     (* $a1:tt $a2:tt) => {
-        Expr::Bin(BinOp::Mul, Rc::new(icfp!{ $a1 }), Rc::new(icfp!{ $a2 }))
+        Expr::Bin(BinOp::Mul, Box::new(icfp!{ $a1 }), Box::new(icfp!{ $a2 }))
     };
     (/ $a1:tt $a2:tt) => {
-        Expr::Bin(BinOp::Div, Rc::new(icfp!{ $a1 }), Rc::new(icfp!{ $a2 }))
+        Expr::Bin(BinOp::Div, Box::new(icfp!{ $a1 }), Box::new(icfp!{ $a2 }))
     };
     (% $a1:tt $a2:tt) => {
-        Expr::Bin(BinOp::Mod, Rc::new(icfp!{ $a1 }), Rc::new(icfp!{ $a2 }))
+        Expr::Bin(BinOp::Mod, Box::new(icfp!{ $a1 }), Box::new(icfp!{ $a2 }))
     };
     (# $var:ident) => {
         ToExpr::to_expr(&$var)
@@ -112,7 +124,7 @@ macro_rules! icfp {
     ($f:tt $($args:tt)+) => {{
         let mut e = icfp!{ $f };
         $(
-            e = Expr::Bin(BinOp::App, Rc::new(e), Rc::new(icfp!{ $args }));
+            e = Expr::Bin(BinOp::App, Box::new(e), Box::new(icfp!{ $args }));
         )+
         e
     }};
@@ -207,6 +219,51 @@ fn problem16() -> Expr {
                         (concat (concat (f t d e g r) g)
                                 (f t r g e d)))
                 })) 127 "DD" "RR" "UU" "LL"))
+    }
+}
+
+fn problem11() -> Expr {
+    icfp! {
+        let R = (fn s -> (% (* s 48271) 18446744073709551557_i128)) in
+        let d = (fn s -> (take 1 (drop (/ s 4611686018427387904_i128) "LUDR"))) in
+        (concat "solve lambdaman11 " (fix (fn f c s r ->
+            (if (== c 0) {
+                r
+            } else {
+                (f (- c 1) (R s) (concat r (concat (d s) (d s))))
+            })
+        ) 500000 4610551 ""))
+    }
+}
+
+// fn problem20() -> Expr {
+//     icfp! {
+//         let f = (fix (fn f n -> (
+//             if (== n 0) {
+//                 ""
+//             } else {
+//                 (* n (f (- n 1)))
+//             }
+//         )))
+//         in (f(128))
+//     }
+// }
+
+fn problem20(n: usize, u: char, r: char, d: char, l: char) -> String {
+    if n == 0 {
+        "".to_string()
+    } else {
+        let mut ret = String::new();
+
+        for _ in 0..n {
+            ret.push(u);
+        }
+
+        for _ in 0..3 {
+            ret.push(l);
+        }
+
+        ret
     }
 }
 
