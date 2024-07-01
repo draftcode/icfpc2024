@@ -381,7 +381,7 @@ function findJumpLocations(board: Map<string, CellValue>): [string, string][] {
         /^\d+$/.test(dyCell.value)
       ) {
         ret.push([
-          `${x},${y}`,
+          `${x},${y+1}`,
           `${x - parseInt(dxCell.value)},${y - parseInt(dyCell.value)}`,
         ]);
       }
