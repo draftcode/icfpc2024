@@ -2,6 +2,7 @@ use crate::assembler::ToExpr;
 
 use anyhow::{bail, Result};
 use common::expr::{BinOp, Expr};
+use rand::Rng as _;
 use std::rc::Rc;
 
 use crate::util::Direction;
@@ -12,6 +13,7 @@ pub enum Rng {
     Better,
     DefaultRev,
     SmallModRev,
+    Reference,
 }
 
 impl Rng {
@@ -21,6 +23,7 @@ impl Rng {
             "better" => Some(Self::Better),
             "default-rev" => Some(Self::DefaultRev),
             "small-mod-rev" => Some(Self::SmallModRev),
+            "reference" => Some(Self::Reference),
             _ => None,
         }
     }
@@ -51,6 +54,7 @@ impl Rng {
                 (state / 207645).into(),
                 ((state as u128).wrapping_mul(81542) % 830579) as u64,
             ),
+            Self::Reference => ((state >> 62).into(), rand::thread_rng().gen::<u64>()),
         }
     }
 
@@ -66,6 +70,7 @@ impl Rng {
             Self::SmallModRev => icfp! {
                 (% (* s 48271) 830579)
             },
+            Self::Reference => panic!("reference RNG is not compilable"),
         }
     }
 
@@ -128,6 +133,7 @@ impl Rng {
                     ) (#last_seed))
                 }
             }
+            Self::Reference => panic!("reference RNG is not compilable"),
         };
         Ok(expr)
     }
