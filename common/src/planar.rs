@@ -171,6 +171,7 @@ pub struct State {
     max_y: i32,
     written: Vec<Vec<bool>>,
     pub monotonic_tick: i32,
+    read: Vec<Vec<bool>>,
 }
 
 impl Default for State {
@@ -189,6 +190,7 @@ impl Default for State {
             max_y: i32::MIN / 3,
             written: vec![],
             monotonic_tick: 0,
+            read: vec![],
         }
     }
 }
@@ -216,7 +218,7 @@ fn readable(board: &Vec<Vec<Cell>>, pos: (i32, i32)) -> bool {
     }
 }
 
-fn is_cell_emtpy(board: &Vec<Vec<Cell>>, pos: (i32, i32)) -> bool {
+fn is_cell_empty(board: &Vec<Vec<Cell>>, pos: (i32, i32)) -> bool {
     if !inside(board, pos) {
         return false;
     }
@@ -426,6 +428,15 @@ impl State {
         let mut warp_requests = vec![];
 
         let mut new_board = self.board.0.clone();
+
+        // Mark all value being read
+        self.read = vec![vec![false; new_board[0].len()]; new_board.len()];
+        for y in 0..self.board.0.len() {
+            for x in 0..self.board.0[0].len() {
+                self.mark_read_op((x as i32, y as i32));
+            }
+        }
+
         self.written = vec![vec![false; new_board[0].len()]; new_board.len()];
         for y in 0..new_board.len() {
             for x in 0..new_board[y].len() {
@@ -525,7 +536,7 @@ impl State {
                 to_y
             );
         }
-        if !readable(&self.board.0, (from_x, from_y)) {
+        if is_cell_empty(&self.board.0, (from_x, from_y)) {
             // Arg is not ready yet.
             return Ok(());
         }
@@ -535,14 +546,11 @@ impl State {
         if !self.writable(board, (to_x, to_y)) {
             bail!("Trying to write the cell twice {},{}", to_x, to_y);
         }
-        if let Some(i) = self.get_number((from_x, from_y)) {
-            self.write_to(board, to_x, to_y, Cell::Number(i))?;
-            // Not updating written
-            if self.writable(board, (from_x, from_y)) {
-                self.raw_write(board, (from_x, from_y), Cell::Empty)?;
-            }
-        } else {
-            bail!("@@@@@@");
+        let c = get_cell(&self.board.0, (from_x, from_y)).unwrap();
+        self.write_to(board, to_x, to_y, c)?;
+        // Not updating written
+        if self.writable(board, (from_x, from_y)) {
+            self.raw_write(board, (from_x, from_y), Cell::Empty)?;
         }
 
         Ok(())
@@ -561,8 +569,10 @@ impl State {
         let x = x as usize;
         let y = y as usize;
         if let Cell::Submit = board[y][x] {
-            if let Cell::Number(i) = v.clone() {
-                self.output = Some(i);
+            if !self.read[y][x] {
+                if let Cell::Number(i) = v.clone() {
+                    self.output = Some(i);
+                }
             }
         }
         board[y][x] = v;
@@ -650,7 +660,7 @@ impl State {
         let arg2 = (x as i32, y as i32 - 1);
         let to1 = (x as i32 + 1, y as i32);
         let to2 = (x as i32, y as i32 + 1);
-        if is_cell_emtpy(&self.board.0, arg1) || is_cell_emtpy(&self.board.0, arg2) {
+        if is_cell_empty(&self.board.0, arg1) || is_cell_empty(&self.board.0, arg2) {
             // Args are not ready yet.
             return Ok(());
         }
@@ -740,6 +750,53 @@ impl State {
         self.max_x = self.max_x.max(pos.0);
         self.min_y = self.min_y.min(pos.1);
         self.max_y = self.max_y.max(pos.1);
+    }
+
+    fn mark_read(&mut self, pos: (i32, i32)) {
+        if inside(&self.board.0, pos) {
+            self.read[pos.1 as usize][pos.0 as usize] = true;
+        }
+    }
+
+    fn executable(&mut self, pos: (i32, i32)) -> bool {
+        if !inside(&self.board.0, pos) {
+            return false;
+        }
+        match self.board.0[pos.1 as usize][pos.0 as usize] {
+            Cell::Down => !is_cell_empty(&self.board.0, (pos.0, pos.1 - 1)),
+            Cell::Up => !is_cell_empty(&self.board.0, (pos.0, pos.1 + 1)),
+            Cell::Left => !is_cell_empty(&self.board.0, (pos.0 + 1, pos.1)),
+            Cell::Right => !is_cell_empty(&self.board.0, (pos.0 - 1, pos.1)),
+            Cell::Plus | Cell::Minus | Cell::Mul | Cell::Div | Cell::Rem | Cell::Eq | Cell::Neq => {
+                !is_cell_empty(&self.board.0, (pos.0 - 1, pos.1))
+                    && !is_cell_empty(&self.board.0, (pos.0, pos.1 - 1))
+            }
+            _ => false,
+        }
+    }
+
+    fn mark_read_op(&mut self, op_pos: (i32, i32)) {
+        let ux = op_pos.0 as usize;
+        let uy = op_pos.1 as usize;
+        if inside(&self.board.0, op_pos) && self.executable(op_pos) {
+            match self.board.0[op_pos.1 as usize][op_pos.0 as usize] {
+                Cell::Down => self.read[(op_pos.1 - 1) as usize][op_pos.0 as usize] = true,
+                Cell::Up => self.read[(op_pos.1 + 1) as usize][op_pos.0 as usize] = true,
+                Cell::Left => self.read[op_pos.1 as usize][(op_pos.0 + 1) as usize] = true,
+                Cell::Right => self.read[op_pos.1 as usize][(op_pos.0 - 1) as usize] = true,
+                Cell::Plus
+                | Cell::Minus
+                | Cell::Mul
+                | Cell::Div
+                | Cell::Rem
+                | Cell::Eq
+                | Cell::Neq => {
+                    self.read[op_pos.1 as usize][(op_pos.0 - 1) as usize] = true;
+                    self.read[(op_pos.1 - 1) as usize][op_pos.0 as usize] = true;
+                }
+                _ => {}
+            }
+        }
     }
 }
 
