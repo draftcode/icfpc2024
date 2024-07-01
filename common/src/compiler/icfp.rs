@@ -20,6 +20,7 @@ pub fn binary_op(s: &str) -> Option<String> {
         "string=?" => Some(b + "="),
         "modulo" => Some(b + "%"),
         "div" => Some(b + "/"),
+        "or" => Some(b + "|"),
         _ => None,
     }
 }
