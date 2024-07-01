@@ -3,13 +3,13 @@
 
 ; comment
 
-(define (double x) (string-append x x))
-(define (x64 x) (double (double (double (double (double (double (double x))))))))
+(define (d1 x) (string-append x x x))
+(define (d2 x) (d1 (d1 (d1 (d1 x)))))
 
 (define (res) (
     string-append
     "solve lambdaman8 "
-    (x64 (string-append (string-append (string-append (x64 "D") (x64 "L")) (x64 "U")) (x64 "R")))
+    (d2 (string-append (d2 "DD") (d2 "LL") (d2 "UU") (d2 "RR")))
 ))
 
 (define (main args) (print (res)))
