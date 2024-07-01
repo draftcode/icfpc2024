@@ -134,7 +134,7 @@ impl LMap {
             let nx = x as isize + dx;
             let ny = y as isize + dy;
             if nx < 0 || nx >= height as isize || ny < 0 || ny >= width as isize {
-                bail!("out of map");
+                continue;
             }
             let nx = nx as usize;
             let ny = ny as usize;
