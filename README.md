@@ -1,21 +1,27 @@
-# icfpc2024
+# ICFP Programming Contest 2024: Team Spica
 
-## Toolchains
+## Members
 
-Rust も Python もこの Toolchain インストーラーでなんとかしましょう。
+- [@chiro](https://github.com/chiro/)
+- [@draftcode](https://github.com/draftcode/)
+- [@fuqinho](https://github.com/fuqinho/)
+- [@nya3jp](https://github.com/nya3jp/)
+- [@ogiekako](https://github.com/ogiekako/)
+- [@phoenixstarhiro](https://github.com/phoenixstarhiro/)
+- [@shunsakuraba](https://github.com/shunsakuraba/)
+- [@tanakh](https://github.com/tanakh/)
 
-- https://rustup.rs/
-- https://rye.astral.sh/
+## Programming languages
 
-## Pre-commit
+- Rust for most part of our solutions
+- TypeScript and Python for infrastructure stuff
 
-Git の pre-commit hook で formatter をかけてしましましょう。
+## Notable work
 
-```bash
-rye install pre-commit
-pre-commit install
-```
+### Common ICFP expression library
 
-これで git commit ごとに formatter がかかります。 https://pre-commit.com/hooks.html
-にいろいろ hook があるので、ほしいものがあれば.pre-commit-config.yaml を編集してく
-ださい。
+Location: [/common](/common)
+
+### Frontend
+
+Location: [/frontend](/frontend)
