@@ -157,6 +157,34 @@ impl std::fmt::Display for Board {
 }
 
 #[derive(Clone, Debug)]
+struct UsedRange {
+    pub min_x: i32,
+    pub max_x: i32,
+    pub min_y: i32,
+    pub max_y: i32,
+}
+
+impl UsedRange {
+    fn update(&mut self, x: i32, y: i32) {
+        self.min_x = self.min_x.min(x);
+        self.max_x = self.max_x.max(x);
+        self.min_y = self.min_y.min(y);
+        self.max_y = self.max_y.max(y);
+    }
+}
+
+impl Default for UsedRange {
+    fn default() -> Self {
+        UsedRange {
+            min_x: i32::MAX / 3,
+            max_x: i32::MIN / 3,
+            min_y: i32::MAX / 3,
+            max_y: i32::MIN / 3,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct State {
     pub board: Board,
     pub history: Vec<Board>,
@@ -172,6 +200,7 @@ pub struct State {
     written: Vec<Vec<bool>>,
     pub monotonic_tick: i32,
     read: Vec<Vec<bool>>,
+    pending_range: UsedRange,
 }
 
 impl Default for State {
@@ -191,6 +220,7 @@ impl Default for State {
             written: vec![],
             monotonic_tick: 0,
             read: vec![],
+            pending_range: Default::default(),
         }
     }
 }
@@ -258,6 +288,25 @@ pub fn print_for_submit(state: &State) -> String {
     s
 }
 
+fn calc_used_range(board: &Vec<Vec<Cell>>) -> (i32, i32, i32, i32) {
+    let mut min_x = i32::MAX;
+    let mut max_x = i32::MIN;
+    let mut min_y = i32::MAX;
+    let mut max_y = i32::MIN;
+
+    for y in 0..board.len() {
+        for x in 0..board[0].len() {
+            if !is_cell_empty(board, (x as i32, y as i32)) {
+                min_x = min_x.min(x as i32);
+                max_x = max_x.max(x as i32);
+                min_y = min_y.min(y as i32);
+                max_y = max_y.max(y as i32);
+            }
+        }
+    }
+    (min_x, max_x, min_y, max_y)
+}
+
 impl State {
     pub fn new(board: &str, a: BigInt, b: BigInt) -> anyhow::Result<Self> {
         let mut s: State = Default::default();
@@ -286,6 +335,15 @@ impl State {
         s.board.0.push(vec![Cell::Empty; col_max + 2]);
         s.input_a = a;
         s.input_b = b;
+
+        // Init {min,max}_{x,y}
+        let (ix, ax, iy, ay) = calc_used_range(&s.board.0);
+        s.min_x = ix;
+        s.max_x = ax;
+        s.min_y = iy;
+        s.max_y = ay;
+
+        println!("{:?}", s);
 
         // Replace A and B immediately after parsing.
         for l in s.board.0.iter_mut() {
@@ -424,6 +482,7 @@ impl State {
         self.history.push(self.board.clone());
         self.tick += 1;
         self.max_tick = self.max_tick.max(self.tick);
+        self.pending_range = Default::default();
 
         let mut warp_requests = vec![];
 
@@ -476,6 +535,11 @@ impl State {
             // Do not process warp requests if 'S' is already written
             return Ok(());
         }
+
+        self.min_x = self.min_x.min(self.pending_range.min_x);
+        self.max_x = self.max_x.max(self.pending_range.max_x);
+        self.min_y = self.min_y.min(self.pending_range.min_y);
+        self.max_y = self.max_y.max(self.pending_range.max_y);
 
         if !warp_requests.is_empty() {
             let dt = warp_requests[0].0;
@@ -746,10 +810,7 @@ impl State {
     }
 
     fn update_min_max(&mut self, pos: (i32, i32)) {
-        self.min_x = self.min_x.min(pos.0);
-        self.max_x = self.max_x.max(pos.0);
-        self.min_y = self.min_y.min(pos.1);
-        self.max_y = self.max_y.max(pos.1);
+        self.pending_range.update(pos.0, pos.1);
     }
 
     fn mark_read(&mut self, pos: (i32, i32)) {
