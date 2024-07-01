@@ -1,8 +1,6 @@
-use std::cmp::Ordering;
-use std::collections::{BinaryHeap, HashMap};
-use std::hash::Hash;
+use std::cmp;
+use std::collections::HashMap;
 use std::io::BufWriter;
-use std::{cmp, io};
 
 type Point = (i32, i32);
 type Velocity = (i32, i32);
@@ -15,6 +13,7 @@ fn surrogate_cost(p1: Point, p2: Point) -> i32 {
     return cmp::max((p1.0 - p2.0).abs(), (p1.1 - p2.1).abs());
 }
 
+#[allow(dead_code)]
 fn surrogate_cost_with_velocity(curpt: Point, curv: Velocity, goal: Point) -> i32 {
     let dx = goal.0 - curpt.0;
     let dy = goal.1 - curpt.1;
@@ -117,6 +116,7 @@ fn get_oneaxis_available_xs(v: i32, t: i32) -> (i32, i32) {
 }
 
 // FIXME: we should be able to solve this by not looping but considering the number of solutions in the quadratic equation
+#[allow(dead_code)]
 fn get_first_available_t(dx: i32, vinit: i32) -> i32 {
     for t in 0.. {
         let r = get_oneaxis_available_xs(vinit, t);
@@ -262,7 +262,7 @@ mod vrange_test {
     }
 }
 
-/*      __A
+/*     __A
    __B  o
   ^    oo
   |   aoo         (1) remove 'o' so that vend is correct
@@ -437,6 +437,7 @@ fn generate_visit_plan(
     return ret;
 }
 
+#[allow(dead_code)]
 fn generate_pow2_visit_plan(
     curp: Point,
     curv: Velocity,
@@ -488,6 +489,7 @@ fn actualize_visit_plan(
     return std::iter::zip(xaccl, yaccl).collect();
 }
 
+#[cfg(test)]
 mod generate_plan_test {
     use super::*;
 
@@ -514,7 +516,7 @@ fn visit_point(curpt: Point, curvel: Velocity, targetpt: Point) -> (Vec<Accelera
     let p = p[0];
     let t = p.0;
     let vend = p.1;
-    let accl = actualize_visit_plan(curpt, curvel, targetpt, p.1, p.0);
+    let accl = actualize_visit_plan(curpt, curvel, targetpt, vend, t);
     return (accl, vend);
 }
 
@@ -579,8 +581,9 @@ fn solve_la1(v: Vec<(i32, i32)>, nplan: usize) {
         v.len() - 1,
         v.len()
     );
-    curpt = *v.last().unwrap();
-    curvel = vend;
+    // currently unused
+    // curpt = *v.last().unwrap();
+    // curvel = vend;
     println!("{}", buffer);
     eprintln!("Solution length = {}", buffer.len());
 }
@@ -635,8 +638,9 @@ fn solve_la2(v: Vec<(i32, i32)>, nplan: usize) {
         v.len() - 1,
         v.len()
     );
-    curpt = *v.last().unwrap();
-    curvel = vend;
+    // currently unused
+    //curpt = *v.last().unwrap();
+    //curvel = vend;
     println!("{}", buffer);
     eprintln!("Solution length = {}", buffer.len());
 }
@@ -691,17 +695,41 @@ fn load_keypads(fname: String) -> String {
     return ret;
 }
 
-fn save_plan(plan_fname: String, plan: Vec<(Point, Velocity, usize, usize)>) {
+type Plan = Vec<(Point, Velocity, usize)>;
+
+fn load_plan(plan_fname: String) -> Plan {
+    use std::io::BufRead;
+    let file = std::fs::File::open(plan_fname.as_str()).unwrap();
+    let reader = std::io::BufReader::new(file);
+    let mut ret = Vec::new();
+    for line in reader.lines() {
+        match line {
+            Ok(line) => {
+                let mut values = line.split_whitespace();
+                let Some(px) = values.next() else {
+                    break;
+                };
+                let px: i32 = px.parse::<i32>().unwrap();
+                let py: i32 = values.next().unwrap().parse::<i32>().unwrap();
+                let vx: i32 = values.next().unwrap().parse::<i32>().unwrap();
+                let vy: i32 = values.next().unwrap().parse::<i32>().unwrap();
+                let keylen: usize = values.next().unwrap().parse::<usize>().unwrap();
+                ret.push(((px, py), (vx, vy), keylen));
+            }
+            Err(_) => {
+                break;
+            }
+        }
+    }
+    return ret;
+}
+
+fn save_plan(plan_fname: String, plan: &Plan) {
     use std::io::Write;
     let f = std::fs::File::create(plan_fname.as_str()).unwrap();
     let mut f = BufWriter::new(f);
-    for (p, v, keylen, alllen) in plan {
-        writeln!(
-            &mut f,
-            "{} {} {} {} {} {}",
-            p.0, p.1, v.0, v.1, keylen, alllen
-        )
-        .expect("write failed");
+    for (p, v, keylen) in plan {
+        writeln!(&mut f, "{} {} {} {} {}", p.0, p.1, v.0, v.1, keylen).expect("write failed");
     }
 }
 
@@ -714,22 +742,134 @@ fn make_plan(v: Vec<(i32, i32)>, seq: String, plan_fname: String) {
     for i in 0..v.len() {
         pt2idx.insert(v[i], i);
     }
-    let mut prevptidx = 0;
-    for (i, (p, v)) in traj.into_iter().enumerate() {
+    let mut prevptidx = -1;
+    for (t, (p, v)) in traj.into_iter().enumerate() {
         if pt2idx.contains_key(&p) {
             let idx = pt2idx.get(&p).unwrap();
             if !visited[*idx] {
-                let keylen = i - prevptidx;
-                plan.push((p, v, keylen, i));
-                prevptidx = i;
+                let keylen = (t as i32 - prevptidx) as usize;
+                plan.push((p, v, keylen));
+                prevptidx = t as i32;
                 visited[*idx] = true;
             }
         }
     }
-    save_plan(plan_fname, plan);
+    save_plan(plan_fname, &plan);
 }
 
-fn optimize_plan(planfile: String) {}
+#[allow(dead_code)]
+fn in_range(u: i32, rangeval: (i32, i32)) -> bool {
+    return rangeval.0 <= u && u <= rangeval.1;
+}
+
+fn local_opt_resovle3pt(
+    p1: Point,
+    v1: Velocity,
+    p2: Point,
+    p3: Point,
+    v3: Velocity,
+    curtotlen: usize,
+) -> Option<(Velocity, usize, usize)> {
+    let mut ret_time = curtotlen;
+    let mut ret = None;
+    for t1 in 0..curtotlen {
+        let Some(xvr) = get_available_vrange(p2.0 - p1.0, v1.0, t1 as i32) else {
+            continue;
+        };
+        let Some(yvr) = get_available_vrange(p2.1 - p1.1, v1.1, t1 as i32) else {
+            continue;
+        };
+        for vx in xvr.0..xvr.1 + 1 {
+            for vy in yvr.0..yvr.1 + 1 {
+                for t2 in 0..curtotlen - t1 {
+                    if t1 + t2 >= ret_time {
+                        break;
+                    }
+                    let Some(xvr) = get_available_vrange(p3.0 - p2.0, vx, t2 as i32) else {
+                        continue;
+                    };
+                    if !in_range(v3.0, xvr) {
+                        continue;
+                    }
+                    let Some(yvr) = get_available_vrange(p3.1 - p2.1, vy, t2 as i32) else {
+                        continue;
+                    };
+                    if !in_range(v3.1, yvr) {
+                        continue;
+                    }
+                    if t1 + t2 < ret_time {
+                        ret_time = t1 + t2;
+                        ret = Some(((vx, vy), t1, t2));
+                    }
+                }
+            }
+        }
+    }
+    return ret;
+}
+
+fn greedy_local_opt(plan: Plan) -> Plan {
+    let mut curp: Point = (0, 0);
+    let mut curv: Velocity = (0, 0);
+    let mut t1 = plan[0].2;
+    let mut t2;
+    let mut retplan: Plan = Vec::new();
+    for i in 0..plan.len() - 1 {
+        t2 = plan[i + 1].2;
+        match local_opt_resovle3pt(curp, curv, plan[i].0, plan[i + 1].0, plan[i + 1].1, t1 + t2) {
+            Some((newv, newt1, newt2)) => {
+                assert!(newt1 + newt2 < t1 + t2);
+                retplan.push((plan[i].0, newv, newt1));
+                eprintln!("step {i} improved from v={:?} {t1} & v={:?} {t2} -> v={:?} {newt1} & v={:?} {newt2}",
+                    plan[i].1, plan[i+1].1, newv, plan[i+1].1);
+                t1 = newt2;
+                curp = plan[i].0;
+                curv = newv;
+            }
+            None => {
+                retplan.push((plan[i].0, plan[i].1, t1));
+                t1 = t2;
+                curp = plan[i].0;
+                curv = plan[i].1;
+            }
+        }
+    }
+    let (p, v, _t) = plan.last().unwrap();
+    retplan.push((*p, *v, t1));
+    return retplan;
+}
+
+fn optimize_plan(planfile: String, outplanfile: String) {
+    let initialplan = load_plan(planfile);
+
+    let newplan = greedy_local_opt(initialplan);
+
+    println!(
+        "Final plan length = {}",
+        newplan.iter().fold(0usize, |acc, (_, _, t)| acc + t)
+    );
+    save_plan(outplanfile, &newplan);
+}
+
+fn actuailze_all_plan(planfile: String, outputfile: String) {
+    let plan = load_plan(planfile);
+    let mut curp = (0, 0);
+    let mut curv = (0, 0);
+    let mut keys = String::new();
+    for (i, (p, v, t)) in plan.iter().enumerate() {
+        eprintln!("Step {i}/{} {:?} {:?} {:?}", plan.len(), p, v, t);
+        let accl = actualize_visit_plan(curp, curv, *p, *v, *t as i32);
+        let encoded = encode_thrust_into_keypad(accl);
+        keys += encoded.as_str();
+        curp = *p;
+        curv = *v;
+    }
+
+    use std::io::Write;
+    let f = std::fs::File::create(outputfile.as_str()).unwrap();
+    let mut f = BufWriter::new(f);
+    writeln!(&mut f, "{}", keys).unwrap();
+}
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -770,8 +910,8 @@ fn main() {
         }
         let v = load_problem(args[2].clone());
         let mut nplan = 100;
-        if args.len() >= 3 {
-            nplan = args[2].parse::<usize>().unwrap();
+        if args.len() >= 4 {
+            nplan = args[3].parse::<usize>().unwrap();
         }
         solve_la2(v, nplan);
     } else if args[1] == "make_plan" {
@@ -780,7 +920,9 @@ fn main() {
         let plan_fname = args[4].clone();
         make_plan(v, seq, plan_fname);
     } else if args[1] == "optimize_plan" {
-        optimize_plan(args[2].clone());
+        optimize_plan(args[2].clone(), args[3].clone());
+    } else if args[1] == "actualize" {
+        actuailze_all_plan(args[2].clone(), args[3].clone());
     }
 
     //println!("start reorder");
