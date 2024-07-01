@@ -281,12 +281,12 @@ const KNOWN_SOLUTIONS: &[KnownSolution] = &[
     },
     // 16 is hard
     KnownSolution {
-        // 169B
+        // 149B
         problem_id: 17,
-        rng: Rng::Default,
-        seed: 9,
+        rng: Rng::MediumModRev,
+        seed: 2,
         stride: 1,
-        moves: MAX_MOVES,
+        moves: 512458,
     },
     KnownSolution {
         // 171B
