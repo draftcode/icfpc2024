@@ -363,7 +363,7 @@ function Debugger({
           ) : (
             <PlainState state={state} />
           )}
-          <div>
+          <div className="space-y-2">
             <div>ステップ: {step}</div>
             <div className="flex gap-x-2">
               <button className="btn btn-xs" onClick={() => updateStep(-10)}>
@@ -393,6 +393,12 @@ function Debugger({
                 <div>{data.score}</div>
               </div>
             ) : null}
+            {data?.error && (
+              <div className="bg-red-300 p-4">
+                <h2 className="font-bold">エラー</h2>
+                <div>{data.error}</div>
+              </div>
+            )}
           </div>
         </div>
       </div>

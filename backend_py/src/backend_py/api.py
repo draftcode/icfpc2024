@@ -70,12 +70,22 @@ class ThreedSimulationResult(BaseModel):
     board: str
     output: int | None
     score: int
+    error: str | None
 
 
 @app.post("/simulation/3d")
 async def run_3d_simulation(body: ThreedSimulationRequest) -> ThreedSimulationResult:
-    result_board, output, score = onestep_3d(body.board, body.val_a, body.val_b, body.turns)
-    return ThreedSimulationResult(board=result_board, output=output, score=score)
+    try:
+        result_board, output, score = onestep_3d(
+            body.board, body.val_a, body.val_b, body.turns
+        )
+        return ThreedSimulationResult(
+            board=result_board, output=output, score=score, error=None
+        )
+    except BaseException as e:
+        return ThreedSimulationResult(
+            board=body.board, output=None, score=0, error=str(e)
+        )
 
 
 @app.get("/communications")

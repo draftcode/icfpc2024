@@ -48,6 +48,7 @@ export interface ThreedSimulationResult {
   board: string;
   output: number | null;
   score: number;
+  error: string | null;
 }
 
 export function useProblem(category: string, id: number) {
