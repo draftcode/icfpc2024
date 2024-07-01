@@ -393,22 +393,36 @@ function Debugger({
 }
 
 function findJumpLocations(board: Map<string, CellValue>): [string, string][] {
+  const labels = new Map<string, string>();
+  for (const cell of Array.from(board.values())) {
+    const m = cell.value.match(/^(\w+)(\[.*\])?$/);
+    if (m && m[1] !== "S" && m[1] !== "A" && m[1] !== "B") {
+      labels.set(m[1], `${cell.coord[0]},${cell.coord[1]}`);
+    }
+  }
+
   const ret: [string, string][] = [];
   for (const cell of Array.from(board.values())) {
-    if (cell.value === "@") {
-      const [x, y] = cell.coord;
-      const dxCell = board.get(`${x - 1},${y}`);
-      const dyCell = board.get(`${x + 1},${y}`);
-      if (
-        dxCell &&
-        dyCell &&
-        /^\d+$/.test(dxCell.value) &&
-        /^\d+$/.test(dyCell.value)
-      ) {
-        ret.push([
-          `${x},${y - 1}`,
-          `${x - parseInt(dxCell.value)},${y - parseInt(dyCell.value)}`,
-        ]);
+    if (cell.value.startsWith("@")) {
+      const label = cell.value.slice(1);
+      const target = labels.get(label);
+      if (target) {
+        ret.push([`${cell.coord[0]},${cell.coord[1] - 1}`, target]);
+      } else {
+        const [x, y] = cell.coord;
+        const dxCell = board.get(`${x - 1},${y}`);
+        const dyCell = board.get(`${x + 1},${y}`);
+        if (
+          dxCell &&
+          dyCell &&
+          /^\d+$/.test(dxCell.value) &&
+          /^\d+$/.test(dyCell.value)
+        ) {
+          ret.push([
+            `${x},${y - 1}`,
+            `${x - parseInt(dxCell.value)},${y - parseInt(dyCell.value)}`,
+          ]);
+        }
       }
     }
   }
