@@ -65,12 +65,14 @@ enum Command {
 }
 
 fn search_main(problem_id: usize, stride: usize, rng_name: &str, start_seed: u64) -> Result<()> {
-    println!("Searching seed for problem {problem_id} with stride {stride}...");
+    eprintln!("Searching seed for problem {problem_id} with stride {stride}...");
 
     let game = load_game(problem_id)?;
     let rng = Rng::from_name(rng_name).context("unknown RNG name")?;
 
-    let best_pills = AtomicUsize::new(1000000);
+    eprintln!("Initial pills: {}", game.pills());
+
+    let best_pills = AtomicUsize::new(game.pills());
 
     const CHUNK_SIZE: usize = 1000;
     const SEED_MAX: u64 = 1000000000;
