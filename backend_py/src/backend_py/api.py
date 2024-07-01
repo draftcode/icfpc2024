@@ -240,7 +240,7 @@ async def team_rank(session: SessionDep) -> TeamRankResponse:
     )
     return TeamRankResponse(
         scoreboard_last_updated=scoreboard_log.updated,
-        total_rank=total_score_row.values[0],  # type: ignore
+        total_rank=_rewrite_rank(total_score_row.values[0]),  # type: ignore
         lambdaman=_to_problem_set_rank(
             lambdaman_score_row,
             parsed_result.lambdaman_parsed,
@@ -269,9 +269,9 @@ def _to_problem_set_rank(
 ) -> ProblemSetRank:
     problems = []
     for i, (our_score, best_score) in enumerate(scores):
-        rank = scoreboard.values[i + 2] if i + 2 < len(scoreboard.values) else None
-        if rank == "?":
-            rank = 1  # HACK
+        rank = _rewrite_rank(
+            scoreboard.values[i + 2] if i + 2 < len(scoreboard.values) else None
+        )
         problems.append(
             ProblemRank(
                 id=i + 1,
@@ -280,7 +280,12 @@ def _to_problem_set_rank(
                 best_score=best_score,
             )
         )
-    rank = scoreboard.values[0]
-    if rank == "?":
-        rank = 1  # HACK
-    return ProblemSetRank(updated=updated, rank=rank, problems=problems)  # type: ignore
+    return ProblemSetRank(
+        updated=updated, rank=_rewrite_rank(scoreboard.values[0]), problems=problems
+    )  # type: ignore
+
+
+def _rewrite_rank(rank):
+    if isinstance(rank, str) and rank == "?":
+        return 1
+    return rank
