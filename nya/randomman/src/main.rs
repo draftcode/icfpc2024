@@ -233,42 +233,48 @@ const KNOWN_SOLUTIONS: &[KnownSolution] = &[
         moves: 47672,
     },
     KnownSolution {
+        // 177B
         problem_id: 11,
         rng: Rng::DefaultRev,
         seed: 5129096,
         stride: 2,
-        moves: MAX_MOVES,
+        moves: 980964,
     },
     KnownSolution {
+        // 177B
         problem_id: 12,
-        rng: Rng::Default,
-        seed: 663880,
+        rng: Rng::DefaultRev,
+        seed: 4061593,
         stride: 2,
-        moves: MAX_MOVES,
+        moves: 985798,
     },
     KnownSolution {
+        // 176B
         problem_id: 13,
-        rng: Rng::Default,
-        seed: 217404,
+        rng: Rng::DefaultRev,
+        seed: 286039,
         stride: 2,
-        moves: MAX_MOVES,
+        moves: 892226,
     },
     KnownSolution {
+        // 176B
         problem_id: 14,
-        rng: Rng::Default,
-        seed: 35975,
+        rng: Rng::DefaultRev,
+        seed: 308043,
         stride: 2,
-        moves: MAX_MOVES,
+        moves: 962784,
     },
     KnownSolution {
+        // 176B
         problem_id: 15,
-        rng: Rng::Default,
-        seed: 1663183,
+        rng: Rng::DefaultRev,
+        seed: 2174025,
         stride: 2,
-        moves: MAX_MOVES,
+        moves: 999344,
     },
     // 16 is hard
     KnownSolution {
+        // 169B
         problem_id: 17,
         rng: Rng::Default,
         seed: 9,
@@ -276,6 +282,7 @@ const KNOWN_SOLUTIONS: &[KnownSolution] = &[
         moves: MAX_MOVES,
     },
     KnownSolution {
+        // 171B
         problem_id: 18,
         rng: Rng::Default,
         seed: 288180,
@@ -285,6 +292,7 @@ const KNOWN_SOLUTIONS: &[KnownSolution] = &[
     // 19 is hard
     // 20 is hard
     KnownSolution {
+        // 172B
         problem_id: 21,
         rng: Rng::Default,
         seed: 13229262,
