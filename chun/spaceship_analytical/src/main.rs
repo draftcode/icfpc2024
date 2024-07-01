@@ -839,16 +839,22 @@ fn greedy_local_opt(plan: Plan) -> Plan {
     return retplan;
 }
 
-fn optimize_plan(planfile: String, outplanfile: String) {
+fn optimize_plan(planfile: String, outplanfile: String, run_loop: bool) {
     let initialplan = load_plan(planfile);
+    let mut curplan = initialplan.clone();
+    let mut curcost = curplan.iter().fold(0usize, |acc, (_, _, t)| acc + t);
+    loop {
+        let newplan = greedy_local_opt(curplan);
+        let newcost = newplan.iter().fold(0usize, |acc, (_, _, t)| acc + t);
 
-    let newplan = greedy_local_opt(initialplan);
-
-    println!(
-        "Final plan length = {}",
-        newplan.iter().fold(0usize, |acc, (_, _, t)| acc + t)
-    );
-    save_plan(outplanfile, &newplan);
+        println!("Final plan length = {newcost}");
+        save_plan(outplanfile.clone(), &newplan);
+        if !run_loop || newcost >= curcost {
+            break;
+        }
+        curcost = newcost;
+        curplan = newplan;
+    }
 }
 
 fn actuailze_all_plan(planfile: String, outputfile: String) {
@@ -920,7 +926,15 @@ fn main() {
         let plan_fname = args[4].clone();
         make_plan(v, seq, plan_fname);
     } else if args[1] == "optimize_plan" {
-        optimize_plan(args[2].clone(), args[3].clone());
+        let mut run_loop = false;
+        if args.len() >= 5 {
+            if args[4] == "loop" {
+                run_loop = true
+            } else {
+                panic!("this arg must be \"loop\"");
+            }
+        }
+        optimize_plan(args[2].clone(), args[3].clone(), run_loop);
     } else if args[1] == "actualize" {
         actuailze_all_plan(args[2].clone(), args[3].clone());
     }
