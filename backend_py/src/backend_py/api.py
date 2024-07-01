@@ -69,12 +69,13 @@ class ThreedSimulationRequest(BaseModel):
 class ThreedSimulationResult(BaseModel):
     board: str
     output: int | None
+    score: int
 
 
 @app.post("/simulation/3d")
 async def run_3d_simulation(body: ThreedSimulationRequest) -> ThreedSimulationResult:
-    result_board, output = onestep_3d(body.board, body.val_a, body.val_b, body.turns)
-    return ThreedSimulationResult(board=result_board, output=output)
+    result_board, output, score = onestep_3d(body.board, body.val_a, body.val_b, body.turns)
+    return ThreedSimulationResult(board=result_board, output=output, score=score)
 
 
 @app.get("/communications")

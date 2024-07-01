@@ -32,7 +32,7 @@ fn evaluate_message(input: String) -> PyResult<String> {
 }
 
 #[pyfunction]
-fn onestep_3d(program: String, a: i32, b: i32, turn: usize) -> PyResult<(String, Option<i32>)> {
+fn onestep_3d(program: String, a: i32, b: i32, turn: usize) -> PyResult<(String, Option<i32>, i32)> {
     let state = planar::State::new(&program, a.into(), b.into());
     if state.is_err() {
         return Err(PyErr::new::<PyValueError, _>(format!(
@@ -61,7 +61,8 @@ fn onestep_3d(program: String, a: i32, b: i32, turn: usize) -> PyResult<(String,
     let res: Option<i32> = state
         .output
         .map(|v| v.min(i32_max).max(i32_min).try_into().unwrap());
-    Ok((format!("{}", state.board), res))
+    let score = state.score();
+    Ok((format!("{}", state.board), res, score))
 }
 
 /// A Python module implemented in Rust.
