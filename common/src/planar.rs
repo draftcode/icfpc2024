@@ -341,7 +341,7 @@ impl State {
     }
 
     pub fn score(&self) -> i32 {
-        self.used_x() * self.used_y() * (self.max_tick + 1)
+        self.used_x() * self.used_y() * (self.max_tick - 1)
     }
 
     pub fn resolve_label(&mut self) -> anyhow::Result<()> {
