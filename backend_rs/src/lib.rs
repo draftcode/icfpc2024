@@ -58,10 +58,10 @@ fn onestep_3d(program: String, a: i32, b: i32, turn: usize) -> PyResult<(String,
 
     let i32_max: BigInt = i32::MAX.into();
     let i32_min: BigInt = i32::MIN.into();
+    let score = state.score();
     let res: Option<i32> = state
         .output
         .map(|v| v.min(i32_max).max(i32_min).try_into().unwrap());
-    let score = state.score();
     Ok((format!("{}", state.board), res, score))
 }
 
