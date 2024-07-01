@@ -270,6 +270,8 @@ def _to_problem_set_rank(
     problems = []
     for i, (our_score, best_score) in enumerate(scores):
         rank = scoreboard.values[i + 2] if i + 2 < len(scoreboard.values) else None
+        if rank == "?":
+            rank = 1
         problems.append(
             ProblemRank(
                 id=i + 1,
