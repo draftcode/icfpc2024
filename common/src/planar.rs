@@ -295,17 +295,29 @@ impl State {
 
     pub fn new_with_input_port(board: &str, a: BigInt, b: BigInt) -> anyhow::Result<Self> {
         let mut s: State = Default::default();
+
+        let mut col_max = 0;
+        for l in board.lines() {
+            let mut col_len = 0;
+            let _ = l.split_whitespace().for_each(|_| col_len += 1);
+            col_max = col_max.max(col_len);
+        }
+
+        s.board.0.push(vec![Cell::Empty; col_max + 2]);
         for l in board.lines() {
             if l.is_empty() || l.chars().nth(0).unwrap() == '?' {
                 continue;
             }
-            let mut row = vec![];
+            let mut row = vec![Cell::Empty];
             for c in l.split_whitespace() {
                 row.push(Cell::from_str(c)?);
             }
-            row.push(Cell::Empty);
+            while row.len() < col_max + 2 {
+                row.push(Cell::Empty);
+            }
             s.board.0.push(row);
         }
+        s.board.0.push(vec![Cell::Empty; col_max + 2]);
         s.input_a = a.clone();
         s.input_b = b.clone();
         Ok(s)
