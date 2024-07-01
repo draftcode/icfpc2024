@@ -3,7 +3,7 @@
 
 (define (rep s d) (if (= d 1) s (string-append (rep s (- d 1)) (rep s (- d 1)))))
 
-(define (get p) (string-take 1 (string-drop p "URDLURDL")))
+(define (get p) (string-take 1 (string-drop p "URDLUR")))
 
 (define (recur d p) (
     if (or (= d 0) (< p 0)) ""
