@@ -2,7 +2,7 @@ import datetime
 import importlib.resources as pkg_resources
 from typing import Sequence
 
-from backend_rs import onestep_3d, encode_message  # type: ignore
+from backend_rs import resolve_3d, onestep_3d, encode_message  # type: ignore
 from fastapi import Body, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, RedirectResponse
@@ -86,6 +86,24 @@ async def run_3d_simulation(body: ThreedSimulationRequest) -> ThreedSimulationRe
         return ThreedSimulationResult(
             board=body.board, output=None, score=0, error=str(e)
         )
+
+
+class ThreedResolveRequest(BaseModel):
+    board: str
+
+
+class ThreedResolveResult(BaseModel):
+    board: str
+    error: str | None
+
+
+@app.post("/simulation/3d/resolve")
+async def resolve_3d_simulation(body: ThreedResolveRequest) -> ThreedResolveResult:
+    try:
+        result_board = resolve_3d(body.board)
+        return ThreedResolveResult(board=result_board, error=None)
+    except BaseException as e:
+        return ThreedResolveResult(board="", error=str(e))
 
 
 @app.get("/communications")

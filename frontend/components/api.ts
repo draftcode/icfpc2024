@@ -51,6 +51,11 @@ export interface ThreedSimulationResult {
   error: string | null;
 }
 
+export interface ThreedResolveResult {
+  board: string;
+  error: string | null;
+}
+
 export function useProblem(category: string, id: number) {
   const { data, error, isLoading } = useSWR<AxiosResponse<ParsedProblem>>(
     {
@@ -107,6 +112,28 @@ export function use3DSimulation() {
     Key,
     ThreedSimulationArg
   >("/simulation/3d", fetcher);
+  return { data: data?.data, error, isMutating, trigger };
+}
+
+export function use3DResolve() {
+  const fetcher = async (
+    url: string,
+    { arg: { board } }: { arg: { board: string } },
+  ) => {
+    return await client({
+      method: "post",
+      url: url,
+      data: {
+        board: board,
+      },
+    });
+  };
+  const { data, error, trigger, isMutating } = useSWRMutation<
+    AxiosResponse<ThreedResolveResult>,
+    any,
+    Key,
+    ThreedSimulationArg
+  >("/simulation/3d/resolve", fetcher);
   return { data: data?.data, error, isMutating, trigger };
 }
 
