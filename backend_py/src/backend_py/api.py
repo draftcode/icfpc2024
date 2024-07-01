@@ -2,7 +2,7 @@ import datetime
 import importlib.resources as pkg_resources
 from typing import Sequence
 
-from backend_rs import onestep_3d, encode_message  # type: ignore
+from backend_rs import resolve_3d, onestep_3d, encode_message  # type: ignore
 from fastapi import Body, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse, RedirectResponse
@@ -86,6 +86,24 @@ async def run_3d_simulation(body: ThreedSimulationRequest) -> ThreedSimulationRe
         return ThreedSimulationResult(
             board=body.board, output=None, score=0, error=str(e)
         )
+
+
+class ThreedResolveRequest(BaseModel):
+    board: str
+
+
+class ThreedResolveResult(BaseModel):
+    board: str
+    error: str | None
+
+
+@app.post("/simulation/3d/resolve")
+async def resolve_3d_simulation(body: ThreedResolveRequest) -> ThreedResolveResult:
+    try:
+        result_board = resolve_3d(body.board)
+        return ThreedResolveResult(board=result_board, error=None)
+    except BaseException as e:
+        return ThreedResolveResult(board="", error=str(e))
 
 
 @app.get("/communications")
@@ -222,7 +240,7 @@ async def team_rank(session: SessionDep) -> TeamRankResponse:
     )
     return TeamRankResponse(
         scoreboard_last_updated=scoreboard_log.updated,
-        total_rank=total_score_row.values[0],  # type: ignore
+        total_rank=_rewrite_rank(total_score_row.values[0]),  # type: ignore
         lambdaman=_to_problem_set_rank(
             lambdaman_score_row,
             parsed_result.lambdaman_parsed,
@@ -251,7 +269,9 @@ def _to_problem_set_rank(
 ) -> ProblemSetRank:
     problems = []
     for i, (our_score, best_score) in enumerate(scores):
-        rank = scoreboard.values[i + 2] if i + 2 < len(scoreboard.values) else None
+        rank = _rewrite_rank(
+            scoreboard.values[i + 2] if i + 2 < len(scoreboard.values) else None
+        )
         problems.append(
             ProblemRank(
                 id=i + 1,
@@ -260,4 +280,12 @@ def _to_problem_set_rank(
                 best_score=best_score,
             )
         )
-    return ProblemSetRank(updated=updated, rank=scoreboard.values[0], problems=problems)  # type: ignore
+    return ProblemSetRank(
+        updated=updated, rank=_rewrite_rank(scoreboard.values[0]), problems=problems
+    )  # type: ignore
+
+
+def _rewrite_rank(rank):
+    if isinstance(rank, str) and rank == "?":
+        return 1
+    return rank

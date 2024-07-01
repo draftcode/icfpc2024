@@ -733,7 +733,7 @@ fn save_plan(plan_fname: String, plan: &Plan) {
     }
 }
 
-fn make_plan(v: Vec<(i32, i32)>, seq: String, plan_fname: String) {
+fn make_plan(v: Vec<(i32, i32)>, seq: String, plan_fname: String, follow_order: bool) {
     let accl = decode_thrust_from_keypad(seq.as_str());
     let traj = simulate((0, 0), (0, 0), &accl);
     let mut visited: Vec<bool> = std::iter::repeat(false).take(v.len()).collect();
@@ -743,14 +743,24 @@ fn make_plan(v: Vec<(i32, i32)>, seq: String, plan_fname: String) {
         pt2idx.insert(v[i], i);
     }
     let mut prevptidx = -1;
-    for (t, (p, v)) in traj.into_iter().enumerate() {
-        if pt2idx.contains_key(&p) {
-            let idx = pt2idx.get(&p).unwrap();
-            if !visited[*idx] {
+    let mut curorder = 0usize;
+    for (t, (p, vel)) in traj.into_iter().enumerate() {
+        if follow_order {
+            if p == v[curorder] {
                 let keylen = (t as i32 - prevptidx) as usize;
-                plan.push((p, v, keylen));
+                plan.push((p, vel, keylen));
                 prevptidx = t as i32;
-                visited[*idx] = true;
+                curorder += 1
+            }
+        } else {
+            if pt2idx.contains_key(&p) {
+                let idx = pt2idx.get(&p).unwrap();
+                if !visited[*idx] {
+                    let keylen = (t as i32 - prevptidx) as usize;
+                    plan.push((p, vel, keylen));
+                    prevptidx = t as i32;
+                    visited[*idx] = true;
+                }
             }
         }
     }
@@ -808,7 +818,7 @@ fn local_opt_resovle3pt(
     return ret;
 }
 
-fn greedy_local_opt(plan: Plan) -> Plan {
+fn greedy_local_opt(plan: &Plan) -> Plan {
     let mut curp: Point = (0, 0);
     let mut curv: Velocity = (0, 0);
     let mut t1 = plan[0].2;
@@ -834,21 +844,217 @@ fn greedy_local_opt(plan: Plan) -> Plan {
             }
         }
     }
-    let (p, v, _t) = plan.last().unwrap();
-    retplan.push((*p, *v, t1));
+    let (p, _v, _t) = plan.last().unwrap();
+    let best = generate_visit_plan(curp, curv, *p, 1)[0];
+    retplan.push((*p, best.1, best.0 as usize));
     return retplan;
 }
 
-fn optimize_plan(planfile: String, outplanfile: String) {
+fn local_opt_resovle4pt(
+    curp: Point,
+    curv: Velocity,
+    newnextp: Point,
+    newnextnextp: Point,
+    endp: Point,
+    endv: Velocity,
+    curtotlen: usize,
+) -> Option<(Velocity, Velocity, usize, usize, usize)> {
+    let mut ret_time = curtotlen;
+    let mut ret = None;
+    // I know this is a brain-dead code...
+    for t1 in 0..curtotlen {
+        let Some(xvr) = get_available_vrange(newnextp.0 - curp.0, curv.0, t1 as i32) else {
+            continue;
+        };
+        let Some(yvr) = get_available_vrange(newnextp.1 - curp.1, curv.1, t1 as i32) else {
+            continue;
+        };
+        for vx in xvr.0..xvr.1 + 1 {
+            for vy in yvr.0..yvr.1 + 1 {
+                for t2 in 0..curtotlen - t1 {
+                    if t1 + t2 >= ret_time {
+                        break;
+                    }
+                    let Some(xvr2) =
+                        get_available_vrange(newnextnextp.0 - newnextp.0, vx, t2 as i32)
+                    else {
+                        continue;
+                    };
+                    let Some(yvr2) =
+                        get_available_vrange(newnextnextp.1 - newnextp.1, vy, t2 as i32)
+                    else {
+                        continue;
+                    };
+                    for vx2 in xvr2.0..xvr2.1 + 1 {
+                        for vy2 in yvr2.0..yvr2.1 + 1 {
+                            for t3 in 0..curtotlen - t1 - t2 {
+                                if t1 + t2 + t3 >= ret_time {
+                                    break;
+                                }
+                                let Some(xvr3) =
+                                    get_available_vrange(endp.0 - newnextnextp.0, vx2, t3 as i32)
+                                else {
+                                    continue;
+                                };
+                                if !in_range(endv.0, xvr3) {
+                                    continue;
+                                }
+                                let Some(yvr3) =
+                                    get_available_vrange(endp.1 - newnextnextp.1, vy2, t3 as i32)
+                                else {
+                                    continue;
+                                };
+                                if !in_range(endv.1, yvr3) {
+                                    continue;
+                                }
+                                if t1 + t2 + t3 < ret_time {
+                                    ret_time = t1 + t2 + t3;
+                                    ret = Some(((vx, vy), (vx2, vy2), t1, t2, t3));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return ret;
+}
+
+fn greedy_swap_opt(plan: &Plan) -> Plan {
+    let mut curp: Point = (0, 0);
+    let mut curv: Velocity = (0, 0);
+    let mut t1 = plan[0].2;
+    let mut t2 = plan[1].2;
+    let mut t3;
+    let mut p1 = plan[0].0;
+    let mut v1 = plan[0].1;
+    let mut p2 = plan[1].0;
+    let mut v2 = plan[1].1;
+    let mut p3;
+    let mut v3;
+    let mut retplan: Plan = Vec::new();
+    for i in 0..plan.len() - 2 {
+        (p3, v3, t3) = plan[i + 2];
+        match local_opt_resovle4pt(curp, curv, p2, p1, p3, v3, t1 + t2 + t3) {
+            Some((newv, newv2, newt1, newt2, newt3)) => {
+                assert!(newt1 + newt2 + newt3 < t1 + t2 + t3);
+                retplan.push((p2, newv, newt1));
+                eprintln!("step {i} swap improved {curp:?} {curv:?} {t1} {t2} {t3} - {p1:?} - {p2:?} - {p3:?} -> {p2:?} {newv:?} - {p1:?} {newv2:?} {newt1} {newt2} {newt3}");
+                t1 = newt2;
+                t2 = newt3;
+                curp = p2;
+                //p1 = p1; (now curp->p2->p1->p3, so next point is still p1)
+                p2 = p3;
+                curv = newv;
+                v1 = newv2;
+                v2 = v3;
+            }
+            None => {
+                retplan.push((p1, v1, t1));
+                t1 = t2;
+                t2 = t3;
+                curp = p1;
+                p1 = p2;
+                p2 = p3;
+                curv = v1;
+                v1 = v2;
+                v2 = v3;
+            }
+        }
+    }
+    retplan.push((p1, v1, t1 as usize));
+    retplan.push((p2, v2, t2 as usize));
+    assert_eq!(retplan.len(), plan.len());
+    return retplan;
+}
+
+fn greedy_4pt_opt(plan: &Plan) -> Plan {
+    let mut curp: Point = (0, 0);
+    let mut curv: Velocity = (0, 0);
+    let mut t1 = plan[0].2;
+    let mut t2 = plan[1].2;
+    let mut t3;
+    let mut p1 = plan[0].0;
+    let mut v1 = plan[0].1;
+    let mut p2 = plan[1].0;
+    let mut v2 = plan[1].1;
+    let mut p3;
+    let mut v3;
+    let mut retplan: Plan = Vec::new();
+    for i in 0..plan.len() - 2 {
+        (p3, v3, t3) = plan[i + 2];
+        match local_opt_resovle4pt(curp, curv, p1, p2, p3, v3, t1 + t2 + t3) {
+            Some((newv, newv2, newt1, newt2, newt3)) => {
+                assert!(newt1 + newt2 + newt3 < t1 + t2 + t3);
+                retplan.push((p1, newv, newt1));
+                eprintln!("step {i} 4pt improved {curp:?} {curv:?} {t1} {t2} {t3} - {p1:?} - {p2:?} - {p3:?} -> {newv:?} - {newv2:?} {newt1} {newt2} {newt3}");
+                t1 = newt2;
+                t2 = newt3;
+                curp = p1;
+                p1 = p2;
+                p2 = p3;
+                curv = newv;
+                v1 = newv2;
+                v2 = v3;
+            }
+            None => {
+                retplan.push((p1, v1, t1));
+                t1 = t2;
+                t2 = t3;
+                curp = p1;
+                p1 = p2;
+                p2 = p3;
+                curv = v1;
+                v1 = v2;
+                v2 = v3;
+            }
+        }
+    }
+    retplan.push((p1, v1, t1 as usize));
+    retplan.push((p2, v2, t2 as usize));
+    assert_eq!(retplan.len(), plan.len());
+    return retplan;
+}
+
+fn optimize_plan(
+    planfile: String,
+    outplanfile: String,
+    run_loop: bool,
+    run_swap: bool,
+    run_a3: bool,
+) {
     let initialplan = load_plan(planfile);
+    let mut curplan = initialplan.clone();
+    let mut curcost = curplan.iter().fold(0usize, |acc, (_, _, t)| acc + t);
+    loop {
+        let newplan = greedy_local_opt(&curplan);
+        let newcost = newplan.iter().fold(0usize, |acc, (_, _, t)| acc + t);
 
-    let newplan = greedy_local_opt(initialplan);
+        let (newplan, newcost) = if run_swap {
+            let newplan = greedy_swap_opt(&newplan);
+            let newcost = newplan.iter().fold(0usize, |acc, (_, _, t)| acc + t);
+            (newplan, newcost)
+        } else {
+            (newplan, newcost)
+        };
 
-    println!(
-        "Final plan length = {}",
-        newplan.iter().fold(0usize, |acc, (_, _, t)| acc + t)
-    );
-    save_plan(outplanfile, &newplan);
+        let (newplan, newcost) = if run_a3 {
+            let newplan = greedy_4pt_opt(&newplan);
+            let newcost = newplan.iter().fold(0usize, |acc, (_, _, t)| acc + t);
+            (newplan, newcost)
+        } else {
+            (newplan, newcost)
+        };
+
+        println!("Final plan length = {newcost}");
+        save_plan(outplanfile.clone(), &newplan);
+        if !run_loop || newcost >= curcost {
+            break;
+        }
+        curcost = newcost;
+        curplan = newplan;
+    }
 }
 
 fn actuailze_all_plan(planfile: String, outputfile: String) {
@@ -918,9 +1124,35 @@ fn main() {
         let v = load_problem(args[2].clone());
         let seq = load_keypads(args[3].clone());
         let plan_fname = args[4].clone();
-        make_plan(v, seq, plan_fname);
+        let mut follow_order = false;
+        if args.len() >= 6 {
+            if args[5] == "follow" {
+                follow_order = true;
+            } else {
+                panic!("must be \"follow\"");
+            }
+        }
+
+        make_plan(v, seq, plan_fname, follow_order);
     } else if args[1] == "optimize_plan" {
-        optimize_plan(args[2].clone(), args[3].clone());
+        let mut run_loop = false;
+        let mut run_swap = false;
+        let mut run_a2 = false;
+        if args.len() >= 5 {
+            if args[4] == "loop" {
+                run_loop = true;
+            } else if args[4] == "swap" {
+                run_loop = true;
+                run_swap = true;
+            } else if args[4] == "all" {
+                run_loop = true;
+                run_swap = true;
+                run_a2 = true;
+            } else {
+                panic!("this arg must be \"loop\"");
+            }
+        }
+        optimize_plan(args[2].clone(), args[3].clone(), run_loop, run_swap, run_a2);
     } else if args[1] == "actualize" {
         actuailze_all_plan(args[2].clone(), args[3].clone());
     }

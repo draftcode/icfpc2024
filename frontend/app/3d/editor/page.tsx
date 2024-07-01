@@ -1,6 +1,6 @@
 "use client";
 
-import { use3DSimulation } from "@/components/api";
+import { use3DResolve, use3DSimulation } from "@/components/api";
 import {
   CellValue,
   parseStateString,
@@ -22,6 +22,8 @@ export default function Page() {
   const [debugInput, setDebugInput] = useState("");
   const [valA, setValA] = useState(0);
   const [valB, setValB] = useState(0);
+  const [resolveCopied, setResolveCopied] = useState(false);
+  const { trigger: triggerResolve } = use3DResolve();
 
   const setCell = (cell: CellValue) => {
     const newState = new Map(state);
@@ -32,6 +34,15 @@ export default function Page() {
     }
     setState(newState);
     setInput(serializeState(newState));
+  };
+
+  const copyResolvedBoard = async () => {
+    const data = await triggerResolve({ board: input });
+    data.data.board && navigator.clipboard.writeText(data.data.board);
+    setResolveCopied(true);
+    setTimeout(() => {
+      setResolveCopied(false);
+    }, 2000);
   };
 
   return (
@@ -97,6 +108,12 @@ export default function Page() {
               }}
             >
               {copied ? "コピーしました" : "エクセル用にコピー"}
+            </button>
+            <button
+              className="btn btn-sm"
+              onClick={copyResolvedBoard}
+            >
+              {resolveCopied ? "コピーしました" : "提出用コピー"}
             </button>
             <button
               className="btn btn-sm"

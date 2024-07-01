@@ -32,6 +32,23 @@ fn evaluate_message(input: String) -> PyResult<String> {
 }
 
 #[pyfunction]
+fn resolve_3d(input: String) -> PyResult<String> {
+    let state = planar::State::new_with_input_port(&input, 0.into(), 0.into());
+    if state.is_err() {
+        return Err(PyErr::new::<PyValueError, _>(format!(
+            "failed to load program"
+        )));
+    }
+    let mut state = state.unwrap();
+    if state.resolve_label().is_err() {
+        return Err(PyErr::new::<PyValueError, _>(format!(
+            "failed to resolve label"
+        )));
+    }
+    Ok(common::planar::print_for_submit(&state))
+}
+
+#[pyfunction]
 fn onestep_3d(
     program: String,
     a: i32,
@@ -77,5 +94,6 @@ fn backend_rs(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(decode_message, m)?)?;
     m.add_function(wrap_pyfunction!(evaluate_message, m)?)?;
     m.add_function(wrap_pyfunction!(onestep_3d, m)?)?;
+    m.add_function(wrap_pyfunction!(resolve_3d, m)?)?;
     Ok(())
 }
