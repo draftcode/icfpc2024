@@ -7,7 +7,6 @@ import { useCookies } from "react-cookie";
 export default function Sidebar({ current }: { current?: string }) {
   const [cookies, setCookie] = useCookies([
     "hideTop",
-    "badgeType",
     "hideLambdaman",
     "hideSpaceship",
     "hide3d",
@@ -20,7 +19,6 @@ export default function Sidebar({ current }: { current?: string }) {
   const [hideEfficiency, setHideEfficiencyRaw] = useState(
     cookies.hideEfficiency,
   );
-  const [badgeType, setBadgeTypeRaw] = useState(cookies.badgeType ?? "rank");
   const { data, error } = useTeamRank();
 
   const setHideLambdaman = (b: boolean) => {
@@ -38,10 +36,6 @@ export default function Sidebar({ current }: { current?: string }) {
   const setHideEfficiency = (b: boolean) => {
     setHideEfficiencyRaw(b);
     setCookie("hideEfficiency", JSON.stringify(b), { path: "/" });
-  };
-  const setBadgeType = (badgeType: string) => {
-    setBadgeTypeRaw(badgeType);
-    setCookie("badgeType", badgeType, { path: "/" });
   };
   if (error) {
     throw error;
@@ -66,58 +60,7 @@ export default function Sidebar({ current }: { current?: string }) {
         <span className="label-text">1位のやつは隠す</span>
       </label>
       <hr />
-      <form>
-        <div className="form-control">
-          <label className="label cursor-pointer justify-normal gap-x-1">
-            <input
-              type="radio"
-              name="radio-10"
-              className="radio radio-xs"
-              checked={badgeType === "rank"}
-              onChange={() => setBadgeType("rank")}
-            />
-            <span className="label-text">順位</span>
-          </label>
-        </div>
-        <div className="form-control">
-          <label className="label cursor-pointer justify-normal gap-x-1">
-            <input
-              type="radio"
-              name="radio-10"
-              className="radio radio-xs"
-              checked={badgeType === "score"}
-              onChange={() => setBadgeType("score")}
-            />
-            <span className="label-text">スコア</span>
-          </label>
-        </div>
-        <div className="form-control">
-          <label className="label cursor-pointer justify-normal gap-x-1">
-            <input
-              type="radio"
-              name="radio-10"
-              className="radio radio-xs"
-              checked={badgeType === "diff"}
-              onChange={() => setBadgeType("diff")}
-            />
-            <span className="label-text">差分</span>
-          </label>
-        </div>
-        <div className="form-control">
-          <label className="label cursor-pointer justify-normal gap-x-1">
-            <input
-              type="radio"
-              name="radio-10"
-              className="radio radio-xs"
-              checked={badgeType === "bestScore"}
-              onChange={() => setBadgeType("bestScore")}
-            />
-            <span className="label-text">トップスコア</span>
-          </label>
-        </div>
-      </form>
-      <hr />
-      <ul className="menu menu-xs w-56 shrink-0">
+      <ul className="menu menu-xs w-80 shrink-0">
         <li>
           <h2
             onClick={() => setHideLambdaman(!hideLambdaman)}
@@ -152,9 +95,8 @@ export default function Sidebar({ current }: { current?: string }) {
                       )}
                       href={`/lambdaman/${id}`}
                     >
-                      Lambdaman {id}
+                      L{id}
                       <Badge
-                        badge_type={badgeType}
                         rank={rank}
                         best_score={best_score}
                         our_score={our_score}
@@ -204,9 +146,8 @@ export default function Sidebar({ current }: { current?: string }) {
                       )}
                       href={`/spaceship/${id}`}
                     >
-                      Spaceship {id}
+                      Spcm{id}
                       <Badge
-                        badge_type={badgeType}
                         rank={rank}
                         best_score={best_score}
                         our_score={our_score}
@@ -235,9 +176,7 @@ export default function Sidebar({ current }: { current?: string }) {
           >
             <li>
               <Link
-                className={clsx(
-                  "/3d/editor" === current ? "active" : null,
-                )}
+                className={clsx("/3d/editor" === current ? "active" : null)}
                 href="/3d/editor"
               >
                 エディタ
@@ -252,7 +191,6 @@ export default function Sidebar({ current }: { current?: string }) {
                   >
                     3D {id}
                     <Badge
-                      badge_type={badgeType}
                       rank={rank}
                       best_score={best_score}
                       our_score={our_score}
@@ -293,7 +231,6 @@ export default function Sidebar({ current }: { current?: string }) {
                     >
                       Efficiency {id}
                       <Badge
-                        badge_type="rank"
                         rank={rank}
                         best_score={best_score}
                         our_score={our_score}
@@ -310,55 +247,61 @@ export default function Sidebar({ current }: { current?: string }) {
   );
 }
 
+function RankBadge({ rank }: { rank: number | null }) {
+  if (rank === 1) {
+    return <div className="btn btn-xs btn-success">{rank} 位</div>;
+  } else if (rank === null) {
+    return <div className="btn btn-xs btn-warning">No Rank</div>;
+  }
+  return <div className="btn btn-xs btn-active">{rank} 位</div>;
+}
+
+function OurScoreBadge({
+  ourScore,
+  bestScore,
+}: {
+  ourScore: number | null;
+  bestScore: number | null;
+}) {
+  if (ourScore === bestScore) {
+    return <div className="btn btn-xs btn-success justify-end w-[8ch] font-mono">{ourScore}</div>;
+  } else if (ourScore === null) {
+    return <div className="btn btn-xs btn-warning">No Score</div>;
+  }
+  return <div className="btn btn-xs btn-active justify-end w-[8ch] font-mono">{ourScore}</div>;
+}
+
+function BestScoreBadge({
+  ourScore,
+  bestScore,
+}: {
+  ourScore: number | null;
+  bestScore: number | null;
+}) {
+  if (ourScore === bestScore) {
+    return <div className="btn btn-xs btn-success justify-end w-[8ch] font-mono">{bestScore}</div>;
+  } else if (bestScore === null) {
+    return <div className="btn btn-xs btn-warning">No Score</div>;
+  }
+  return <div className="btn btn-xs btn-active justify-end w-[8ch] font-mono">{bestScore}</div>;
+}
+
 function Badge({
-  badge_type,
   rank,
   best_score,
   our_score,
 }: {
-  badge_type: string;
   rank: number | null;
   best_score: number | null;
   our_score: number | null;
 }) {
-  if (badge_type === "rank") {
-    if (rank === 1) {
-      return <div className="badge badge-success">{rank} 位</div>;
-    } else if (rank === null) {
-      return <div className="badge badge-warning">No Rank</div>;
-    }
-    return <div className="badge badge-primary">{rank} 位</div>;
-  }
-  if (badge_type === "score") {
-    if (our_score === best_score) {
-      return <div className="badge badge-success">{our_score}</div>;
-    } else if (our_score === null) {
-      return <div className="badge badge-warning">No Score</div>;
-    }
-    return <div className="badge badge-primary">{our_score}</div>;
-  }
-  if (badge_type === "diff") {
-    if (our_score === null || best_score === null) {
-      return <div className="badge badge-warning">No Score</div>;
-    }
-
-    if (our_score === best_score) {
-      return <div className="badge badge-success">0</div>;
-    }
-    return (
-      <div className="badge badge-primary">
-        {our_score - best_score > 0 ? "+" : ""}
-        {our_score - best_score}
-      </div>
-    );
-  }
-  if (badge_type === "bestScore") {
-    if (best_score === null) {
-      return <div className="badge badge-warning">No Score</div>;
-    }
-    return <div className="badge badge-primary">{best_score}</div>;
-  }
-  return null;
+  return (
+    <div className="flex gap-x-1 place-self-end">
+      <RankBadge rank={rank} />
+      <OurScoreBadge ourScore={our_score} bestScore={best_score} />
+      <BestScoreBadge ourScore={our_score} bestScore={best_score} />
+    </div>
+  );
 }
 
 function CategoryBadge({ rank }: { rank: number | null }) {
