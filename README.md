@@ -14,7 +14,9 @@
 ## Programming languages
 
 - Rust for most part of our solutions
+- Python for small tools
 - TypeScript and Python for infrastructure stuff
+- Google Spreadsheet for 3d programming.
 
 ## Overview
 
