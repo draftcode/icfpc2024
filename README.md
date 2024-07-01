@@ -1,4 +1,4 @@
-# ICFP Programming Contest 2024: Team Spica
+# Team Spica / ICFP Programming Contest 2024
 
 ## Members
 
@@ -16,12 +16,85 @@
 - Rust for most part of our solutions
 - TypeScript and Python for infrastructure stuff
 
+## Overview
+
+TODO(all): Describe the overview of our work
+
 ## Notable work
 
-### Common ICFP expression library
+### General
 
-Location: [/common](/common)
+#### Common ICFP expression library
 
-### Frontend
+[./common](./common)
 
-Location: [/frontend](/frontend)
+TODO(all): Describe this
+
+Rust macro to embed ICFP expressions in Rust code:
+[./tanakh/solver/src/bin/lambdaman.rs](./tanakh/solver/src/bin/lambdaman.rs)
+
+#### Interactive communicator
+
+[./communicate](./communicate)
+
+TODO(nya): Describe this
+
+#### ICFP-to-Haskell/Scheme converter
+
+[./tanakh/evaluator](./tanakh/evaluator)
+
+TODO(tanakh): Describe this
+
+#### Scheme-to-ICFP compiler
+
+[./scmcomp](./scmcomp)
+
+TODO(ogiekako): Describe this
+
+#### Infrastructure
+
+[./frontend](./frontend)
+[./backend_py](./backend_py)
+[./backend_rs](./backend_rs)
+
+TODO(draftcode): Describe this
+
+### Lambdaman
+
+#### Random walk solution generator
+
+[./nya/randomman](./nya/randomman)
+
+TODO(nya): Describe this
+
+### Spaceship
+
+#### chun's solvers
+
+[./chun](./chun)
+
+TODO(chun): Describe this
+
+#### tanakh's solver
+
+[./tanakh/spaceship](./tanakh/spaceship)
+
+TODO(tanakh): Describe this
+
+#### fuqinho's solver
+
+[./fuqinho/fuqinho-spaceship](./fuqinho/fuqinho-spaceship)
+
+TODO(fuqinho): Describe this
+
+### 3D
+
+#### 3D interpreter
+
+[./chir/interpreter](./chir/interpreter)
+
+TODO(chir): Describe this
+
+### Efficiency
+
+TODO(all): Add work about efficiency here
