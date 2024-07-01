@@ -33,7 +33,7 @@ fn evaluate_message(input: String) -> PyResult<String> {
 
 #[pyfunction]
 fn resolve_3d(input: String) -> PyResult<String> {
-    let state = planar::State::new(&input, 0.into(), 0.into());
+    let state = planar::State::new_with_input_port(&input, 0.into(), 0.into());
     if state.is_err() {
         return Err(PyErr::new::<PyValueError, _>(format!(
             "failed to load program"
