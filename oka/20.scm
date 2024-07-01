@@ -7,16 +7,6 @@
 
 (define (add d x) (modulo (+ d x) 4))
 
-(define (recur one dep dir) (
-    if (= dep 0) ""
-    (string-append
-        (one dep (add dir 3))
-        (one dep (add dir 0))
-        (one dep (add dir 1))
-        (get dir)
-    )
-))
-
 (define (one dep dir) (
     if (< dep 1) (string-append (get (add dir 2)) (get (add dir 1)))
     (string-append
@@ -25,7 +15,13 @@
         (one (- dep 2) (add dir 1))
         (rep (get dir) (- dep 1))
 
-        (recur one (- dep 1) dir)
+        (if (= dep 1) ""
+        (string-append
+            (one (- dep 1) (add dir 3))
+            (one (- dep 1) (add dir 0))
+            (one (- dep 1) (add dir 1))
+            (get dir)
+        ))
  
         (rep (get (add dir 2)) dep)
         (get (add dir 2))
