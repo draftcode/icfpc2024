@@ -12,6 +12,7 @@ pub enum Rng {
     Default,
     Better,
     DefaultRev,
+    MediumModRev,
     SmallModRev,
     Reference,
 }
@@ -22,6 +23,7 @@ impl Rng {
             "default" => Some(Self::Default),
             "better" => Some(Self::Better),
             "default-rev" => Some(Self::DefaultRev),
+            "medium-mod-rev" => Some(Self::MediumModRev),
             "small-mod-rev" => Some(Self::SmallModRev),
             "reference" => Some(Self::Reference),
             _ => None,
@@ -29,7 +31,10 @@ impl Rng {
     }
 
     pub fn skip_first_seed(&self) -> bool {
-        matches!(self, Self::DefaultRev | Self::SmallModRev)
+        matches!(
+            self,
+            Self::DefaultRev | Self::SmallModRev | Self::MediumModRev
+        )
     }
 
     pub fn next(&self, state: u64) -> (Direction, u64) {
@@ -47,6 +52,12 @@ impl Rng {
                 (state >> 62).into(),
                 // pow(48271, -1, 18446744073709551557) = 17779510845628573806
                 ((state as u128).wrapping_mul(17779510845628573806) % 18446744073709551557) as u64,
+            ),
+            // Reverse of Park-Miller RNG.
+            Self::MediumModRev => (
+                // pow(48271, -1, 2147483647) = 1899818559
+                (state / 536870912).into(),
+                ((state as u128).wrapping_mul(1899818559) % 2147483647) as u64,
             ),
             Self::SmallModRev => (
                 // 830579: smallest prime less than 94 ** 3 = 830584
@@ -66,6 +77,9 @@ impl Rng {
             },
             Self::Better => icfp! {
                 (% (+ (* s 0xd1342543de82ef95) 1) 18446744073709551616)
+            },
+            Self::MediumModRev => icfp! {
+                (% (* s 48271) 2147483647)
             },
             Self::SmallModRev => icfp! {
                 (% (* s 48271) 830579)
@@ -99,10 +113,10 @@ impl Rng {
         }
         let last_seed = last_seed as u128;
 
-        let div = if self == &Self::SmallModRev {
-            207645
-        } else {
-            4611686018427387904
+        let div = match self {
+            Self::SmallModRev => 207645,
+            Self::MediumModRev => 536870912,
+            Self::Better | Self::Default | Self::DefaultRev => 4611686018427387904,
         };
 
         let step_expr = match stride {
@@ -122,7 +136,7 @@ impl Rng {
                     })
                 ) (#seed)))
             },
-            Self::DefaultRev | Self::SmallModRev => {
+            Self::DefaultRev | Self::MediumModRev | Self::SmallModRev => {
                 icfp! {
                     (fix (fn f s ->
                         (if (== s (#seed)) {
