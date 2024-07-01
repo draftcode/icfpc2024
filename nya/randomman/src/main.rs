@@ -290,7 +290,7 @@ const KNOWN_SOLUTIONS: &[KnownSolution] = &[
         moves: MAX_MOVES,
     },
     // 19 is hard
-    // 20 is hard
+    // TODO: tackle 20
     KnownSolution {
         // 172B
         problem_id: 21,
