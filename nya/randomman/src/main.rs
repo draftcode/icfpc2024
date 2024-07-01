@@ -1,12 +1,16 @@
-use anyhow::{Context, Result};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+
+use anyhow::{bail, ensure, Context, Result};
 use clap::{Parser, Subcommand};
+use common::expr::{Expr, Token};
+use rayon::prelude::*;
 use rng::Rng;
-use util::{do_submit, search_main, MAX_MOVES};
+use simulate::{load_game, MAX_MOVES};
 
 #[macro_use]
 mod assembler;
 pub mod rng;
-pub mod util;
+pub mod simulate;
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -58,6 +62,91 @@ enum Command {
     },
     CompileAll,
     SubmitAll,
+}
+
+fn search_main(problem_id: usize, stride: usize, rng_name: &str, start_seed: u64) -> Result<()> {
+    println!("Searching seed for problem {problem_id} with stride {stride}...");
+
+    let game = load_game(problem_id)?;
+    let rng = Rng::from_name(rng_name).context("unknown RNG name")?;
+
+    let best_pills = AtomicUsize::new(1000000);
+
+    const CHUNK_SIZE: usize = 1000;
+    const SEED_MAX: u64 = 1000000000;
+    let steps = MAX_MOVES / stride;
+
+    for start in (start_seed..SEED_MAX).step_by(CHUNK_SIZE) {
+        let end = start + CHUNK_SIZE as u64 - 1;
+        eprint!("{}...\r", end);
+
+        let solved = AtomicBool::new(false);
+
+        (start..=end).into_par_iter().for_each(|seed| {
+            let mut game = game.clone();
+            let mut state = if rng.skip_first_seed() {
+                rng.next(seed).1
+            } else {
+                seed
+            };
+
+            for step in 1..=steps {
+                let (dir, new_state) = rng.next(state);
+                for _ in 0..stride {
+                    game.step(dir);
+                }
+                state = new_state;
+                if game.pills() == 0 {
+                    eprintln!("seed {seed}: all pills eaten in {} steps!", step * stride);
+                    best_pills.store(0, Ordering::SeqCst);
+                    solved.store(true, Ordering::SeqCst);
+                    return;
+                }
+            }
+
+            let pills = game.pills();
+            if pills < best_pills.fetch_min(pills, Ordering::SeqCst) {
+                eprintln!("seed {seed}: {pills} pills");
+            }
+        });
+
+        if solved.load(Ordering::SeqCst) {
+            break;
+        }
+    }
+
+    Ok(())
+}
+
+fn do_submit(problem_id: usize, expr: &Expr) -> Result<()> {
+    let api_token = std::env::var("API_TOKEN").context("API_TOKEN is not set")?;
+
+    eprintln!(
+        "lambdaman{problem_id}: submitting {}B solution...",
+        expr.encoded().to_string().len()
+    );
+
+    let client = reqwest::blocking::Client::new();
+
+    let response = client
+        .post("https://icfp-api.badalloc.com/communicate")
+        .header("Authorization", format!("Bearer {}", api_token))
+        .header("Content-Type", "text/plain")
+        .body(expr.encoded().to_string())
+        .send()?;
+    ensure!(
+        response.status().is_success(),
+        "request failed: {}",
+        response.status()
+    );
+
+    let raw = response.text()?;
+    let Ok(Token::String(text)) = raw.parse() else {
+        bail!("Failed to parse response: {raw}");
+    };
+
+    eprintln!("lambdaman{problem_id}: {text}");
+    Ok(())
 }
 
 fn compile_main(

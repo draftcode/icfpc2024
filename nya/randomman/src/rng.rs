@@ -1,11 +1,9 @@
-use crate::assembler::ToExpr;
+use crate::{assembler::ToExpr, simulate::Direction};
 
 use anyhow::{bail, Result};
 use common::expr::{BinOp, Expr};
 use rand::Rng as _;
 use std::rc::Rc;
-
-use crate::util::Direction;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Rng {
