@@ -99,7 +99,7 @@ fn search_main(problem_id: usize, stride: usize, rng_name: &str, start_seed: u64
                 }
                 state = new_state;
                 if game.pills() == 0 {
-                    eprintln!("seed {seed}: all pills eaten in {} steps!", step * stride);
+                    eprintln!("seed {seed}: all pills eaten in {} moves!", step * stride);
                     best_pills.store(0, Ordering::SeqCst);
                     solved.store(true, Ordering::SeqCst);
                     return;
@@ -216,19 +216,21 @@ const KNOWN_SOLUTIONS: &[KnownSolution] = &[
     // TODO: 5 can be revisited if code gets shorter
     // 6 has a shorter solution
     KnownSolution {
+        // 142B
         problem_id: 7,
-        rng: Rng::Default,
-        seed: 298,
+        rng: Rng::SmallModRev,
+        seed: 58,
         stride: 1,
-        moves: 17860,
+        moves: 11766,
     },
     // 8-9 have shorter solutions
     KnownSolution {
+        // 144B
         problem_id: 10,
-        rng: Rng::Default,
-        seed: 1,
+        rng: Rng::SmallModRev,
+        seed: 128,
         stride: 1,
-        moves: 53394,
+        moves: 47672,
     },
     KnownSolution {
         problem_id: 11,
