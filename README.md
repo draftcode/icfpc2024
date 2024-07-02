@@ -28,7 +28,7 @@
 
 Common code to work with ICFP expressions, such as parsing and evaluating. We did not finish implementing everything in the specification (e.g. call-by-need) because we didn't have strong needs to evaluate ICFP expressions locally.
 
-An related interesting snippet: Rust macro to embed ICFP expressions in Rust code:
+A related interesting snippet: Rust macro to embed ICFP expressions in Rust code:
 [./tanakh/solver/src/bin/lambdaman.rs](./tanakh/solver/src/bin/lambdaman.rs)
 
 #### Interactive communicator (by @nya3jp)
@@ -49,7 +49,7 @@ I wrote the code in Rust to evaluate the ICFP expression. I also wrote code to c
 
 [./scmcomp](./scmcomp)
 
-To make programming easier, I wrote a compiler that supports a subset of Scheme and outputs ICFP expressions. Some of our best solutions (6,8,9,19,20) are what we manually wrote in Scheme and compiled. See oka/*.scm for reference.
+To make programming easier, I wrote a compiler that supports a subset of Scheme and outputs ICFP expressions. Some of our best solutions (6,8,9,19,20) are what we manually wrote in Scheme and compiled. See oka/\*.scm for reference.
 
 #### Infrastructure (by @draftcode)
 
@@ -87,13 +87,13 @@ We used random walk for many problems (4, 5, 7, 10, 11, 12, 13, 14, 15, 17, 18,
 
 [./chun](./chun)
 
-I created an input pre-ordering utility [spaceship_order](chun/spaceship_order), a solver [speceship_lasolver](chun/spaceship_lasolver), and one big solver-utility-set [speceship_analytical](chun/spaceship_analytical).
+I created an input pre-ordering utility [spaceship_order](chun/spaceship_order), a solver [spaceship_lasolver](chun/spaceship_lasolver), and one big solver-utility-set [spaceship_analytical](chun/spaceship_analytical).
 
 `spaceship_order` reorders input so that the points are visited by the spaceship in this order. It is mostly greedy order, but the simulated annealing was also used depending on the map.
 
-`spaceship_lasolver` tries to visit the target in pre-sorted order with a A*-like heuristic search. It tries to "look-ahead" one target; suppose the ship is at `p0` with `v0` and  tries to visit `p1` then `p2`. The program searches the fastest route to `p2` via `p1`, then use  only the path between `p0` and `p1` (trash `p1` to `p2` path), then
+`spaceship_lasolver` tries to visit the target in pre-sorted order with a A\*-like heuristic search. It tries to "look-ahead" one target; suppose the ship is at `p0` with `v0` and tries to visit `p1` then `p2`. The program searches the fastest route to `p2` via `p1`, then use only the path between `p0` and `p1` (trash `p1` to `p2` path), then
 
-`spaceship_analytical` implemnts several utility as well as optimizer for the already generated keypad seqeunce. First it converts the keypad sequence to the vector of `(point, velocity)`. Then the program tries to locally optimize the sequence. There are three optimizers inside. (1) 3-pt optimizer, take `p0-p1-p2` visited in this order, then change `v1` preserving `v0` and `v2`. (2) 4-pt optimizer. (3) swap optimizer, take `p0-p1-p2-p3` and try `p0-p1-p2-p3` visiting sequence.
+`spaceship_analytical` implements several utility as well as optimizer for the already generated keypad sequence. First it converts the keypad sequence to the vector of `(point, velocity)`. Then the program tries to locally optimize the sequence. There are three optimizers inside. (1) 3-pt optimizer, take `p0-p1-p2` visited in this order, then change `v1` preserving `v0` and `v2`. (2) 4-pt optimizer. (3) swap optimizer, take `p0-p1-p2-p3` and try `p0-p1-p2-p3` visiting sequence.
 
 #### tanakh's solver (by @tanakh)
 
@@ -141,18 +141,18 @@ We implemented a Web-based editor for the 3D language. It utilizes the interpret
 
 ### Efficiency
 
-* Problem 7, 8
+- Problem 7, 8
 
 This problem is a bit-encoded SAT sufficiency problem. Since we needed to find the minimum in lexicographic order among those satisfying the conditions, we used z3, a powerful solver, to find the minimum solution in lexicographic order by adding terms to see if the conditions can be satisfied by false, starting with the variables in the upper digits.
 
-* Problem 9, 10, 11
+- Problem 9, 10, 11
 
 This problem is to find the dictionary-ordered minimum solution of Sudoku encoded in decimal. z3, a powerful solver, was used for this problem as well, since, contrary to the name Efficiency, it is obvious that if the program is run properly, the program will not end even at the end of the universe z3. The answer can be obtained by solving iteratively, starting from the upper digits and adding the condition of using the smallest one that satisfies the constraints.
 
-* Problem 12
+- Problem 12
 
 This was also a program that could not be executed in a decent amount of time, so we read the contents, made a memo and rewrote it into an equivalent, faster program to find a solution.
 
-* All other problems
+- All other problems
 
 They are simple enough to be interpreted by human (Mersenne prime, Fibonacci prime, etc.). We calculated the answer by hand or a simple script.
