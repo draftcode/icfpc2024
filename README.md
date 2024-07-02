@@ -51,7 +51,7 @@ I wrote the code in Rust to evaluate the ICFP expression. I also wrote code to c
 
 [./scmcomp](./scmcomp)
 
-TODO(ogiekako): Describe this
+To make programming easier, I wrote a compiler that supports a subset of Scheme and outputs ICFP expressions. Some of our best solutions (6,8,9,19,20) are what we manually wrote in Scheme and compiled. See oka/*.scm for reference.
 
 #### Infrastructure
 
