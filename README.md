@@ -18,28 +18,26 @@
 - TypeScript and Python for infrastructure stuff
 - Google Spreadsheet for 3d programming.
 
-## Overview
-
-TODO(all): Describe the overview of our work
-
 ## Notable work
 
 ### General
 
-#### Common ICFP expression library
+#### Common ICFP expression library (by everyone)
 
 [./common](./common)
 
-TODO(all): Describe this
+Common code to work with ICFP expressions, such as parsing and evaluating. We did not finish implementing everything in the specification (e.g. call-by-need) because we didn't have strong needs to evaluate ICFP expressions locally.
 
-Rust macro to embed ICFP expressions in Rust code:
+An related interesting snippet: Rust macro to embed ICFP expressions in Rust code:
 [./tanakh/solver/src/bin/lambdaman.rs](./tanakh/solver/src/bin/lambdaman.rs)
 
 #### Interactive communicator (by @nya3jp)
 
 [./communicate](./communicate)
 
-TODO(nya): Describe this
+A small program to communicate with the School of the Bound Variable.
+
+Supports the interactive mode (with readline) and the batch mode.
 
 #### ICFP-to-Haskell/Scheme converter (by @tanakh)
 
