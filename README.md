@@ -35,25 +35,25 @@ TODO(all): Describe this
 Rust macro to embed ICFP expressions in Rust code:
 [./tanakh/solver/src/bin/lambdaman.rs](./tanakh/solver/src/bin/lambdaman.rs)
 
-#### Interactive communicator
+#### Interactive communicator (by @nya3jp)
 
 [./communicate](./communicate)
 
 TODO(nya): Describe this
 
-#### ICFP-to-Haskell/Scheme converter
+#### ICFP-to-Haskell/Scheme converter (by @tanakh)
 
 [./tanakh/evaluator](./tanakh/evaluator)
 
 I wrote the code in Rust to evaluate the ICFP expression. I also wrote code to convert it to Scheme and Haskell code. This was useful for debugging my own evaluator and understanding the code. I also implemented a simple Rust eDSL to generate ICFP expressions.
 
-#### Scheme-to-ICFP compiler
+#### Scheme-to-ICFP compiler (by @ogiekako)
 
 [./scmcomp](./scmcomp)
 
 To make programming easier, I wrote a compiler that supports a subset of Scheme and outputs ICFP expressions. Some of our best solutions (6,8,9,19,20) are what we manually wrote in Scheme and compiled. See oka/*.scm for reference.
 
-#### Infrastructure
+#### Infrastructure (by @draftcode)
 
 [./frontend](./frontend)
 [./backend_py](./backend_py)
@@ -63,7 +63,7 @@ TODO(draftcode): Describe this
 
 ### Lambdaman
 
-#### Random walk solution generator
+#### Random walk solution generator (by @nya3jp)
 
 [./nya/randomman](./nya/randomman)
 
@@ -85,7 +85,7 @@ We used random walk for many problems (4, 5, 7, 10, 11, 12, 13, 14, 15, 17, 18,
 
 ### Spaceship
 
-#### chun's solvers
+#### chun's solvers (by @shunsakuraba)
 
 [./chun](./chun)
 
@@ -97,18 +97,18 @@ I created an input pre-ordering utility [spaceship_order](chun/spaceship_order),
 
 `spaceship_analytical` implemnts several utility as well as optimizer for the already generated keypad seqeunce. First it converts the keypad sequence to the vector of `(point, velocity)`. Then the program tries to locally optimize the sequence. There are three optimizers inside. (1) 3-pt optimizer, take `p0-p1-p2` visited in this order, then change `v1` preserving `v0` and `v2`. (2) 4-pt optimizer. (3) swap optimizer, take `p0-p1-p2-p3` and try `p0-p1-p2-p3` visiting sequence.
 
-#### tanakh's solver
+#### tanakh's solver (by @tanakh)
 
 [./tanakh/spaceship](./tanakh/spaceship)
 
 I implemented an algorithm that greedily selects the next point that can be reached in the shortest time based on the current position and current speed, but the performance was not very good. I also tried an annealing method that solves the order of the points as TSP and then calculates the route, but it did not work well in the case of many points.
 
-#### fuqinho's solver
+#### fuqinho's solver (by @fuqinho)
 
 [./fuqinho/fuqinho-spaceship](./fuqinho/fuqinho-spaceship)
 
 1. Determine visiting order using simulated annealing. (score is total traveling distance)
-2. Precompute minimum steps to move dx with initial velocity v0 and terminal velocity v1. 
+2. Precompute minimum steps to move dx with initial velocity v0 and terminal velocity v1.
    - -100 <= v0, v1 <= 100, -10000 <= dx <= 10000
 3. In 2-dimension movement, calculate the lower bound of steps using above data and search the minimum steps by incrementing target steps.
 4. Using the data above, efficiently list up several possible paths from point 1 to point 2.
@@ -116,7 +116,7 @@ I implemented an algorithm that greedily selects the next point that can be reac
 
 ### 3D
 
-#### 3D interpreter
+#### 3D interpreter (by @chir)
 
 [./chir/interpreter](./chir/interpreter)
 
@@ -135,7 +135,7 @@ The interpreter automatically fills the jump location for the time warp operator
 
 The interpreter also provides a mode to convert a program with labels into a program which can be submitted to the server.
 
-#### 3D editor
+#### 3D editor (by @draftcode)
 
 We implemented a Web-based editor for the 3D language. It utilizes the interpreter described above via PyO3.
 
